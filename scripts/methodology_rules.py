@@ -53,6 +53,17 @@ FRA_RESP_FBS = "flatbuffers/fbs/fra_response.fbs"
 FRB_RESP_FBS = "flatbuffers/fbs/fixed_rate_bond_response.fbs"
 EQ_RESP_FBS = "flatbuffers/fbs/equity_option_response.fbs"
 CATALOG = "tests/functional/CATALOG.md"
+TS_PARSER_CPP = "src/parsers/term_structure_parser.cpp"
+TS_POINT_CPP = "src/parsers/term_structure_point_parser.cpp"
+SCHED_PARSER_CPP = "src/parsers/schedule_parser.cpp"
+
+ENGINE_REPO_URL = "https://github.com/joseprupi/quantraserver"
+CONNECTOR_REPO_URL = "https://github.com/joseprupi/quantra-mcp"
+
+# this server's own source (the connector-analytics page cites the working tree)
+BUMPS_PY = "src/quantra_mcp/builders/bumps.py"
+ANALYTICS_PY = "src/quantra_mcp/tools/analytics.py"
+RECONCILE_PY = "src/quantra_mcp/tools/reconcile.py"
 
 
 def c(path: str, start: str, end: str | int, nth: int = 1) -> Cite:
@@ -471,6 +482,82 @@ TOPICS: list[Topic] = [
                     r"fixed_leg_day_counter:enums.DayCounter = null;",
                 ),
             ),
+            s(
+                "The code: `day_counter`, `interpolator` and `bootstrap_trait` are each required "
+                "on the `TermStructure`; the trait is the explicit family selector (no "
+                "auto-dispatch from the point types).",
+                c(
+                    TS_PARSER_CPP,
+                    r"if \(!ts->day_counter\(\)\.has_value\(\)\)",
+                    r"auto trait = ts->bootstrap_trait\(\)\.value\(\);",
+                ),
+            ),
+            s(
+                "The code: for `Discount` / `ZeroRate` / `FwdRate` every point is parsed into a "
+                "QuantLib `RateHelper` (a value point among them is a request error) and the "
+                "helpers are handed to `buildCurve`.",
+                c(
+                    TS_PARSER_CPP,
+                    r"// Bootstrap traits build a PiecewiseYieldCurve from rate helpers\. A",
+                    r"return buildCurve\(ts, instruments\);",
+                ),
+            ),
+            s(
+                "The code: `buildCurve` uses a bootstrap tolerance of 1e-15, the curve's "
+                "`reference_date` (else the evaluation date) and its `day_counter`, then "
+                "switches on `interpolator` x `bootstrap_trait`.",
+                c(
+                    TS_PARSER_CPP,
+                    r"^std::shared_ptr<YieldTermStructure> TermStructureParser::buildCurve\(",
+                    r"switch \(ts->interpolator\(\)\.value\(\)\) \{",
+                ),
+            ),
+            s(
+                "The code: the `LogLinear` branch instantiates "
+                "`QuantLib::PiecewiseYieldCurve<Discount | ZeroYield | ForwardRate, LogLinear>` "
+                "(reference date, helpers, day counter, tolerance) for `bootstrap_trait` "
+                "`Discount` / `ZeroRate` / `FwdRate`; `BackwardFlat`, `ForwardFlat` and "
+                "`Linear` follow the same pattern with their own QuantLib interpolator class.",
+                c(
+                    TS_PARSER_CPP,
+                    r"case enums::Interpolator_LogLinear:",
+                    r'QUANTRA_INVALID_ARGUMENT\("Unsupported BootstrapTrait for LogLinear"\);',
+                ),
+            ),
+            s(
+                "The code: `LogCubic` maps to QuantLib's `MonotonicLogCubic`; an unknown "
+                "`interpolator` or trait combination is a request error, never a default.",
+                c(
+                    TS_PARSER_CPP,
+                    r"case enums::Interpolator_LogCubic:",
+                    r'QUANTRA_INVALID_ARGUMENT\("Unsupported Interpolator"\);',
+                ),
+            ),
+            s(
+                "The code: an `OISHelper` becomes `QuantLib::OISRateHelper(settlement_days, "
+                "tenor, quote, overnight index, deps.discount_curve, telescopic=false, "
+                "payment_lag, fixed_leg_convention, fixed_leg_frequency, calendar, forward "
+                "start 0, overnight spread 0, LastRelevantDate pillar, averaging_method, "
+                "QuantLib defaults for end-of-month / fixed frequency / fixed calendar, "
+                "lookback_days (wire 0 = QuantLib Null = off), lockout_days, "
+                "apply_observation_shift)`.",
+                c(
+                    TS_POINT_CPP,
+                    r'// Wire 0 = "no lookback"\. QuantLib encodes the off-state as',
+                    r"requireBool\(point->apply_observation_shift\(\),",
+                ),
+            ),
+            s(
+                "The code: a `SwapHelper` becomes `QuantLib::SwapRateHelper(quote, tenor, "
+                "calendar, sw_fixed_leg_frequency, sw_fixed_leg_convention, "
+                "sw_fixed_leg_day_counter, ibor index, spread, fwd_start_days, "
+                "deps.discount_curve)`; the index forwarding is always the curve being built.",
+                c(
+                    TS_POINT_CPP,
+                    r"return std::make_shared<SwapRateHelper>\(",
+                    r"^        \);$",
+                ),
+            ),
         ],
         "fields": [
             s(
@@ -481,9 +568,10 @@ TOPICS: list[Topic] = [
         ],
         "gaps": [
             "Bootstrap accuracy, iteration limits and extrapolation policy are not documented "
-            "at this tag; the engine uses QuantLib's `PiecewiseYieldCurve` defaults (a bond "
-            "beyond the last pillar is rejected, see error-codes / the example "
-            "`fixed_rate_bond_beyond_pillar_request`).",
+            "in engine prose at this tag; from source (`buildCurve` above) the bootstrap "
+            "tolerance is 1e-15 and everything else is QuantLib's `PiecewiseYieldCurve` "
+            "default (a bond beyond the last pillar is rejected, see error-codes / the "
+            "example `fixed_rate_bond_beyond_pillar_request`).",
             "The pillar dates the engine reports for a bootstrapped curve are the helpers' "
             "tenor dates, not necessarily the helper maturity nodes (this server's live "
             "finding, CHANGELOG 0.1.1); rebuilding a curve from sampled discount factors at "
@@ -824,6 +912,133 @@ TOPICS: list[Topic] = [
         ],
     },
     {
+        "slug": "schedules-and-stubs",
+        "title": "Schedules: date generation rules, stubs, end-of-month, conventions",
+        "summary": (
+            "Every leg schedule is a QuantLib `Schedule` built from the request's "
+            "`calendar`, `frequency`, `convention`, `termination_date_convention`, "
+            "`date_generation_rule` and `end_of_month` (all required) plus the optional stub "
+            "anchors `first_date` / `next_to_last_date`. The rule decides from which end the "
+            "regular periods are counted, and therefore where an odd period (a stub) falls."
+        ),
+        "statements": [
+            s(
+                "The `Schedule` table: the required fields and the two optional stub anchors "
+                "(`first_date` controls the FIRST stub, `next_to_last_date` the LAST, "
+                "symmetrically; omitted = no stub).",
+                c(
+                    SCHEDULE_FBS,
+                    r"^/// Date schedule definition for payment and accrual dates\.",
+                    r"^}",
+                ),
+            ),
+            s(
+                "Date generation rules available: Backward, CDS, Forward, OldCDS, "
+                "ThirdWednesday, Twentieth, TwentiethIMM, Zero.",
+                c(ENUMS_FBS, r"^/// Date generation rule for schedule construction\.", r"^}"),
+            ),
+            s(
+                "Business-day conventions available (used for `convention`, "
+                "`termination_date_convention` and the legs' `payment_convention`).",
+                c(ENUMS_FBS, r"^/// Business day convention for date adjustments\.", r"^}"),
+            ),
+            s(
+                "The code: every schedule field is presence-required; an omitted one is a 400 "
+                "naming the field, never a default.",
+                c(
+                    SCHED_PARSER_CPP,
+                    r"if \(!schedule->calendar\(\)\.has_value\(\)\)",
+                    r'QUANTRA_INVALID_ARGUMENT\("Schedule\.end_of_month is required"\);',
+                ),
+            ),
+            s(
+                "The code: the stub anchors are optional and default to QuantLib's own "
+                "`Date()` (no stub); when present they must lie strictly inside "
+                "(effective_date, termination_date).",
+                c(
+                    SCHED_PARSER_CPP,
+                    r"// Optional stub-period control\. Absent fields default to",
+                    r"const bool hasNextToLast = schedule->next_to_last_date\(\) != NULL;",
+                ),
+            ),
+            s(
+                "The code: some rules (e.g. `Zero`) reject stub anchors; QuantLib's reason is "
+                "surfaced as a named 400.",
+                c(
+                    SCHED_PARSER_CPP,
+                    r"// With a stub date present, some DateGeneration rules",
+                    r"// take the unwrapped path below\.",
+                ),
+            ),
+            s(
+                "The code: the QuantLib `Schedule` constructor call, argument by argument "
+                "(effective, termination, period from `frequency`, calendar, convention, "
+                "termination-date convention, date-generation rule, end-of-month).",
+                c(
+                    SCHED_PARSER_CPP,
+                    r"return std::make_shared<QuantLib::Schedule>\(",
+                    r"schedule->end_of_month\(\)\.value\(\)\);",
+                    nth=2,
+                ),
+            ),
+            s(
+                "The code: each rule maps one-to-one onto `QuantLib::DateGeneration::Rule`.",
+                c(ENUM_CONV, r"^QuantLib::DateGeneration::Rule DateGenerationToQL", r"^}"),
+            ),
+            s(
+                "0.7.0 note: stub periods via `first_date` / `next_to_last_date` on every "
+                "schedule-carrying product.",
+                c(VERSIONING, r"^- \*\*Stub periods\*\*: optional `first_date`", 3),
+            ),
+            s(
+                "Documented usage (engine catalog): a 2-month short first coupon from Backward "
+                "generation with a `first_date` two months after the effective date; an "
+                "18-month long first coupon likewise.",
+                c(CATALOG, r"EUR 5Y bond with a SHORT first coupon \(2-month stub\)", 2),
+            ),
+            s(
+                "Documented usage (engine catalog): a short first period on both swap legs "
+                "with Forward generation anchored by `first_date`.",
+                c(CATALOG, r"EUR 5Y payer swap with a short first period on both legs", 1),
+            ),
+        ],
+        "fields": [
+            s(
+                "`schedule.date_generation_rule`, `schedule.end_of_month` (presence-required), "
+                "`schedule.first_date`, `schedule.next_to_last_date` on every leg schedule.",
+                c(
+                    SCHEDULE_FBS,
+                    r"Presence-required: absent-vs-false silently changes schedule dates",
+                    r"Omit for no last stub",
+                ),
+            ),
+        ],
+        "gaps": [
+            "Where Forward vs Backward places the odd period is not stated in engine prose; "
+            "it is QuantLib's `Schedule` semantics for the rule the code passes through: "
+            "`Backward` counts regular periods back from the termination date, so an "
+            "off-grid tenor leaves the short (or, with `first_date`, long) period at the FRONT "
+            "(a front stub, the market default for odd-dated swaps); `Forward` counts from "
+            "the effective date, so the odd period falls at the END (a back stub). For an "
+            "on-grid tenor (a spot-start 5Y annual / semiannual swap) the two rules generate "
+            "identical dates. Test it with `reprice_with` on "
+            "`swaps[0].<leg>.schedule.date_generation_rule`.",
+            "`termination_date_convention` is not described in engine prose; from source it is "
+            "QuantLib's `terminationDateConvention`: the business-day rule applied to the "
+            "termination date alone (`convention` adjusts every other date).",
+            "`end_of_month` is documented only as presence-required; the behaviour is "
+            "QuantLib's: when true and the effective date is the last business day of its "
+            "month, every generated date is rolled to month end.",
+            "`Zero` (a single period), `ThirdWednesday` (IMM dates), `Twentieth` / "
+            "`TwentiethIMM` / `CDS` / `OldCDS` (credit roll dates) are QuantLib's rules of the "
+            "same name; the engine documents no behaviour of its own for them.",
+            "This server's swap presets default `date_generation_rule` to `Backward` on the "
+            "OIS / vanilla swap trade blocks (market standard, see the preset's "
+            "`field_provenance`); the engine's own swap fixtures use `Forward`. The leg "
+            "overrides (`<leg>_overrides.schedule.date_generation_rule`) set it per trade.",
+        ],
+    },
+    {
         "slug": "error-codes",
         "title": "Error codes and what they mean",
         "summary": (
@@ -869,3 +1084,218 @@ TOPICS: list[Topic] = [
         "gaps": [],
     },
 ]
+
+
+#: The connector-analytics page: what THIS server computes on top of engine outputs,
+#: cited into this repository's own source (working tree at generation time, cited at
+#: the short sha of HEAD). Rendered by ``methodology_gen.render_connector_topic``.
+CONNECTOR_TOPIC: Topic = {
+    "slug": "connector-analytics",
+    "title": "Connector analytics: swap_dv01, key_rate_ladder, scenario, fair_rate, reprice_with",
+    "summary": (
+        "These five tools never price anything themselves. Every NPV they report is an engine "
+        "output of a complete pricing request (echoed in `calls[*].result.request` / "
+        "`base.request` / `changed.request`). What this server adds is (1) the edit of the "
+        "request (a quote bumped by `bump_bp / 10 000`, a quote replaced, a field set) and "
+        "(2) a subtraction, a halving or a sum of those engine NPVs. Every such derived number "
+        "sits next to the raw per-call NPVs so it can be redone by hand."
+    ),
+    "ledger": [
+        (
+            "`calls[*].npv`, `npvs.*`, `ladder[*].npv_up` / `npv_down`, `table[*].npv`, "
+            "`base` / `changed` results",
+            "engine output (NPV of the request shown)",
+        ),
+        ("`fair_rate`, `fair_spread`", "engine output, read from the response; never solved here"),
+        (
+            "`swap_dv01.dv01`",
+            "connector arithmetic: (npv_up - npv_down) / 2 (centered), "
+            "npv_up - base_npv (up) or base_npv - npv_down (down)",
+        ),
+        (
+            "`key_rate_ladder.ladder[*].dv01`, `parallel.dv01`",
+            "connector arithmetic: the same difference per pillar / for all pillars",
+        ),
+        ("`key_rate_ladder.sum_of_buckets`", "connector arithmetic: sum of the ladder dv01s"),
+        ("`scenario.table[*].change`", "connector arithmetic: npv - base_npv"),
+        ("`reprice_with.differences.fields.*.difference`", "connector arithmetic: changed - base"),
+        (
+            "`compare_results.rows[*].abs_diff` / `rel_diff`",
+            "connector arithmetic: quantra - external; abs_diff / |external|",
+        ),
+        (
+            "bumped quotes (`bumped_quotes`, `calls[*].edits`, `changes_applied`)",
+            "connector "
+            "edit of the request: quote + bump_bp / 10 000 (futures price - bump_bp / 100), or the "
+            "value set",
+        ),
+    ],
+    "statements": [
+        s(
+            "A bump is a pure edit of the engine `TermStructure`: `bump_bp / 10_000` is added "
+            "to the pillar's quoted rate or spread; a futures pillar moves by `-bump_bp / 100`; "
+            "nothing else is computed.",
+            c(
+                BUMPS_PY,
+                r'^"""Quote bumps for the analytics tools',
+                r"are rejected with a message that names them\.",
+            ),
+        ),
+        s(
+            "Which field is bumped per point type, and which point types cannot be bumped in bp "
+            "(discount factors, FX points; bond clean prices and `quote_id` pillars are refused "
+            "in `_quote`).",
+            c(
+                BUMPS_PY,
+                r"^#: point_type -> \(quote field, scale applied to bump_bp\)",
+                r"^}$",
+                nth=1,
+            ),
+        ),
+        s(
+            "Unbumpable point types and the reason reported.",
+            c(BUMPS_PY, r"^_UNBUMPABLE: dict\[str, str\] = \{", r"^}$"),
+        ),
+        s(
+            "The bump arithmetic itself (`after = before + bump_bp * scale`), recorded as "
+            "`{curve, pillar, point_type, field, from, to, bump_bp}`.",
+            c(
+                BUMPS_PY,
+                r"scale = -0\.01 if p\.field == \"futures_price\" else BP",
+                r"\"bump_bp\": bump_bp,",
+            ),
+        ),
+        s(
+            "A `replace_quotes` entry sets one pillar's quote to the given value (no arithmetic).",
+            c(BUMPS_PY, r"^def replace_quote\(", r"point\[p\.field\] = float\(value\)"),
+        ),
+        s(
+            "Every reprice goes through the SAME pricing tool the trade would normally use "
+            "(`price_vanilla_swap` / `price_ois_swap` internals), so each `calls[*].result` is "
+            "a complete, replayable pricing result.",
+            c(
+                ANALYTICS_PY,
+                r"^async def _price_spec\(",
+                r"\"\"\"Reprice ``spec`` on a \(possibly bumped\) pricing block",
+            ),
+        ),
+        s(
+            "The NPV read from each engine response is `swaps[0].npv`, unchanged.",
+            c(ANALYTICS_PY, r"^def _npv\(result: ToolResult\)", r"^    return None$"),
+        ),
+        s(
+            "`spot` / tenor dates are resolved by the engine once (base call) and pinned for "
+            "every reprice, so bumped requests differ from the base only in the quotes moved.",
+            c(ANALYTICS_PY, r"^def _pin_dates\(", r"^    return spec$"),
+        ),
+        s(
+            "DV01 methods: which bumped reprices each needs (`centered` = up and down; `up`; "
+            "`down`).",
+            c(ANALYTICS_PY, r"^def _sides\(", r"return \[\(\"down\", -bump_bp\)\]"),
+        ),
+        s(
+            "The DV01 arithmetic: centered = (npv_up - npv_down) / 2; up = npv_up - base_npv; "
+            "down = base_npv - npv_down. Nothing else.",
+            c(ANALYTICS_PY, r"^def dv01_of\(", r"return base_npv - npvs\[\"down\"\]"),
+        ),
+        s(
+            "`swap_dv01`: every pillar of the selected curve(s) is bumped on each side the "
+            "method needs; the per-call NPVs are reported as `npvs`, the derived number as "
+            "`dv01` with its `dv01_definition`.",
+            c(
+                ANALYTICS_PY,
+                r"for label, signed in _sides\(method, bump_bp\):",
+                r"bumped_quotes=quotes,",
+            ),
+        ),
+        s(
+            "`key_rate_ladder`: the buckets are the curve's ACTUAL pillars in wire order; one "
+            "reprice per pillar and side plus a parallel reprice per side.",
+            c(
+                ANALYTICS_PY,
+                r"sides = _sides\(method, bump_bp\)",
+                r"f\"pillar:\{p\.label\}:\{side\}\", r\.with_curves",
+            ),
+        ),
+        s(
+            "`key_rate_ladder` rows: `dv01` per pillar from that pillar's own up / down NPVs; "
+            "`sum_of_buckets` is their sum; `parallel.dv01` is the same difference with every "
+            "pillar bumped together.",
+            c(
+                ANALYTICS_PY,
+                r"by_label = \{c\[\"label\"\]: c for c in r\.calls\[1:\]\}",
+                r"parallel\[\"dv01\"\] = dv01_of\(method, r\.base_npv, par_npvs\)",
+            ),
+        ),
+        s(
+            "`scenario`: `change = npv - base_npv` per named market variant; `edits` counts the "
+            "quotes moved (listed in `calls[*].edits`).",
+            c(
+                ANALYTICS_PY,
+                r"rows: list\[dict\[str, Any\]\] = \[",
+                r"definitions=\{\"change\": \"npv - base_npv",
+            ),
+        ),
+        s(
+            "`fair_rate`: `fair_rate` / `fair_spread` are read from the engine response; when "
+            "absent the tool says so and solves nothing.",
+            c(
+                ANALYTICS_PY,
+                r"swap = _swap0\(base\[\"result\"\]\) or \{\}",
+                r"message=None if fields else",
+            ),
+        ),
+        s(
+            "Reprices fan out concurrently, bounded by `QUANTRA_MAX_CONCURRENCY`; a failed "
+            "reprice fails the whole result with its engine error.",
+            c(ANALYTICS_PY, r"^    async def fan_out\(", r"^        return None$"),
+        ),
+        s(
+            "`reprice_with`: a change is either `value` (set, any JSON) or `bump_bp` (add "
+            "`bump_bp / 10_000` to an existing numeric field); what was done is recorded "
+            "as `{path, kind, before, after}`.",
+            c(RECONCILE_PY, r"^def apply_change\(", r"\"after\": after,"),
+        ),
+        s(
+            "`reprice_with.request_diff`: every leaf that differs between the two requests.",
+            c(
+                RECONCILE_PY,
+                r"^def request_diff\(",
+                r"\"\"\"Every leaf that differs between two JSON values",
+            ),
+        ),
+        s(
+            "`reprice_with.differences`: the numeric top-level fields of the first priced item, "
+            "`difference = changed - base` (subtraction only).",
+            c(
+                RECONCILE_PY,
+                r"^def numeric_differences\(",
+                r"\"arithmetic\": \"difference = changed - base \(subtraction only\)\",",
+            ),
+        ),
+        s(
+            "`compare_results`: `abs_diff = quantra - external`, `rel_diff = abs_diff / "
+            "|external|` (null when external is 0).",
+            c(
+                RECONCILE_PY,
+                r"row\[\"abs_diff\"\] = value - ext",
+                r"row\[\"rel_diff\"\] = \(value - ext\) / abs\(ext\) if ext != 0 else None",
+            ),
+        ),
+    ],
+    "gaps": [
+        "No sensitivity is analytic here: a DV01 is a finite difference of two engine NPVs "
+        "1bp apart (or base and one bump); convexity is what makes `up`, `down` and `centered` "
+        "differ, and what makes `sum_of_buckets` differ from `parallel.dv01`.",
+        "A bumped pillar is re-bootstrapped by the engine with its neighbours fixed, so a "
+        "key-rate bucket reshapes the forwards around that pillar; a small bucket may carry "
+        "either sign.",
+        "Bumps are applied to the quotes of the curve as given in the market (par rates, "
+        "spreads, futures prices, zero / forward values). Discount-factor value curves cannot "
+        "be bumped in bp; paste a zero or forward table, or use `reprice_with` on a specific "
+        "field instead.",
+        "Nothing here is a vendor's definition of DV01 / PV01 / key-rate; when a vendor "
+        "reports a one-sided or a 1bp-up number, choose `method` accordingly and compare like "
+        "with like.",
+    ],
+}

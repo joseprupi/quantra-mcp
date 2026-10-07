@@ -194,16 +194,20 @@ def register(app: MCPServer) -> None:
             "How the engine computes what it returns: one page per topic (npv, fair-rate, "
             "greeks-bump-and-reprice, theta, curve-bootstrap, value-curves, "
             "settlement-and-cash-settlement, volatility-types, calendars-and-overrides, "
-            "day-counters-and-compounding, error-codes), generated from the engine's own docs "
-            "and source at the pin with path@tag:line citations."
+            "day-counters-and-compounding, schedules-and-stubs, error-codes), generated from "
+            "the engine's own docs and source at the pin with path@tag:line citations and "
+            "GitHub permalinks; plus connector-analytics (what this server computes on top of "
+            "engine outputs, cited into its own source). The two repository URLs come first."
         ),
         mime_type="application/json",
     )
     def methodology_index() -> dict[str, Any]:
         index = methodology.load_index()
         return {
+            "repos": methodology.repos(),
             "engine_tag": index["engine_tag"],
             "engine_sha": index["engine_sha"],
+            "connector_sha": index["connector_sha"],
             "topics": methodology.topics(),
             "metric_topics": index["metric_topics"],
         }
@@ -213,8 +217,10 @@ def register(app: MCPServer) -> None:
         name="methodology-page",
         description=(
             "One methodology page as markdown, e.g. quantra://methodology/theta: plain-language "
-            "summary, the engine's own excerpts each cited path@tag:Lstart-Lend, the request "
-            "fields that control it, and what the engine does not document."
+            "summary, the engine's own excerpts each cited path@tag:Lstart-Lend with a GitHub "
+            "permalink, the request fields that control it, and what the engine does not "
+            "document. quantra://methodology/connector-analytics documents this server's own "
+            "arithmetic (DV01 differences, bumps, reprice diffs) cited into its source."
         ),
         mime_type="text/markdown",
     )

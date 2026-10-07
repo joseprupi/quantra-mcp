@@ -1,6 +1,6 @@
 # Value curves: zero, discount-factor and forward points
 
-_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.7.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 A curve given as values rather than par quotes interpolates ONE quantity: zero rates (`InterpolatedZero`), discount factors (`InterpolatedDiscount`) or instantaneous continuously-compounded forwards (`InterpolatedFwd`). The three disagree between nodes for the same market, so which table was pasted matters.
 
@@ -28,6 +28,8 @@ table ZeroRatePoint {
 
 Source: `flatbuffers/fbs/term_structure.fbs@v0.7.0:L205-L219`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/term_structure.fbs#L205-L219>
+
 ### 2. Discount-factor point: feeds a QuantLib `InterpolatedDiscountCurve`; the factor must be in (0, 1] and the first point (reference date) must be exactly 1.0.
 
 ````text
@@ -48,6 +50,8 @@ table DiscountFactorPoint {
 ````
 
 Source: `flatbuffers/fbs/term_structure.fbs@v0.7.0:L221-L234`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/term_structure.fbs#L221-L234>
 
 ### 3. Forward-rate point: the INSTANTANEOUS continuously-compounded forward f(t), not a period forward; a different interpolated quantity, so off-node values differ.
 
@@ -74,6 +78,8 @@ table ForwardRatePoint {
 
 Source: `flatbuffers/fbs/term_structure.fbs@v0.7.0:L236-L253`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/term_structure.fbs#L236-L253>
+
 ### 4. The three interpolated families are distinct curves; explicit zero curves must say `InterpolatedZero`; all zero points in one curve share one compounding / frequency; `InterpolatedFwd` allows Linear / BackwardFlat / ForwardFlat only.
 
 ````text
@@ -93,6 +99,8 @@ mis-built before).
 ````
 
 Source: `docs/versioning.md@v0.7.0:L145-L157`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/versioning.md#L145-L157>
 
 ### 5. Sampling zeros back out: by default on the curve's day counter, continuous compounding; forwards default to simple compounding and the instantaneous definition.
 
@@ -120,6 +128,8 @@ table ForwardRateQuery {
 
 Source: `flatbuffers/fbs/curve_query.fbs@v0.7.0:L24-L42`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/curve_query.fbs#L24-L42>
+
 ## Request fields that control it
 
 - `bootstrap_trait` = `InterpolatedZero` | `InterpolatedDiscount` | `InterpolatedFwd`; `interpolator`; per-point `compounding` / `frequency` (zero points only).
@@ -137,6 +147,8 @@ enum BootstrapTrait : byte {
 ````
 
 Source: `flatbuffers/fbs/enums.fbs@v0.7.0:L37-L45`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/enums.fbs#L37-L45>
 
 ## Not documented in engine v0.7.0
 

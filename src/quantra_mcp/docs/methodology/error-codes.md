@@ -1,6 +1,6 @@
 # Error codes and what they mean
 
-_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.7.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 400 = the request is wrong (missing field, bad date, unsupported combination); 422 = well-formed but unpriceable (a QuantLib-level failure); 404 = a referenced id is not in the request's pricing block. Retrying without changing the payload never helps. The `error` field carries the cause.
 
@@ -30,6 +30,8 @@ _Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca
 ````
 
 Source: `docs/http-api.md@v0.7.0:L7-L24`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/http-api.md#L7-L24>
 
 ### 2. Status code table.
 
@@ -61,6 +63,8 @@ changing the payload will not help.
 
 Source: `docs/http-api.md@v0.7.0:L26-L48`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/http-api.md#L26-L48>
+
 ### 3. Error body: `error` is the field to read; `code` / `code_name` are the gRPC status; `message` repeats `error`.
 
 ````text
@@ -84,6 +88,8 @@ Every non-2xx response is a JSON object:
 
 Source: `docs/http-api.md@v0.7.0:L50-L65`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/http-api.md#L50-L65>
+
 ### 4. Which omissions are 400s (0.5.0 list).
 
 ````text
@@ -104,6 +110,8 @@ Source: `docs/http-api.md@v0.7.0:L50-L65`
 
 Source: `docs/versioning.md@v0.7.0:L159-L171`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/versioning.md#L159-L171>
+
 ### 5. Headers: `X-Quantra-Api-Version` on every POST response; `X-Request-Id` echoed when sent.
 
 ````text
@@ -119,6 +127,8 @@ correlate a client-side failure with the engine log lines that produced it.
 ````
 
 Source: `docs/http-api.md@v0.7.0:L67-L75`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/http-api.md#L67-L75>
 
 ## Not documented in engine v0.7.0
 

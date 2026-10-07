@@ -1,5 +1,64 @@
 # Changelog
 
+## 0.1.4 (2026-10-07)
+
+Connector self-documentation, centered DV01, front-stub default (M5.4). Driven by two
+live reconciliations against vendor swap screens: the server works; these are the gaps
+they exposed.
+
+- New methodology topic `connector-analytics` (`quantra://methodology/connector-analytics`,
+  `explain_method("connector-analytics")`): what `swap_dv01`, `key_rate_ladder`,
+  `scenario`, `fair_rate` and `reprice_with` compute on top of engine outputs, GENERATED
+  from this repository's own source (`builders/bumps.py`, `tools/analytics.py`,
+  `tools/reconcile.py`) with the same anchor / excerpt mechanism as the engine pages:
+  `path@<short sha>:Lstart-Lend` citations plus
+  `https://github.com/joseprupi/quantra-mcp/blob/<sha>/<path>#L..` permalinks, 20
+  citations. The page opens with a ledger of which result fields are engine outputs and
+  which are differences computed here. `scripts/methodology_gen.py --connector-only`
+  regenerates it after a source commit; a test asserts every cited range exists in the
+  working tree with a byte-identical excerpt.
+- New engine methodology topic `schedules-and-stubs` (12 citations): the `Schedule`
+  table and its stub anchors, the date-generation and business-day enums, the
+  schedule parser (required fields, stub validation, the QuantLib `Schedule`
+  constructor call), the rule mapping, the 0.7.0 stub note and the catalog's stub
+  examples; Forward vs Backward stub placement, `termination_date_convention` and
+  `end_of_month` behaviour stated as "not documented in engine prose, QuantLib semantics".
+- `curve-bootstrap` now excerpts the engine's C++ (14 citations): the required
+  trait / interpolator / day-counter guards, the helper-to-`buildCurve` dispatch, the
+  `PiecewiseYieldCurve<Discount | ZeroYield | ForwardRate, LogLinear>` instantiation
+  (tolerance 1e-15), the `LogCubic` / fail-closed branch, and the `OISRateHelper` and
+  `SwapRateHelper` constructions field by field.
+- Every methodology citation now carries a GitHub permalink right after its `Source:`
+  line (`https://github.com/joseprupi/quantraserver/blob/v0.7.0/<path>#Lstart-Lend`);
+  `INDEX.json`, the `quantra://methodology` index (first entry) and `explain_method`
+  (`repos`, `links`, `repository`) carry the two repository URLs. 128 citations over 13
+  topics (28 engine files at `v0.7.0`, 3 connector files).
+- `swap_dv01` / `key_rate_ladder`: new `method` = `centered` (default) | `up` | `down`.
+  Centered = `(NPV(+bp) - NPV(-bp)) / 2` from three engine calls (base, up, down);
+  `up` = `NPV(+bp) - NPV(base)`; `down` = `NPV(base) - NPV(-bp)`. Results carry every
+  per-call NPV (`npvs`; `npv_up` / `npv_down` per ladder row and for `parallel`) and a
+  `dv01_definition` for the method used; `bumped_quotes` is keyed by side; call labels
+  are `base` / `up` / `down` and `parallel:<side>` / `pillar:<label>:<side>`. `bump_bp`
+  must be positive (the method sets the sign). Live on the 5Y EUR fixture the centered
+  parallel DV01 is bracketed by the one-sided numbers (see the live test's printout).
+- `market_data_source` (M5.3 enum, same stamping) is now required on `swap_dv01`,
+  `key_rate_ladder`, `scenario` and `fair_rate`; `reprice_with` carries the declaration
+  of the result it reprices (noted), requires it for an explicit `{endpoint, body}` or an
+  unstamped result, and refuses a disagreeing one.
+- Presets: the `trades.ois_swap` blocks of `USD_SOFR_OIS` and `EUR_ESTR_OIS` and the
+  `trades.vanilla_swap` blocks of `EUR_EURIBOR_6M` and `EUR_EURIBOR_3M` now default
+  `schedule.date_generation_rule` to `Backward` (short front stub, the market default for
+  odd-dated swaps) with a `field_provenance` note: market standard, verified against a
+  vendor screen of a 15-month USD SOFR OIS (2023-08-17) where Backward matched the
+  screen NPV within 1 USD and Forward was 5,400 USD away; no vendor fixture is vendored.
+  The engine fixtures these blocks otherwise follow use Forward, so the fixture
+  reproductions (`price_vanilla_swap`, `price_ois_swap`, the blog OIS, the swaption
+  underlyings) set `Forward` explicitly through the leg overrides and remain JSON-equal
+  (goldens unchanged). For a regular spot-start tenor the two rules generate the same
+  dates (the 5Y EUR analytics fixture still reproduces its catalog NPV under Backward).
+- Instructions: the developer paragraph names the connector-analytics page and the two
+  repository URLs so an agent can hand over the links.
+
 ## 0.1.3 (2026-10-07)
 
 Absolute rule on market data (M5.3). Observed live: asked only what market data a

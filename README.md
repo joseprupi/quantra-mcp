@@ -424,14 +424,21 @@ through the same `price_vanilla_swap` / `price_ois_swap` path under bumped
 markets and report engine outputs plus their differences, never a locally
 computed sensitivity. A bump adds `bp / 10 000` to a pillar's quoted rate or
 spread (a futures price moves by `-bp / 100`); discount-factor points, bond
-clean prices, FX points and `quote_id` pillars are refused by name. Every
-result carries `calls`, the complete uniform pricing result of each reprice
-(base, bumped, one per pillar, one per scenario) with its echoed `request`, so
-each number can be replayed with curl and each difference redone by hand.
-`spot` / tenor dates are resolved by the engine once in the base call and
-pinned for the reprices, so bumped requests differ from the base only in the
-quotes that moved. Reprices fan out concurrently, bounded by
-`QUANTRA_MAX_CONCURRENCY` (default 4).
+clean prices, FX points and `quote_id` pillars are refused by name. A DV01 is
+a finite difference of engine NPVs and `method` says which: `centered`
+(default) = `(NPV(+bp) - NPV(-bp)) / 2` from three engine calls, `up` =
+`NPV(+bp) - NPV(base)`, `down` = `NPV(base) - NPV(-bp)`; every per-call NPV is
+reported next to it with a `dv01_definition`. Every result carries `calls`,
+the complete uniform pricing result of each reprice (base, up / down, one per
+pillar and side, one per scenario) with its echoed `request`, so each number
+can be replayed with curl and each difference redone by hand. `spot` / tenor
+dates are resolved by the engine once in the base call and pinned for the
+reprices, so bumped requests differ from the base only in the quotes that
+moved. Reprices fan out concurrently, bounded by `QUANTRA_MAX_CONCURRENCY`
+(default 4). All four take the same required `market_data_source` declaration
+as the pricing tools. What the connector computes (and what it does not) is
+documented and cited into this repository's source at
+`quantra://methodology/connector-analytics` (`explain_method("connector-analytics")`).
 
 `trade` is the swap to reprice: `product` (`vanilla_swap` | `ois_swap`),
 `preset`, `discounting_curve`, `forwarding_curve` and the pricing tool's own
@@ -440,24 +447,25 @@ economics (`swap_type`, `notional`, `fixed_rate`, `effective_date`, `tenor` |
 
 | Tool | Does |
 |---|---|
-| `swap_dv01(market, trade, bump_bp=1.0, scope=all\|discounting\|forwarding)` | Reprices with every pillar of the selected curve(s) bumped. `base_npv`, `bumped_npv`, `dv01 = bumped_npv - base_npv`, `bumped_quotes` (from/to per pillar), `calls` = the two pricing results. |
-| `key_rate_ladder(market, trade, bump_bp=1.0, curve?)` | Buckets = the curve's actual pillars in wire order (default: the discounting curve). `ladder` = `[{pillar, quote_from, quote_to, bumped_npv, dv01}]`, `parallel` (all pillars together), `sum_of_buckets`; `calls` = base + parallel + one per pillar. |
-| `scenario(market, trade, scenarios)` | `[{name, bumps: [{curve, bp, pillar?}], replace_quotes: [{curve, pillar, value}]}]`; `pillar` is a label (`5Y`, `3x6`, `FUT 2025-03-19`, a value-point date) or a 0-based index, omitted = the whole curve. `table` = `[{name, npv, change = npv - base_npv, edits}]` starting with `base`. |
-| `fair_rate(market, trade)` | The engine's `fair_rate` / `fair_spread` from the pricing response; `provided_by_engine` false + a message when the product's response has neither (nothing is solved locally). |
+| `swap_dv01(market, market_data_source, trade, bump_bp=1.0, method=centered\|up\|down, scope=all\|discounting\|forwarding)` | Reprices with every pillar of the selected curve(s) bumped on each side the method needs. `base_npv`, `npvs` (base / up / down), `dv01`, `dv01_definition`, `bumped_quotes` (from/to per pillar and side), `calls` = the complete pricing results (3 for centered, 2 one-sided). |
+| `key_rate_ladder(market, market_data_source, trade, bump_bp=1.0, method=centered\|up\|down, curve?)` | Buckets = the curve's actual pillars in wire order (default: the discounting curve). `ladder` = `[{pillar, quote_from, quote_up / quote_down, npv_up / npv_down, dv01}]`, `parallel` (all pillars together), `sum_of_buckets`, `definitions`; `calls` = base + parallel per side + one per pillar and side. |
+| `scenario(market, market_data_source, trade, scenarios)` | `[{name, bumps: [{curve, bp, pillar?}], replace_quotes: [{curve, pillar, value}]}]`; `pillar` is a label (`5Y`, `3x6`, `FUT 2025-03-19`, a value-point date) or a 0-based index, omitted = the whole curve. `table` = `[{name, npv, change = npv - base_npv, edits}]` starting with `base`. |
+| `fair_rate(market, market_data_source, trade)` | The engine's `fair_rate` / `fair_spread` from the pricing response; `provided_by_engine` false + a message when the product's response has neither (nothing is solved locally). |
 
 Live on the engine fixture `irs_eur_5y_payer_ois_discounted_multicurve` (10m
-5Y EUR payer, OIS-discounted): `swap_dv01` with both curves bumped +1bp, the
-`EUR_6M_CURVE` ladder summing to its parallel bump within 2%, a receiver
-ladder negative and concentrated at the 5Y pillar, and a zero-bump scenario
-reproducing the base NPV (`tests/live/test_live_analytics.py`).
+5Y EUR payer, OIS-discounted): `swap_dv01` centered with both curves bumped
++-1bp bracketed by its `up` / `down` one-sided numbers, the `EUR_6M_CURVE`
+ladder summing to its parallel bump within 2%, a receiver ladder negative and
+concentrated at the 5Y pillar, and a zero-bump scenario reproducing the base
+NPV (`tests/live/test_live_analytics.py`).
 
 ## Reconciliation and methodology
 
 | Tool | What it does |
 |---|---|
-| `explain_method(topic)` | How the engine computes something, from its own docs and source at the pin: `npv`, `fair-rate`, `greeks-bump-and-reprice`, `theta`, `curve-bootstrap`, `value-curves`, `settlement-and-cash-settlement`, `volatility-types`, `calendars-and-overrides`, `day-counters-and-compounding`, `error-codes`. Every statement is a verbatim excerpt with a `path@tag:Lstart-Lend` citation; each page ends with what the engine does not document. Generated by `scripts/pin_engine.py`, never hand-written. No engine call. |
+| `explain_method(topic)` | How the engine computes something, from its own docs and source at the pin: `npv`, `fair-rate`, `greeks-bump-and-reprice`, `theta`, `curve-bootstrap` (incl. the C++ that instantiates `PiecewiseYieldCurve` and `OISRateHelper`), `value-curves`, `settlement-and-cash-settlement`, `volatility-types`, `calendars-and-overrides`, `day-counters-and-compounding`, `schedules-and-stubs`, `error-codes`; and `connector-analytics`, what this server computes on top of engine outputs (bumps, DV01 differences, scenario changes, reprice diffs), cited into its own source at a commit. Every statement is a verbatim excerpt with a `path@tag:Lstart-Lend` citation and a GitHub permalink; each page ends with what is not documented. Generated by `scripts/pin_engine.py` / `scripts/methodology_gen.py`, never hand-written. No engine call. |
 | `compare_results(external, quantra)` | The user's `{label: number}` next to the first priced item of a result: `abs_diff = quantra - external`, `rel_diff = abs_diff / \|external\|`, label mapping shown (premium / PV -> `npv`, PV01 -> `dv01`, fair rate -> `fair_rate` then `atm_forward`, ...), unmapped labels with the reason, and per metric the methodology topic to consult. Pure presentation, no engine call. |
-| `reprice_with(result_or_request, changes, reprice_base=False, validate=True)` | Edit fields of a previous result's echoed request (or an explicit `{endpoint, body}`) by path (`[{path, value}]` or `[{path, bump_bp}]`, e.g. `swaptions[0].swaption.settlement_method`, `pricing.rates.curves[0].interpolator`, `pricing.as_of_date`), validate, reprice; returns `changes_applied`, `request_diff` (every differing leaf), both complete results and the numeric `differences` of the first item (`changed - base`). The generic "test the hypothesis" primitive. |
+| `reprice_with(result_or_request, changes, market_data_source?, reprice_base=False, validate=True)` | Edit fields of a previous result's echoed request (or an explicit `{endpoint, body}`) by path (`[{path, value}]` or `[{path, bump_bp}]`, e.g. `swaptions[0].swaption.settlement_method`, `pricing.rates.curves[0].interpolator`, `pricing.as_of_date`), validate, reprice; returns `changes_applied`, `request_diff` (every differing leaf), both complete results and the numeric `differences` of the first item (`changed - base`). The generic "test the hypothesis" primitive. |
 
 ## Resources
 
@@ -473,7 +481,7 @@ reproducing the base NPV (`tests/live/test_live_analytics.py`).
 | `quantra://examples/{name}` | An example body by name (any category), e.g. `quantra://examples/sofr-ois-swap-request`; a category name lists that category. |
 | `quantra://pin` | The engine tag, commit and image this server is pinned to. |
 | `quantra://presets/{id}` | A market-convention preset as data with per-field provenance (`quantra://presets` lists them). |
-| `quantra://methodology` | Index of the methodology pages (topic, title, summary, citation count) and the metric -> topic map. |
+| `quantra://methodology` | The two repository URLs (engine, connector), then the index of the methodology pages (topic, title, summary, source, citation count) and the metric -> topic map. |
 | `quantra://methodology/{topic}` | One methodology page as markdown, e.g. `quantra://methodology/theta`: summary, the engine's cited excerpts, the request fields that control it, what is not documented. |
 
 ## Prompts

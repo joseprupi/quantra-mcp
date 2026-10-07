@@ -116,11 +116,19 @@ build_query -> bootstrap_curve; session_put stores a built curve so later calls 
 whose trade block supplies every convention, and the trade economics; "spot" and
 tenor dates are resolved by the engine's /calendar-advance and reported in
 `date_resolution`. Analytics by composition: swap_dv01, key_rate_ladder, scenario,
-fair_rate (each reprice's full result is in `calls`). Reconciliation: compare_results
+fair_rate (each reprice's full result is in `calls`; DV01 `method` centered | up | down,
+centered by default = (NPV(+bp) - NPV(-bp)) / 2). Reconciliation: compare_results
 (external {label: number} vs a result; abs / rel differences; topic per metric),
 explain_method(topic) (the cited methodology page) and reprice_with(result, changes)
 (edit fields of an echoed request by path, reprice, diff both requests and the numeric
-fields). Every result echoes the exact
+fields). The connector-side computations (bumps, DV01 differences, scenario changes,
+reprice diffs) are documented and cited into this server's own source at
+quantra://methodology/connector-analytics, which also lists which result fields are
+engine outputs and which are differences computed here. Every citation carries a GitHub
+permalink; the two repositories are the engine https://github.com/joseprupi/quantraserver
+(cited at the pinned tag) and this server https://github.com/joseprupi/quantra-mcp (cited
+at a commit); both URLs are also the first entry of the quantra://methodology index.
+Every result echoes the exact
 request sent (`request`) and the engine body verbatim (`response`); on an engine error
 `ok` is false and `error` is the engine's text (400 = request wrong, 422 = well-formed
 but unpriceable). The engine does not default omitted fields; every convention a

@@ -1,6 +1,6 @@
 # Fair rate, fair spread, ATM forward
 
-_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.7.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 The engine reports QuantLib's `fairRate()` / `fairSpread()` for swaps, the curve-implied forward for FRAs, the par spread for CDS, and the ATM forward swap rate and annuity for swaptions (only when `swaption_pricing_details` is on).
 
@@ -14,6 +14,8 @@ The engine reports QuantLib's `fairRate()` / `fairSpread()` for swaps, the curve
 ````
 
 Source: `src/evaluators/vanilla_swap_evaluator.cpp@v0.7.0:L239-L240`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/vanilla_swap_evaluator.cpp#L239-L240>
 
 ### 2. With a notionals vector the engine reproduces the same formula explicitly: fair rate = fixed rate - NPV / (fixed-leg BPS / 1bp); fair spread likewise on the floating leg.
 
@@ -33,6 +35,8 @@ Source: `src/evaluators/vanilla_swap_evaluator.cpp@v0.7.0:L239-L240`
 
 Source: `src/evaluators/vanilla_swap_evaluator.cpp@v0.7.0:L330-L340`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/vanilla_swap_evaluator.cpp#L330-L340>
+
 ### 3. A swap with a CMS leg has no fair rate / spread; the engine reports 0.0 there by design.
 
 ````cpp
@@ -44,6 +48,8 @@ Source: `src/evaluators/vanilla_swap_evaluator.cpp@v0.7.0:L330-L340`
 
 Source: `src/evaluators/vanilla_swap_evaluator.cpp@v0.7.0:L452-L455`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/vanilla_swap_evaluator.cpp#L452-L455>
+
 ### 4. OIS swap: `fair_rate` / `fair_spread` are `OvernightIndexedSwap::fairRate()` / `fairSpread()`.
 
 ````cpp
@@ -52,6 +58,8 @@ Source: `src/evaluators/vanilla_swap_evaluator.cpp@v0.7.0:L452-L455`
 ````
 
 Source: `src/evaluators/ois_swap_evaluator.cpp@v0.7.0:L124-L125`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/ois_swap_evaluator.cpp#L124-L125>
 
 ### 5. CDS: `fair_spread` is the par spread in decimal, absent when QuantLib cannot express it (e.g. zero running coupon); `fair_upfront` is the upfront for the par spread.
 
@@ -65,6 +73,8 @@ Source: `src/evaluators/ois_swap_evaluator.cpp@v0.7.0:L124-L125`
 
 Source: `flatbuffers/fbs/cds_response.fbs@v0.7.0:L8-L12`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/cds_response.fbs#L8-L12>
+
 ### 6. FRA: `forward_rate` is the implied forward from the forwarding curve.
 
 ````text
@@ -73,6 +83,8 @@ Source: `flatbuffers/fbs/cds_response.fbs@v0.7.0:L8-L12`
 ````
 
 Source: `flatbuffers/fbs/fra_response.fbs@v0.7.0:L6-L7`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/fra_response.fbs#L6-L7>
 
 ### 7. Swaption: `atm_forward` is the ATM forward swap rate and `annuity` the underlying swap's annuity (PV01-style), both diagnostics.
 
@@ -85,6 +97,8 @@ Source: `flatbuffers/fbs/fra_response.fbs@v0.7.0:L6-L7`
 
 Source: `flatbuffers/fbs/swaption_response.fbs@v0.7.0:L12-L15`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/swaption_response.fbs#L12-L15>
+
 ### 8. Those swaption diagnostics are read from QuantLib's additional results only when `swaption_pricing_details` is set.
 
 ````cpp
@@ -96,6 +110,8 @@ Source: `flatbuffers/fbs/swaption_response.fbs@v0.7.0:L12-L15`
 
 Source: `src/evaluators/swaption_evaluator.cpp@v0.7.0:L621-L624`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/swaption_evaluator.cpp#L621-L624>
+
 ## Request fields that control it
 
 - `pricing.options.swaption_pricing_details` turns the swaption analytics on.
@@ -106,6 +122,8 @@ Source: `src/evaluators/swaption_evaluator.cpp@v0.7.0:L621-L624`
 ````
 
 Source: `flatbuffers/fbs/pricing.fbs@v0.7.0:L60-L61`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/pricing.fbs#L60-L61>
 
 ## Not documented in engine v0.7.0
 

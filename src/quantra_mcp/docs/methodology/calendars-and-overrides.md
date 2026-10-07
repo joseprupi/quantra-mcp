@@ -1,6 +1,6 @@
 # Calendars, business-day rules and per-request holiday overrides
 
-_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.7.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 Every date adjustment uses the calendar and business-day convention the request states (nothing is defaulted). A request may add or remove holidays for a calendar for its own duration via `calendar_overrides`; nothing is stored.
 
@@ -23,6 +23,8 @@ enum BusinessDayConvention : byte {
 
 Source: `flatbuffers/fbs/enums.fbs@v0.7.0:L107-L116`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/enums.fbs#L107-L116>
+
 ### 2. Date generation rules available.
 
 ````text
@@ -40,6 +42,8 @@ enum DateGenerationRule : byte {
 ````
 
 Source: `flatbuffers/fbs/enums.fbs@v0.7.0:L135-L145`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/enums.fbs#L135-L145>
 
 ### 3. Schedules: `end_of_month` is presence-required; `first_date` / `next_to_last_date` control the first / last stub.
 
@@ -62,6 +66,8 @@ Source: `flatbuffers/fbs/enums.fbs@v0.7.0:L135-L145`
 ````
 
 Source: `flatbuffers/fbs/schedule.fbs@v0.7.0:L14-L28`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/schedule.fbs#L14-L28>
 
 ### 4. Where `calendar_overrides` goes and its shape.
 
@@ -92,6 +98,8 @@ The shape is the same in both places: a list with one entry per calendar.
 
 Source: `docs/http-api.md@v0.7.0:L77-L98`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/http-api.md#L77-L98>
+
 ### 5. Semantics: an override applies to every use of that calendar in the request; an already-true override is accepted with no effect.
 
 ````text
@@ -111,6 +119,8 @@ Source: `docs/http-api.md@v0.7.0:L77-L98`
 ````
 
 Source: `docs/http-api.md@v0.7.0:L143-L155`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/http-api.md#L143-L155>
 
 ### 6. Rejected override requests (400 naming the field path).
 
@@ -140,6 +150,8 @@ report per-item errors inside a `200` response.
 
 Source: `docs/http-api.md@v0.7.0:L157-L177`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/http-api.md#L157-L177>
+
 ### 7. Notes: `UnitedStates` == `UnitedStatesSettlement`; an added holiday can move a fixing before as-of (422 unless the fixing is supplied); cached curves are kept per override set.
 
 ````text
@@ -163,6 +175,8 @@ Source: `docs/http-api.md@v0.7.0:L157-L177`
 
 Source: `docs/http-api.md@v0.7.0:L179-L194`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/http-api.md#L179-L194>
+
 ### 8. Implementation: overrides are applied to QuantLib's calendar state for one request and reset afterwards (a worker handles one request at a time).
 
 ````cpp
@@ -178,6 +192,8 @@ Source: `docs/http-api.md@v0.7.0:L179-L194`
 
 Source: `src/common/calendar_overrides.h@v0.7.0:L5-L12`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/common/calendar_overrides.h#L5-L12>
+
 ## Request fields that control it
 
 - `pricing.calendar_overrides` (or top-level on the calendar endpoints): `[{calendar, added_holidays, removed_holidays}]`.
@@ -189,6 +205,8 @@ Source: `src/common/calendar_overrides.h@v0.7.0:L5-L12`
 ````
 
 Source: `flatbuffers/fbs/pricing.fbs@v0.7.0:L84-L86`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/pricing.fbs#L84-L86>
 
 ## Not documented in engine v0.7.0
 

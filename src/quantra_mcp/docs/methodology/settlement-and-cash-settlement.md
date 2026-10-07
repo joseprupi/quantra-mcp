@@ -1,6 +1,6 @@
 # Swaption settlement type and method
 
-_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.7.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 `settlement_type` (Physical | Cash) is required. `settlement_method` (PhysicalOTC | PhysicalCleared | CollateralizedCashPrice | ParYieldCurve) has a wire default of PhysicalOTC and is passed straight to QuantLib's `Settlement::Method`; the engine documents no formula of its own.
 
@@ -31,6 +31,8 @@ table Swaption {
 
 Source: `flatbuffers/fbs/swaption.fbs@v0.7.0:L10-L27`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/swaption.fbs#L10-L27>
+
 ### 2. Settlement type values.
 
 ````text
@@ -42,6 +44,8 @@ enum SettlementType : byte {
 ````
 
 Source: `flatbuffers/fbs/enums.fbs@v0.7.0:L232-L236`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/enums.fbs#L232-L236>
 
 ### 3. Settlement method values.
 
@@ -56,6 +60,8 @@ enum SettlementMethod : byte {
 ````
 
 Source: `flatbuffers/fbs/enums.fbs@v0.7.0:L238-L244`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/enums.fbs#L238-L244>
 
 ### 4. Mapping to QuantLib: each method maps one-to-one onto `QuantLib::Settlement::Method`.
 
@@ -80,6 +86,8 @@ QuantLib::Settlement::Method SettlementMethodToQL(const quantra::enums::Settleme
 
 Source: `src/common/enum_convert.cpp@v0.7.0:L320-L335`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/common/enum_convert.cpp#L320-L335>
+
 ### 5. An unknown settlement type fails closed (never silently Physical).
 
 ````cpp
@@ -102,6 +110,8 @@ Source: `src/common/enum_convert.cpp@v0.7.0:L320-L335`
 
 Source: `src/evaluators/swaption_evaluator.cpp@v0.7.0:L164-L178`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/swaption_evaluator.cpp#L164-L178>
+
 ### 6. Bonds: `pricing.settlement_date` is the bond settlement date.
 
 ````text
@@ -110,6 +120,8 @@ Source: `src/evaluators/swaption_evaluator.cpp@v0.7.0:L164-L178`
 ````
 
 Source: `flatbuffers/fbs/pricing.fbs@v0.7.0:L71-L72`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/pricing.fbs#L71-L72>
 
 ## Request fields that control it
 
@@ -124,6 +136,8 @@ Source: `flatbuffers/fbs/pricing.fbs@v0.7.0:L71-L72`
 ````
 
 Source: `flatbuffers/fbs/swaption.fbs@v0.7.0:L15-L19`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/swaption.fbs#L15-L19>
 
 ## Not documented in engine v0.7.0
 

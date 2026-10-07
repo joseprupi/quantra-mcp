@@ -1,6 +1,6 @@
 # DV01, gamma, vega: bump-and-reprice vs analytic
 
-_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.7.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 Swaption sensitivities exist in two forms selected by request flags: analytic (`swaption_pricing_details`, QuantLib's Black / Bachelier calculator) and bump-and-reprice (`swaption_pricing_rebump`: 1bp parallel curve bump, 1bp vol bump, 1-day roll). Equity greeks are analytic. Bonds report duration and convexity under `bond_pricing_details`. Swaps, FRAs, caps and CDS carry no sensitivities in the response.
 
@@ -25,6 +25,8 @@ struct SwaptionRebumpConfig {
 
 Source: `src/domain/swaption_rebump.h@v0.7.0:L16-L27`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/domain/swaption_rebump.h#L16-L27>
+
 ### 2. The three pre-built market snapshots: curve up, curve down (parallel +/- bump at as-of) and roll (no bump, as-of + roll days). The vol-bump legs reuse the base curves.
 
 ````cpp
@@ -46,6 +48,8 @@ struct SwaptionRebumpMarkets {
 
 Source: `src/evaluators/swaption_evaluator.h@v0.7.0:L95-L108`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/swaption_evaluator.h#L95-L108>
+
 ### 3. Rebump definitions: dv01 = (NPV(+1bp) - NPV(-1bp)) / 2; gamma = NPV(+1bp) - 2 NPV + NPV(-1bp); vega = (NPV(vol+1bp) - NPV(vol-1bp)) / 2; theta = NPV(tomorrow) - NPV.
 
 ````cpp
@@ -65,6 +69,8 @@ Source: `src/evaluators/swaption_evaluator.h@v0.7.0:L95-L108`
 ````
 
 Source: `src/evaluators/swaption_evaluator.cpp@v0.7.0:L656-L668`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/swaption_evaluator.cpp#L656-L668>
 
 ### 4. Analytic path (`swaption_pricing_details`): delta, vega, gamma, theta from QuantLib's `BachelierCalculator` (Normal vol) or `BlackCalculator` (with the displacement added to strike and forward), and dv01 = delta x 1bp.
 
@@ -97,6 +103,8 @@ Source: `src/evaluators/swaption_evaluator.cpp@v0.7.0:L656-L668`
 
 Source: `src/evaluators/swaption_evaluator.cpp@v0.7.0:L630-L653`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/swaption_evaluator.cpp#L630-L653>
+
 ### 5. The response documents `dv01` as "may be analytic or rebump-based depending on request flags" and delta / vega / gamma / theta as "from pricing details / rebump logic".
 
 ````text
@@ -114,6 +122,8 @@ Source: `src/evaluators/swaption_evaluator.cpp@v0.7.0:L630-L653`
 
 Source: `flatbuffers/fbs/swaption_response.fbs@v0.7.0:L16-L25`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/swaption_response.fbs#L16-L25>
+
 ### 6. Equity options: delta, gamma, vega, theta, rho are the QuantLib option's analytic greeks times `quantity`.
 
 ````cpp
@@ -125,6 +135,8 @@ Source: `flatbuffers/fbs/swaption_response.fbs@v0.7.0:L16-L25`
 ````
 
 Source: `src/evaluators/equity_option_evaluator.cpp@v0.7.0:L254-L258`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/equity_option_evaluator.cpp#L254-L258>
 
 ### 7. Bonds (`bond_pricing_details`): yield, modified and Macaulay duration, convexity and BPS via QuantLib `BondFunctions` at the settlement date.
 
@@ -151,6 +163,8 @@ Source: `src/evaluators/equity_option_evaluator.cpp@v0.7.0:L254-L258`
 
 Source: `src/evaluators/fixed_rate_bond_evaluator.cpp@v0.7.0:L88-L105`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/fixed_rate_bond_evaluator.cpp#L88-L105>
+
 ## Request fields that control it
 
 - `pricing.options`: `bond_pricing_details`, `bond_pricing_flows`, `swaption_pricing_details`, `swaption_pricing_rebump`.
@@ -169,6 +183,8 @@ table PricingOptions {
 ````
 
 Source: `flatbuffers/fbs/pricing.fbs@v0.7.0:L55-L64`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/pricing.fbs#L55-L64>
 
 ## Not documented in engine v0.7.0
 

@@ -1,6 +1,6 @@
 # Theta: exact definition
 
-_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.7.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 Two definitions exist, selected by request flags. Rebump theta (`swaption_pricing_rebump`) is NPV(as-of + 1 day) - NPV(as-of) with the same market, in currency. Analytic theta (`swaption_pricing_details`, equity options) is QuantLib's calculator theta.
 
@@ -15,6 +15,8 @@ Two definitions exist, selected by request flags. Rebump theta (`swaption_pricin
 
 Source: `src/evaluators/swaption_evaluator.cpp@v0.7.0:L667-L668`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/swaption_evaluator.cpp#L667-L668>
+
 ### 2. `rollDays` is 1 day.
 
 ````cpp
@@ -24,6 +26,8 @@ Source: `src/evaluators/swaption_evaluator.cpp@v0.7.0:L667-L668`
 
 Source: `src/domain/swaption_rebump.h@v0.7.0:L25-L26`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/domain/swaption_rebump.h#L25-L26>
+
 ### 3. The roll leg is "bump 0 @ asOf + rollDays": no curve or vol bump, only the evaluation date moves.
 
 ````cpp
@@ -31,6 +35,8 @@ Source: `src/domain/swaption_rebump.h@v0.7.0:L25-L26`
 ````
 
 Source: `src/evaluators/swaption_evaluator.h@v0.7.0:L103-L103`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/swaption_evaluator.h#L103-L103>
 
 ### 4. The theta-leg instrument is rebuilt so that evaluation-date-dependent pieces behave correctly under the rolled date.
 
@@ -42,6 +48,8 @@ Source: `src/evaluators/swaption_evaluator.h@v0.7.0:L103-L103`
 
 Source: `src/evaluators/swaption_evaluator.h@v0.7.0:L58-L60`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/swaption_evaluator.h#L58-L60>
+
 ### 5. Analytic theta (details flag): `calc.theta(forward, timeToExpiry)` from QuantLib's Bachelier calculator for Normal vol, or the Black calculator with the displacement for (shifted) lognormal.
 
 ````cpp
@@ -50,6 +58,8 @@ Source: `src/evaluators/swaption_evaluator.h@v0.7.0:L58-L60`
 
 Source: `src/evaluators/swaption_evaluator.cpp@v0.7.0:L641-L641`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/swaption_evaluator.cpp#L641-L641>
+
 ### 6. Equity option theta: the QuantLib option's `theta()` times `quantity`.
 
 ````cpp
@@ -57,6 +67,8 @@ Source: `src/evaluators/swaption_evaluator.cpp@v0.7.0:L641-L641`
 ````
 
 Source: `src/evaluators/equity_option_evaluator.cpp@v0.7.0:L257-L257`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/equity_option_evaluator.cpp#L257-L257>
 
 ### 7. Response fields that do not apply are omitted rather than reported as a sentinel (0.5.0 note).
 
@@ -67,6 +79,8 @@ Source: `src/evaluators/equity_option_evaluator.cpp@v0.7.0:L257-L257`
 ````
 
 Source: `docs/versioning.md@v0.7.0:L176-L178`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/versioning.md#L176-L178>
 
 ## Request fields that control it
 
@@ -80,6 +94,8 @@ Source: `docs/versioning.md@v0.7.0:L176-L178`
 ````
 
 Source: `flatbuffers/fbs/pricing.fbs@v0.7.0:L60-L63`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/pricing.fbs#L60-L63>
 
 ## Not documented in engine v0.7.0
 

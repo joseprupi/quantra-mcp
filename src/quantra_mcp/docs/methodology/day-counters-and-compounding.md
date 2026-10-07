@@ -1,6 +1,6 @@
 # Day counters, compounding and yield conventions
 
-_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.7.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 Day counters and compounding are always what the request states: legs, indices, curves, zero points and bond yields each carry their own. Zero rates sampled from a curve default to the curve's day counter with continuous compounding unless the query says otherwise.
 
@@ -31,6 +31,8 @@ enum DayCounter : byte {
 
 Source: `flatbuffers/fbs/enums.fbs@v0.7.0:L3-L20`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/enums.fbs#L3-L20>
+
 ### 2. Compounding conventions available.
 
 ````text
@@ -45,6 +47,8 @@ enum Compounding : byte {
 
 Source: `flatbuffers/fbs/enums.fbs@v0.7.0:L183-L189`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/enums.fbs#L183-L189>
+
 ### 3. The `Yield` convention block (day counter, compounding, frequency) used for bond yield quotation.
 
 ````text
@@ -58,6 +62,8 @@ table Yield {
 
 Source: `flatbuffers/fbs/common.fbs@v0.7.0:L14-L19`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/common.fbs#L14-L19>
+
 ### 4. Bond yield, durations and convexity are computed with the request's yield day counter / compounding / frequency.
 
 ````cpp
@@ -65,6 +71,8 @@ Source: `flatbuffers/fbs/common.fbs@v0.7.0:L14-L19`
 ````
 
 Source: `src/evaluators/fixed_rate_bond_evaluator.cpp@v0.7.0:L89-L89`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/fixed_rate_bond_evaluator.cpp#L89-L89>
 
 ### 5. Zero points: each carries its compounding and frequency; all zero points of one curve must share them.
 
@@ -76,6 +84,8 @@ Source: `src/evaluators/fixed_rate_bond_evaluator.cpp@v0.7.0:L89-L89`
 ````
 
 Source: `flatbuffers/fbs/term_structure.fbs@v0.7.0:L215-L218`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/term_structure.fbs#L215-L218>
 
 ### 6. Zero / forward sampling defaults: curve day counter, Continuous (zeros) / Simple (forwards), Annual frequency.
 
@@ -90,6 +100,8 @@ table ZeroRateQuery {
 
 Source: `flatbuffers/fbs/curve_query.fbs@v0.7.0:L25-L30`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/curve_query.fbs#L25-L30>
+
 ### 7. Omitted conventions are errors, never defaults.
 
 ````text
@@ -103,6 +115,8 @@ Source: `flatbuffers/fbs/curve_query.fbs@v0.7.0:L25-L30`
 
 Source: `docs/http-api.md@v0.7.0:L16-L21`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/http-api.md#L16-L21>
+
 ### 8. OIS helpers and the overnight leg: the fixed-leg / payment day counter fields are deprecated and ignored (the day count comes from the overnight index).
 
 ````text
@@ -114,6 +128,8 @@ Source: `docs/http-api.md@v0.7.0:L16-L21`
 
 Source: `docs/versioning.md@v0.7.0:L103-L106`
 
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/versioning.md#L103-L106>
+
 ### 9. FRA: the unused day-counter / calendar / convention fields are accepted but ignored.
 
 ````text
@@ -123,6 +139,8 @@ Source: `docs/versioning.md@v0.7.0:L103-L106`
 ````
 
 Source: `docs/versioning.md@v0.7.0:L189-L191`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/docs/versioning.md#L189-L191>
 
 ## Request fields that control it
 
@@ -140,6 +158,8 @@ table CurveQuerySpec {
 ````
 
 Source: `flatbuffers/fbs/curve_query.fbs@v0.7.0:L46-L53`
+
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/curve_query.fbs#L46-L53>
 
 ## Not documented in engine v0.7.0
 
