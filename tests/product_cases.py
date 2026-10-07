@@ -55,6 +55,7 @@ def product_cases() -> list[ProductCase]:
     p = fx["irs_eur_5y_payer_ois_discounted_multicurve"]["pricing"]
     base = dict(
         market=p,
+        market_data_source="engine_example",
         preset="EUR_EURIBOR_6M",
         swap_type="Payer",
         notional=10_000_000.0,
@@ -77,6 +78,7 @@ def product_cases() -> list[ProductCase]:
     p = fx["ois_usd_3y_payer_sofr"]["pricing"]
     base = dict(
         market=p,
+        market_data_source="engine_example",
         preset="USD_SOFR_OIS",
         swap_type="Payer",
         notional=10_000_000.0,
@@ -99,6 +101,7 @@ def product_cases() -> list[ProductCase]:
     p = fx["frb_eur_5y_at_par_annual_30360"]["pricing"]
     base = dict(
         market=p,
+        market_data_source="engine_example",
         preset="EUR_FIXED_BOND",
         face_amount=1_000_000.0,
         coupon_rate=0.031,
@@ -120,6 +123,7 @@ def product_cases() -> list[ProductCase]:
     )
     base = dict(
         market=p,
+        market_data_source="engine_example",
         preset="EUR_EURIBOR_6M",
         face_amount=1_000_000.0,
         index_id="EUR_6M",
@@ -140,6 +144,7 @@ def product_cases() -> list[ProductCase]:
     p = market_without(fx["zcb_eur_10y_discount"]["pricing"], "options")
     base = dict(
         market=p,
+        market_data_source="engine_example",
         preset="EUR_FIXED_BOND",
         face_amount=1_000_000.0,
         issue_date="as_of",
@@ -160,6 +165,7 @@ def product_cases() -> list[ProductCase]:
     p = fx["fra_eur_3x6_long_at_forward"]["pricing"]
     base = dict(
         market=p,
+        market_data_source="engine_example",
         preset="EUR_EURIBOR_3M",
         notional=1_000_000.0,
         strike=0.031319,
@@ -182,6 +188,7 @@ def product_cases() -> list[ProductCase]:
     p = market_without(fx["cap_eur_5y_itm_strike_2pct"]["pricing"], "volatility")
     base = dict(
         market=p,
+        market_data_source="engine_example",
         preset="EUR_EURIBOR_3M",
         cap_floor_type="Cap",
         notional=1_000_000.0,
@@ -212,6 +219,7 @@ def product_cases() -> list[ProductCase]:
     }
     base = dict(
         market=p,
+        market_data_source="engine_example",
         preset="EUR_EURIBOR_6M",
         exercise_date="2026-01-15",
         discounting_curve="discount",
@@ -240,6 +248,7 @@ def product_cases() -> list[ProductCase]:
     p = market_without(fx["cds_eur_5y_buyer_100bp_spread_curve"]["pricing"], "credit", "volatility")
     base = dict(
         market=p,
+        market_data_source="engine_example",
         preset="EUR_CDS",
         side="Buyer",
         notional=10_000_000.0,
@@ -270,6 +279,7 @@ def product_cases() -> list[ProductCase]:
 
     eq = dict(
         as_of="2025-01-15",
+        market_data_source="engine_example",
         spot=100.0,
         strike=100.0,
         expiry="2026-01-15",
@@ -287,6 +297,7 @@ def product_cases() -> list[ProductCase]:
     zc = fx["zciis_eur_5y_payer_linear_obs"]
     base = dict(
         market=zc["pricing"],
+        market_data_source="engine_example",
         inflation_index_id="EUHICP",
         fixings=zc["pricing"]["inflation"]["inflation_indices"][0]["fixings"],
         swap_type="Payer",
@@ -309,6 +320,7 @@ def product_cases() -> list[ProductCase]:
     yy = fx["yyiis_eur_5y_payer_annual"]
     base = dict(
         market=yy["pricing"],
+        market_data_source="engine_example",
         inflation_index_id="EUHICP_YY",
         fixings=yy["pricing"]["inflation"]["inflation_indices"][0]["fixings"],
         swap_type="Payer",
@@ -351,6 +363,7 @@ def blog_ois_args(built_curve: dict[str, Any]) -> dict[str, Any]:
     curve built by ``build_curve(USD_SOFR_OIS, <SOFR strip>)``."""
     return dict(
         market={"curves": [built_curve]},
+        market_data_source="user_pasted",
         as_of="2025-01-15",
         preset="USD_SOFR_OIS",
         swap_type="Payer",
@@ -378,6 +391,7 @@ def usd_ois_swaption_args(fixture: str, settlement_method: str) -> dict[str, Any
     fixture carries no QuantLib reference value, so it stays out of ``FIXTURES``."""
     return dict(
         market=market_without(fixture_body(fixture)["pricing"], "volatility"),
+        market_data_source="engine_example",
         preset="USD_SOFR_OIS",
         underlying_type="OisSwap",
         underlying={

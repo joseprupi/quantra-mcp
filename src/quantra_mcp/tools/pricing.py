@@ -76,6 +76,7 @@ from quantra_mcp.schema.enums_generated import (
 from quantra_mcp.schema.validate import validate_request
 from quantra_mcp.session import SessionStore
 from quantra_mcp.tools._dates import DateResolutionFailed, DateResolver
+from quantra_mcp.tools._market_source import MarketDataSource, stamp
 from quantra_mcp.tools._result import ToolResult, local_error_result, new_request_id, run_post
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
 
@@ -1283,6 +1284,7 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
     @app.tool()
     async def price_vanilla_swap(
         market: Market,
+        market_data_source: MarketDataSource,
         preset: str,
         swap_type: SwapType,
         notional: float,
@@ -1305,6 +1307,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         """Price a fixed-vs-IBOR swap (POST /price-vanilla-swap).
 
         Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             market: ``{"session": name}``, an engine ``pricing`` block (used verbatim)
                 or ``{curves: [...], indices: [...]}`` (build_curve results allowed).
             preset: a preset with a ``vanilla_swap`` block (``EUR_EURIBOR_6M``,
@@ -1341,23 +1351,27 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             fixed_leg_overrides=fixed_leg_overrides,
             floating_leg_overrides=floating_leg_overrides,
         )
-        return await price_vanilla_swap_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            discounting_curve,
-            forwarding_curve,
-            as_of,
-            include_flows,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_vanilla_swap_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                discounting_curve,
+                forwarding_curve,
+                as_of,
+                include_flows,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()
     async def price_ois_swap(
         market: Market,
+        market_data_source: MarketDataSource,
         preset: str,
         swap_type: SwapType,
         notional: float,
@@ -1386,6 +1400,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         """Price an OIS (fixed vs compounded overnight) swap (POST /price-ois-swap).
 
         Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             market: as in price_vanilla_swap.
             preset: a preset with an ``ois_swap`` block (``USD_SOFR_OIS``: payment lag 2;
                 ``EUR_ESTR_OIS``: payment lag 0).
@@ -1416,23 +1438,27 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             fixed_leg_overrides=fixed_leg_overrides,
             overnight_leg_overrides=overnight_leg_overrides,
         )
-        return await price_ois_swap_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            discounting_curve,
-            forwarding_curve,
-            as_of,
-            include_flows,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_ois_swap_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                discounting_curve,
+                forwarding_curve,
+                as_of,
+                include_flows,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()
     async def price_fixed_rate_bond(
         market: Market,
+        market_data_source: MarketDataSource,
         preset: str,
         face_amount: float,
         coupon_rate: float,
@@ -1453,6 +1479,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         """Price a fixed-rate bond (POST /price-fixed-rate-bond).
 
         Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             market: as in price_vanilla_swap.
             preset: a preset with a ``fixed_rate_bond`` block (``EUR_FIXED_BOND``).
             face_amount: > 0. coupon_rate: annual decimal coupon.
@@ -1478,23 +1512,27 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             overrides=overrides,
             yield_overrides=yield_overrides,
         )
-        return await price_fixed_rate_bond_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            discounting_curve,
-            as_of,
-            include_details,
-            include_flows,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_fixed_rate_bond_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                discounting_curve,
+                as_of,
+                include_details,
+                include_flows,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()
     async def price_floating_rate_bond(
         market: Market,
+        market_data_source: MarketDataSource,
         preset: str,
         face_amount: float,
         issue_date: str,
@@ -1519,6 +1557,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         """Price a floating-rate note (POST /price-floating-rate-bond).
 
         Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             preset: a preset with a ``floating_rate_bond`` block (``EUR_EURIBOR_6M``).
             face_amount, issue_date, maturity_date | tenor, effective_date, overrides,
                 include_details, include_flows: as in price_fixed_rate_bond.
@@ -1539,25 +1585,29 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             in_arrears=in_arrears,
             overrides=overrides,
         )
-        return await price_floating_rate_bond_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            discounting_curve,
-            forwarding_curve,
-            coupon_pricer,
-            as_of,
-            include_details,
-            include_flows,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_floating_rate_bond_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                discounting_curve,
+                forwarding_curve,
+                coupon_pricer,
+                as_of,
+                include_details,
+                include_flows,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()
     async def price_zero_coupon_bond(
         market: Market,
+        market_data_source: MarketDataSource,
         preset: str,
         face_amount: float,
         discounting_curve: str,
@@ -1576,6 +1626,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         """Price a zero-coupon bond (POST /price-zero-coupon-bond).
 
         Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             preset: a preset with a ``zero_coupon_bond`` block (``EUR_FIXED_BOND``,
                 settlement T+3 on TARGET).
             maturity_date: ``YYYY-MM-DD``, or ``tenor`` counted (by the engine, Unadjusted)
@@ -1593,22 +1651,26 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             redemption=redemption,
             yield_overrides=yield_overrides,
         )
-        return await price_zero_coupon_bond_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            discounting_curve,
-            as_of,
-            include_details,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_zero_coupon_bond_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                discounting_curve,
+                as_of,
+                include_details,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()
     async def price_callable_fixed_rate_bond(
         market: Market,
+        market_data_source: MarketDataSource,
         preset: str,
         face_amount: float,
         coupon_rate: float,
@@ -1630,6 +1692,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         (POST /price-callable-fixed-rate-bond).
 
         Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             preset: a preset with a ``callable_fixed_rate_bond`` block (``EUR_FIXED_BOND``).
             call_schedule: ``[{date, price, type: Call|Put}]`` with increasing dates
                 (clean price per 100 of face).
@@ -1649,22 +1719,26 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             overrides=overrides,
             tree_steps=tree_steps,
         )
-        return await price_callable_fixed_rate_bond_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            discounting_curve,
-            model,
-            as_of,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_callable_fixed_rate_bond_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                discounting_curve,
+                model,
+                as_of,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()
     async def price_fra(
         market: Market,
+        market_data_source: MarketDataSource,
         preset: str,
         notional: float,
         strike: float,
@@ -1686,6 +1760,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         """Price a forward rate agreement (POST /price-fra).
 
         Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             preset: a preset with a ``fra`` block (``EUR_EURIBOR_3M``, ``EUR_EURIBOR_6M``).
             notional: > 0. strike: agreed forward rate (decimal).
             side: ``Long`` (pay fixed) or ``Short``.
@@ -1710,22 +1792,26 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             calendar=None,
             business_day_convention=business_day_convention,
         )
-        return await price_fra_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            discounting_curve,
-            forwarding_curve,
-            as_of,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_fra_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                discounting_curve,
+                forwarding_curve,
+                as_of,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()
     async def price_cap_floor(
         market: Market,
+        market_data_source: MarketDataSource,
         preset: str,
         cap_floor_type: CapFloorType,
         notional: float,
@@ -1751,6 +1837,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         """Price an interest-rate cap, floor or collar (POST /price-cap-floor).
 
         Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             preset: a preset with a ``cap_floor`` block (``EUR_EURIBOR_3M`` quarterly,
                 ``EUR_EURIBOR_6M`` semiannual).
             cap_floor_type: ``Cap`` | ``Floor`` | ``Collar``. strike: decimal.
@@ -1780,24 +1874,28 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             schedule_overrides=schedule_overrides,
             include_details=include_details,
         )
-        return await price_cap_floor_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            discounting_curve,
-            forwarding_curve,
-            vol,
-            model,
-            as_of,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_cap_floor_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                discounting_curve,
+                forwarding_curve,
+                vol,
+                model,
+                as_of,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()
     async def price_swaption(
         market: Market,
+        market_data_source: MarketDataSource,
         preset: str,
         underlying: ps.VanillaSwapTrade | ps.OisSwapTrade,
         discounting_curve: str,
@@ -1820,6 +1918,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         """Price a swaption (POST /price-swaption).
 
         Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             preset: a preset with ``swaption`` + ``vanilla_swap`` blocks (``EUR_EURIBOR_6M``).
             underlying: the swap exercised into, as a VanillaSwapTrade (swap_type,
                 notional, fixed_rate, effective_date, termination_date | tenor, ...).
@@ -1849,26 +1955,30 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             underlying=underlying,
             underlying_type=underlying_type,
         )
-        return await price_swaption_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            discounting_curve,
-            forwarding_curve,
-            vol,
-            model,
-            as_of,
-            include_details,
-            include_diagnostics,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_swaption_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                discounting_curve,
+                forwarding_curve,
+                vol,
+                model,
+                as_of,
+                include_details,
+                include_diagnostics,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()
     async def price_cds(
         market: Market,
+        market_data_source: MarketDataSource,
         side: ProtectionSide,
         notional: float,
         running_coupon: float,
@@ -1897,6 +2007,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         """Price a single-name CDS (POST /price-cds).
 
         Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             side: ``Buyer`` (buy protection) or ``Seller``. notional: > 0.
             running_coupon: decimal (0.01 = 100bp).
             credit_curve: ``{par_spreads: [{tenor, spread}], recovery_rate?, id?}``
@@ -1933,24 +2051,28 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             cash_settlement_days=cash_settlement_days,
             schedule_overrides=schedule_overrides,
         )
-        return await price_cds_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            discounting_curve,
-            credit_curve,
-            recovery_rate,
-            model,
-            as_of,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_cds_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                discounting_curve,
+                credit_curve,
+                recovery_rate,
+                model,
+                as_of,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()
     async def price_equity_option(
         spot: float | str,
+        market_data_source: MarketDataSource,
         strike: float,
         expiry: str,
         option_type: EquityOptionType,
@@ -1975,6 +2097,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         """Price a vanilla equity option (POST /price-equity-option).
 
         Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             spot: spot price (a Price quote the tool adds) or a quote id in the market.
             strike, expiry (``YYYY-MM-DD``), option_type ``Call`` | ``Put``.
             vol: ``{constant: 0.2, id?}`` (constant BlackVolSpec added) or a surface id.
@@ -2004,27 +2134,31 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             trade_id=trade_id,
         )
         the_model: str | pe.EquityModel = model if model is not None else pe.EquityModel()
-        return await price_equity_option_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            underlying_id,
-            spot,
-            rate_curve,
-            dividend_yield,
-            vol,
-            the_model,
-            discrete_dividends,
-            as_of,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_equity_option_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                underlying_id,
+                spot,
+                rate_curve,
+                dividend_yield,
+                vol,
+                the_model,
+                discrete_dividends,
+                as_of,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()
     async def price_zc_inflation_swap(
         market: Market,
+        market_data_source: MarketDataSource,
         inflation_index_id: str,
         fixings: list[pi.Fixing],
         swap_type: SwapType,
@@ -2051,6 +2185,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         market-data source; the tool sets them on the index and says so in ``notes``.
 
         Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             inflation_index_id: id in pricing.inflation.inflation_indices.
             fixings: ``[{date: "2024-12-01", value: 126.16}, ...]`` monthly CPI levels.
             swap_type: ``Payer`` pays fixed. notional, fixed_rate: decimal.
@@ -2065,25 +2207,29 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             maturity_date=maturity_date,
             tenor=tenor,
         )
-        return await price_zc_inflation_swap_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            inflation_index_id,
-            fixings,
-            discounting_curve,
-            inflation_curve,
-            as_of,
-            include_flows,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_zc_inflation_swap_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                inflation_index_id,
+                fixings,
+                discounting_curve,
+                inflation_curve,
+                as_of,
+                include_flows,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()
     async def price_yoy_inflation_swap(
         market: Market,
+        market_data_source: MarketDataSource,
         inflation_index_id: str,
         fixings: list[pi.Fixing],
         swap_type: SwapType,
@@ -2110,6 +2256,16 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         ``fixings`` (YoY rates) is REQUIRED for the same reason as in
         price_zc_inflation_swap. Fixed and YoY legs share the preset's schedule
         (annual by default); ``spread`` is added to the YoY rate.
+
+        Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
         """
         first = pi.YoyInflationSwapTrade(
             swap_type=swap_type,
@@ -2122,25 +2278,29 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             frequency=frequency,
             schedule_overrides=schedule_overrides,
         )
-        return await price_yoy_inflation_swap_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            inflation_index_id,
-            fixings,
-            discounting_curve,
-            inflation_curve,
-            as_of,
-            include_flows,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_yoy_inflation_swap_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                inflation_index_id,
+                fixings,
+                discounting_curve,
+                inflation_curve,
+                as_of,
+                include_flows,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()
     async def price_yoy_inflation_cap_floor(
         market: Market,
+        market_data_source: MarketDataSource,
         inflation_index_id: str,
         fixings: list[pi.Fixing],
         cap_floor_type: CapFloorType,
@@ -2170,6 +2330,16 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         ``{constant: 0.01, type: Black|Bachelier|UnitDisplacedBlack, id?}`` (a
         YoYOptionletVolSpec the tool adds with the preset's conventions) or a surface
         id. ``cap_rate`` for Cap/Collar, ``floor_rate`` for Floor/Collar.
+
+        Args:
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
         """
         first = pi.YoyInflationCapFloorTrade(
             cap_floor_type=cap_floor_type,
@@ -2184,20 +2354,23 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             spread=spread,
             schedule_overrides=schedule_overrides,
         )
-        return await price_yoy_inflation_cap_floor_impl(
-            backend,
-            store,
-            market,
-            preset,
-            [first, *(additional_trades or [])],
-            inflation_index_id,
-            fixings,
-            discounting_curve,
-            inflation_curve,
-            vol,
-            as_of,
-            calendar_overrides,
-            request_id,
+        return stamp(
+            await price_yoy_inflation_cap_floor_impl(
+                backend,
+                store,
+                market,
+                preset,
+                [first, *(additional_trades or [])],
+                inflation_index_id,
+                fixings,
+                discounting_curve,
+                inflation_curve,
+                vol,
+                as_of,
+                calendar_overrides,
+                request_id,
+            ),
+            market_data_source,
         )
 
     @app.tool()

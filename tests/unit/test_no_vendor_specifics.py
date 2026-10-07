@@ -1,6 +1,6 @@
 """Operator rule: nothing vendor- or example-specific ships. No vendored example
-carries a vendor reference, and the instructions and prompts carry the hard rule
-on example market data, stated verbatim."""
+carries a vendor reference, and the instructions and prompts carry the ABSOLUTE
+rule on market data (M5.3), stated verbatim, with no illustrative / demo loophole."""
 
 from __future__ import annotations
 
@@ -14,14 +14,26 @@ from quantra_mcp import prompts, server
 EXAMPLES = Path(__file__).resolve().parents[2] / "src" / "quantra_mcp" / "examples"
 VENDOR_RE = re.compile(r"bbg|bloomberg|swpm|refinitiv|markit|icvs", re.IGNORECASE)
 
+ABSOLUTE_RULE = (
+    "Never type, estimate, recall or invent market data (quotes, discount factors, zero "
+    "rates, vols, fixings). Not as a placeholder, not as a test run, not labelled as "
+    "approximate. Market data for a user's trade exists only when the user has pasted or "
+    "dictated it in this conversation. Until then: say what is needed, in paste-able form, "
+    "and stop. Do not call any curve-building or pricing tool."
+)
+
 RULE_PHRASES = (
+    ABSOLUTE_RULE,
+    "requires a market_data_source declaration",
     "request-SHAPE references only",
     "MUST come from the user",
     "Never reuse an example's market data for the user's trade",
     'never say "the engine already ships this trade"',
     "ask for it in paste-able form and stop there",
-    "label it as illustrative and name the example used",
 )
+
+#: the retired loophole: no instruction or prompt may offer it again
+LOOPHOLE_RE = re.compile(r"illustrative|demo price|placeholder price", re.IGNORECASE)
 
 
 def test_no_vendored_example_carries_a_vendor_reference() -> None:
@@ -54,20 +66,39 @@ def _flat(text: str) -> str:
     return " ".join(text.split())
 
 
-def test_instructions_and_prompts_state_the_hard_rule() -> None:
+ALL_PROMPTS = (
+    prompts.HOLIDAY_CHECK,
+    prompts.RECONCILE_EXTERNAL_PRICE,
+    prompts.EXPLORE_EXAMPLES,
+    prompts._price_a_swap(),
+    prompts._price_a_swap("USD", "ois"),
+    prompts._bootstrap_from_strip(),
+    prompts._price_from_screen(),
+    prompts._price_from_screen("swaption"),
+)
+
+
+def test_instructions_and_prompts_state_the_absolute_rule() -> None:
     for phrase in RULE_PHRASES:
         assert phrase in _flat(server.INSTRUCTIONS), phrase
         assert phrase in _flat(prompts.VOICE), phrase
-    assert server.INSTRUCTIONS.count("HARD RULE on the shipped examples") == 1
-    # every prompt built on VOICE carries it
-    for text in (
-        prompts.HOLIDAY_CHECK,
-        prompts.RECONCILE_EXTERNAL_PRICE,
-        prompts._price_a_swap(),
-        prompts._bootstrap_from_strip(),
-        prompts._price_from_screen(),
-    ):
-        assert "HARD RULE on the shipped examples" in text
+    assert server.INSTRUCTIONS.count("ABSOLUTE RULE on market data") == 1
+    # every prompt built on VOICE carries it, verbatim
+    for text in ALL_PROMPTS[:2] + ALL_PROMPTS[3:]:
+        assert "ABSOLUTE RULE on market data" in text
+        assert ABSOLUTE_RULE in _flat(text)
+
+
+def test_no_illustrative_or_demo_price_loophole_anywhere() -> None:
+    for text in (server.INSTRUCTIONS, prompts.VOICE, *ALL_PROMPTS):
+        assert not LOOPHOLE_RE.search(text), LOOPHOLE_RE.search(text)
+        assert "HARD RULE" not in text  # the old, weaker rule is gone
+    readme = (Path(__file__).resolve().parents[2] / "README.md").read_text()
+    assert not LOOPHOLE_RE.search(readme)
+    assert "never type, estimate, recall or invent market data" in readme
+
+
+def test_instructions_carry_no_vendor_claim() -> None:
     # and the instructions / prompts carry no vendor-specific claim (neutral examples only)
     neutral_ok = re.compile(
         r"Bloomberg SWPM screen|Bloomberg SWPM,|Bloomberg ICVS ?/ ?SWDF", re.IGNORECASE

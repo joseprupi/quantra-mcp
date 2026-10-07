@@ -98,6 +98,7 @@ async def test_tool_discount_table_builds_a_value_curve(app: Any) -> None:
             await c.call_tool(
                 "curve_from_pasted_table",
                 {
+                    "market_data_source": "user_pasted",
                     "text": text,
                     "id": "VC",
                     "kind": "discount",
@@ -131,6 +132,7 @@ async def test_tool_reference_date_from_first_discount_row(app: Any) -> None:
             await c.call_tool(
                 "curve_from_pasted_table",
                 {
+                    "market_data_source": "user_pasted",
                     "text": "2025-01-15 1.0\n1Y 0.96",
                     "id": "VC",
                     "kind": "discount",
@@ -141,7 +143,13 @@ async def test_tool_reference_date_from_first_discount_row(app: Any) -> None:
         missing = _s(
             await c.call_tool(
                 "curve_from_pasted_table",
-                {"text": "1Y 3.5%", "id": "Z", "kind": "zero", "preset": "USD_SOFR_OIS"},
+                {
+                    "market_data_source": "user_pasted",
+                    "text": "1Y 3.5%",
+                    "id": "Z",
+                    "kind": "zero",
+                    "preset": "USD_SOFR_OIS",
+                },
             )
         )
     assert r["ok"] and r["curve"]["reference_date"] == "2025-01-15"
@@ -156,6 +164,7 @@ async def test_tool_par_table_builds_helpers_from_the_preset(app: Any) -> None:
             await c.call_tool(
                 "curve_from_pasted_table",
                 {
+                    "market_data_source": "user_pasted",
                     "text": "Tenor Rate\n1Y 4.95%\n2Y 4.40%\n2030-01-15 3.75%",
                     "id": "SOFR",
                     "kind": "par",
@@ -168,6 +177,7 @@ async def test_tool_par_table_builds_helpers_from_the_preset(app: Any) -> None:
             await c.call_tool(
                 "curve_from_pasted_table",
                 {
+                    "market_data_source": "user_pasted",
                     "text": "1Y 3%",
                     "id": "E",
                     "kind": "par",
@@ -180,6 +190,7 @@ async def test_tool_par_table_builds_helpers_from_the_preset(app: Any) -> None:
             await c.call_tool(
                 "curve_from_pasted_table",
                 {
+                    "market_data_source": "user_pasted",
                     "text": "6M 3% deposit\n2Y 3.1%",
                     "id": "E",
                     "kind": "par",
@@ -206,6 +217,7 @@ async def test_tool_zero_table_and_errors(app: Any) -> None:
             await c.call_tool(
                 "curve_from_pasted_table",
                 {
+                    "market_data_source": "user_pasted",
                     "text": "1W 5.33%\n10Y 3.60%",
                     "id": "Z",
                     "kind": "zero",
@@ -222,6 +234,7 @@ async def test_tool_zero_table_and_errors(app: Any) -> None:
             await c.call_tool(
                 "curve_from_pasted_table",
                 {
+                    "market_data_source": "user_pasted",
                     "text": "no 1\nrows 2\nhere 3",
                     "id": "Z",
                     "kind": "zero",
@@ -232,7 +245,13 @@ async def test_tool_zero_table_and_errors(app: Any) -> None:
         bad_preset = _s(
             await c.call_tool(
                 "curve_from_pasted_table",
-                {"text": "1Y 0.9", "id": "Z", "kind": "discount", "preset": "NOPE"},
+                {
+                    "market_data_source": "user_pasted",
+                    "text": "1Y 0.9",
+                    "id": "Z",
+                    "kind": "discount",
+                    "preset": "NOPE",
+                },
             )
         )
     assert z["ok"], z

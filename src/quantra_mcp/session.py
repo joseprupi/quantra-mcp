@@ -37,6 +37,9 @@ class SessionItem:
     value: dict[str, Any]
     stored_at: str
     size_bytes: int = 0
+    #: the caller's declaration of where the numbers came from (user_pasted / user_file /
+    #: engine_example / session); None only for items stored without one (direct API use)
+    market_data_source: str | None = None
 
     def summary(self) -> dict[str, Any]:
         row: dict[str, Any] = {
@@ -44,6 +47,7 @@ class SessionItem:
             "kind": self.kind,
             "stored_at": self.stored_at,
             "size_bytes": self.size_bytes,
+            "market_data_source": self.market_data_source,
         }
         v = self.value
         if self.kind == "curve":
@@ -77,9 +81,15 @@ class SessionStore:
 
     # --- mutation ---------------------------------------------------------
 
-    def put(self, name: str, kind: str, value: Any) -> tuple[SessionItem, str | None]:
+    def put(
+        self, name: str, kind: str, value: Any, market_data_source: str | None = None
+    ) -> tuple[SessionItem, str | None]:
         """Store (or replace) ``name``. Returns the item and the evicted names (comma-joined)
-        if the item cap or the byte cap pushed older items out, else ``None``."""
+        if the item cap or the byte cap pushed older items out, else ``None``.
+
+        ``market_data_source`` is the caller's declaration; a build_curve result carries
+        its own (``value["market_data_source"]``), which is used when no argument is given
+        and must agree with the argument when both are present."""
         if not isinstance(name, str) or not name.strip():
             raise LocalValidationError(
                 "name: a non-empty string is required", [{"path": "/name", "message": "empty"}]
@@ -95,6 +105,16 @@ class SessionStore:
                 [{"path": "/value", "message": "not an object"}],
             )
         attached: list[dict[str, Any]] = []
+        carried = value.get("market_data_source")
+        if isinstance(carried, str):
+            if market_data_source is None:
+                market_data_source = carried
+            elif market_data_source != carried:
+                raise LocalValidationError(
+                    f"market_data_source {market_data_source!r} differs from the one the value "
+                    f"carries ({carried!r}); store it under the source it really has",
+                    [{"path": "/market_data_source", "message": "conflicts with value"}],
+                )
         if kind == "curve" and "curve" in value and isinstance(value["curve"], dict):
             # a build_curve result: keep its indices alongside the curve
             attached = [i for i in value.get("indices") or [] if isinstance(i, dict)]
@@ -110,7 +130,14 @@ class SessionStore:
                 [{"path": "/value", "message": "too large"}],
             )
         now = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat()
-        item = SessionItem(name=name, kind=kind, value=value, stored_at=now, size_bytes=size)
+        item = SessionItem(
+            name=name,
+            kind=kind,
+            value=value,
+            stored_at=now,
+            size_bytes=size,
+            market_data_source=market_data_source,
+        )
         if name in self._items:
             del self._items[name]
         self._items[name] = item
@@ -205,7 +232,7 @@ def resolve_refs(
                 notes.append(
                     f"curves[{i}] <- session {name!r} (curve {got.value.get('id')}"
                     + (f", +{len(attached)} attached index" if attached else "")
-                    + ")"
+                    + f"; stored market_data_source={got.market_data_source})"
                 )
             elif got.kind == "market":
                 cs = [c for c in got.value.get("curves") or [] if isinstance(c, dict)]
@@ -214,7 +241,8 @@ def resolve_refs(
                 out_indices.extend(ixs)
                 notes.append(
                     f"curves[{i}] <- session {name!r} "
-                    f"(market: {len(cs)} curves, {len(ixs)} indices)"
+                    f"(market: {len(cs)} curves, {len(ixs)} indices; "
+                    f"stored market_data_source={got.market_data_source})"
                 )
             else:
                 raise LocalValidationError(

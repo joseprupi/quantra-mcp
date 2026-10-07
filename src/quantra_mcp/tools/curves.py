@@ -31,6 +31,7 @@ from quantra_mcp.schema.enums_generated import (
 )
 from quantra_mcp.schema.validate import validate_component, validate_request
 from quantra_mcp.session import SessionStore, resolve_refs
+from quantra_mcp.tools._market_source import MarketDataSource, stamp
 from quantra_mcp.tools._result import ToolResult, local_error_result, new_request_id, run_post
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
 
@@ -366,6 +367,7 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         preset: str,
         quotes: list[cb.CurveQuote],
         reference_date: str,
+        market_data_source: MarketDataSource,
         trait: BootstrapTrait | None = None,
         interpolator: Interpolator | None = None,
         day_counter: DayCounter | None = None,
@@ -381,6 +383,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
                 ``future_start_date`` + ``price`` or ``rate``). Sorted by
                 maturity; a duplicate (type, tenor) is rejected locally.
             reference_date: ``YYYY-MM-DD`` curve date (normally the pricing as_of).
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             trait: override the preset's bootstrap trait (``Discount``,
                 ``ZeroRate``, ``FwdRate``).
             interpolator: override the preset's interpolator.
@@ -391,8 +401,9 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         ``bootstrap_curve`` (or to ``session_put``); ``notes`` lists every
         default applied with its source. Nothing is priced here.
         """
-        return build_curve_impl(
-            id, preset, quotes, reference_date, trait, interpolator, day_counter
+        return stamp(
+            build_curve_impl(id, preset, quotes, reference_date, trait, interpolator, day_counter),
+            market_data_source,
         )
 
     @app.tool()
@@ -401,6 +412,7 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         kind: cb.ValueKind,
         points: list[cb.ValuePoint],
         reference_date: str,
+        market_data_source: MarketDataSource,
         preset: str | None = None,
         conventions: cb.ValueCurveConventions | None = None,
         compounding: Compounding | None = None,
@@ -418,6 +430,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             points: ``[{date: "2026-01-15", value: 0.96}, {tenor: "2Y", value: ...}]``
                 in order; the engine anchors the curve at the first point.
             reference_date: ``YYYY-MM-DD``.
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             preset: take the curve day counter and point calendar/convention
                 from this preset; or give ``conventions`` explicitly.
             conventions: ``{day_counter, calendar, business_day_convention}``.
@@ -427,16 +447,19 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
 
         Returns ``{ok, curve, indices: [], preset, notes}``.
         """
-        return build_value_curve_impl(
-            id,
-            kind,
-            points,
-            reference_date,
-            preset,
-            conventions,
-            compounding,
-            frequency,
-            interpolator,
+        return stamp(
+            build_value_curve_impl(
+                id,
+                kind,
+                points,
+                reference_date,
+                preset,
+                conventions,
+                compounding,
+                frequency,
+                interpolator,
+            ),
+            market_data_source,
         )
 
     @app.tool()
@@ -444,6 +467,7 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         text: str,
         id: str,
         kind: Literal["discount", "zero", "par"],
+        market_data_source: MarketDataSource,
         preset: str | None = None,
         reference_date: str | None = None,
         conventions: cb.ValueCurveConventions | None = None,
@@ -469,6 +493,14 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             kind: ``discount`` (discount factors -> InterpolatedDiscount), ``zero``
                 (zero rates -> InterpolatedZero) or ``par`` (market quotes -> bootstrap
                 helpers of the preset).
+            market_data_source: where the market numbers in this call come from. ``user_pasted``
+                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
+                user attached a file/screenshot the numbers were read from), ``engine_example``
+                (an engine example's pricing block, only when the user explicitly asked to run
+                an example), ``session`` (a market previously stored in this session, which
+                itself came from one of the above). There is no value for estimated, recalled or
+                placeholder data. If you would have to invent numbers, do not call this tool:
+                ask the user for the data.
             preset: supplies the curve day counter and point calendar/convention
                 (``USD_SOFR_OIS``...); required for ``par``; or give ``conventions``.
             reference_date: the curve / as-of date. For ``discount`` it may be omitted
@@ -488,19 +520,22 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         reference date, the anchor point ``{reference_date: 1.0}`` the engine
         requires is added in front and said so in ``notes``.
         """
-        return curve_from_pasted_table_impl(
-            text,
-            id,
-            kind,
-            preset,
-            reference_date,
-            conventions,
-            quote_type,
-            percent,
-            date_format,
-            compounding,
-            frequency,
-            interpolator,
+        return stamp(
+            curve_from_pasted_table_impl(
+                text,
+                id,
+                kind,
+                preset,
+                reference_date,
+                conventions,
+                quote_type,
+                percent,
+                date_format,
+                compounding,
+                frequency,
+                interpolator,
+            ),
+            market_data_source,
         )
 
     @app.tool()

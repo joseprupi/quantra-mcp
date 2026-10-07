@@ -120,6 +120,7 @@ async def test_scripted_client_runs_the_reconcile_prompt_on_a_pasted_df_table() 
             client,
             "build_curve",
             {
+                "market_data_source": "user_pasted",
                 "id": "USD_SOFR_OIS",
                 "preset": "USD_SOFR_OIS",
                 "quotes": strip["quotes"],
@@ -152,6 +153,7 @@ async def test_scripted_client_runs_the_reconcile_prompt_on_a_pasted_df_table() 
             client,
             "curve_from_pasted_table",
             {
+                "market_data_source": "user_pasted",
                 "text": pasted,
                 "id": "USD_SOFR_OIS",
                 "kind": "discount",

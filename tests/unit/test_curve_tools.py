@@ -39,6 +39,7 @@ async def _build_sofr(c: Client) -> dict[str, Any]:
         await c.call_tool(
             "build_curve",
             {
+                "market_data_source": "user_pasted",
                 "id": "USD_SOFR_OIS",
                 "preset": "USD_SOFR_OIS",
                 "quotes": SOFR["quotes"],
@@ -91,6 +92,7 @@ async def test_build_curve_tool_shape_and_no_engine_call(
             await c.call_tool(
                 "build_curve",
                 {
+                    "market_data_source": "user_pasted",
                     "id": "x",
                     "preset": "USD_SOFR_OIS",
                     "quotes": [{"type": "ois", "tenor": "1Y"}],
@@ -102,6 +104,7 @@ async def test_build_curve_tool_shape_and_no_engine_call(
             await c.call_tool(
                 "build_curve",
                 {
+                    "market_data_source": "user_pasted",
                     "id": "x",
                     "preset": "NOPE",
                     "quotes": [{"type": "ois", "tenor": "1Y", "rate": 0.03}],
@@ -109,7 +112,8 @@ async def test_build_curve_tool_shape_and_no_engine_call(
                 },
             )
         )
-    assert set(r) == {"ok", "curve", "indices", "preset", "notes"} and r["ok"] is True
+    assert set(r) == {"ok", "curve", "indices", "preset", "notes", "market_data_source"}
+    assert r["ok"] is True and r["market_data_source"] == "user_pasted"
     assert r["preset"] == "USD_SOFR_OIS" and len(r["curve"]["points"]) == 15
     assert any(n.startswith("ois.payment_lag=2 from preset USD_SOFR_OIS") for n in r["notes"])
     assert (
@@ -136,7 +140,15 @@ async def test_bootstrap_curve_echoes_resolved_request_and_summarizes(
         )
         direct_call = fake_backend.calls[-1]
         put = _s(
-            await c.call_tool("session_put", {"name": "sofr", "kind": "curve", "value": built})
+            await c.call_tool(
+                "session_put",
+                {
+                    "market_data_source": "user_pasted",
+                    "name": "sofr",
+                    "kind": "curve",
+                    "value": built,
+                },
+            )
         )
         listed = _s(await c.call_tool("session_list", {}))
         got = _s(await c.call_tool("session_get", {"name": "sofr"}))
@@ -225,6 +237,7 @@ async def test_session_put_rejects_schema_mismatch(app: Any) -> None:
             await c.call_tool(
                 "session_put",
                 {
+                    "market_data_source": "user_pasted",
                     "name": "x",
                     "kind": "curve",
                     "value": {"id": "c", "points": [], "day_counter": "NotADayCounter"},
@@ -245,12 +258,24 @@ async def test_session_cap_from_settings() -> None:
     async with Client(app) as c:
         _s(
             await c.call_tool(
-                "session_put", {"name": "a", "kind": "index", "value": {"id": "A", "name": "a"}}
+                "session_put",
+                {
+                    "market_data_source": "user_pasted",
+                    "name": "a",
+                    "kind": "index",
+                    "value": {"id": "A", "name": "a"},
+                },
             )
         )
         r = _s(
             await c.call_tool(
-                "session_put", {"name": "b", "kind": "index", "value": {"id": "B", "name": "b"}}
+                "session_put",
+                {
+                    "market_data_source": "user_pasted",
+                    "name": "b",
+                    "kind": "index",
+                    "value": {"id": "B", "name": "b"},
+                },
             )
         )
     assert r["evicted"] == "a" and r["size"] == 1 and r["max_items"] == 1
@@ -264,6 +289,7 @@ async def test_build_value_curve_and_inflation_passthrough(
             await c.call_tool(
                 "build_value_curve",
                 {
+                    "market_data_source": "user_pasted",
                     "id": "VC",
                     "kind": "discount",
                     "points": [
@@ -279,6 +305,7 @@ async def test_build_value_curve_and_inflation_passthrough(
             await c.call_tool(
                 "build_value_curve",
                 {
+                    "market_data_source": "user_pasted",
                     "id": "VC",
                     "kind": "discount",
                     "points": [{"tenor": "1Y", "value": 0.96}],

@@ -1,6 +1,6 @@
 [project]
 name = "quantra-mcp"
-version = "0.1.2"
+version = "0.1.3"
 description = "MCP server that fronts the Quantra pricing engine's JSON API for agents"
 readme = "README.md"
 license = "BSD-3-Clause"

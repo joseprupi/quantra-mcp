@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.1.3 (2026-10-07)
+
+Absolute rule on market data (M5.3). Observed live: asked only what market data a
+swaption ticket needed, the assistant typed 13 OIS quotes "from memory", priced the
+trade on them and labelled the table "placeholder", using the former "illustrative /
+demo price" exception on its own initiative. That exception is gone.
+
+- Server instructions, `VOICE` and every prompt now state one absolute rule, verbatim:
+  "Never type, estimate, recall or invent market data (quotes, discount factors, zero
+  rates, vols, fixings). Not as a placeholder, not as a test run, not labelled as
+  approximate. Market data for a user's trade exists only when the user has pasted or
+  dictated it in this conversation. Until then: say what is needed, in paste-able form,
+  and stop. Do not call any curve-building or pricing tool." The shipped examples remain
+  request-shape references only; an example's own market data may be run only when the
+  user explicitly asks to run that example, and is then reported as the example's data.
+  The words "illustrative" and "demo price" no longer appear anywhere in instructions,
+  prompts or README (pinned by a test).
+- Mechanical guard: `build_curve`, `build_value_curve`, `curve_from_pasted_table`,
+  `session_put` and every `price_*` tool (14) gained a REQUIRED `market_data_source`
+  argument, an enum of exactly `user_pasted` | `user_file` | `engine_example` |
+  `session`. No value describes estimated, recalled or placeholder data; the argument
+  description says so and tells the model to ask the user instead of calling. A call
+  without it, or with any other value, fails validation before anything runs. The
+  declaration is echoed in the result (`market_data_source`) and as the first entry of
+  `notes`; `session_put` stores it with the item (`item.market_data_source`, reported by
+  `session_get` / `session_list`), a build result's own declaration must agree with the
+  argument, and a later `{"session": name}` reference reports the stored source in the
+  resolving tool's `notes`. No value-level validation is possible; the point is the
+  explicit declaration.
+- Tests: `tests/unit/test_market_data_source.py` (schema enum on every guarded tool,
+  missing / invalid value fails validation, echo per tool and per value, session
+  storage and carry-forward); the hermetic and live suites pass `market_data_source`
+  on every call. README "For business users" states the rule in one sentence.
+
 ## 0.1.2 (2026-10-07)
 
 Methodology transparency, generic (M5.2). Operator rule: nothing in the server is

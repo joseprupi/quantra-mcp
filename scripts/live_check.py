@@ -162,6 +162,7 @@ async def _build_and_query(
         client,
         "build_curve",
         {
+            "market_data_source": "user_pasted",
             "id": preset_id,
             "preset": preset_id,
             "quotes": strip["quotes"],
@@ -270,6 +271,7 @@ async def m2_checks(client: Client, http: httpx.AsyncClient, rows: list[Row]) ->
         client,
         "build_value_curve",
         {
+            "market_data_source": "user_pasted",
             "id": "VC",
             "kind": "discount",
             "points": [{"date": "2025-01-15", "value": 1.0}, {"tenor": "1Y", "value": 0.96}],
@@ -357,7 +359,11 @@ async def m2_checks(client: Client, http: httpx.AsyncClient, rows: list[Row]) ->
         )
 
     # --- session round trip -------------------------------------------------
-    put = await _tool(client, "session_put", {"name": "sofr", "kind": "curve", "value": built})
+    put = await _tool(
+        client,
+        "session_put",
+        {"market_data_source": "user_pasted", "name": "sofr", "kind": "curve", "value": built},
+    )
     via = await _tool(
         client,
         "bootstrap_curve",
@@ -478,6 +484,7 @@ async def m3_tools(client: Client, http: httpx.AsyncClient, rows: list[Row]) -> 
         client,
         "build_curve",
         {
+            "market_data_source": "user_pasted",
             "id": "USD_SOFR_OIS",
             "preset": "USD_SOFR_OIS",
             "quotes": strip["quotes"],

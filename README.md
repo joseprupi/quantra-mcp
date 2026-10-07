@@ -98,12 +98,16 @@ a bumped quote, a rolled date). A cause it can neither cite nor demonstrate is
 reported as a possibility, not a conclusion. Ask "how is this computed?" at any
 point and you get the cited methodology page for that number.
 
-The shipped examples are request-shape references only: the market data for YOUR
-trade (curves, vols, fixings) always comes from you, pasted or quoted. The assistant
-never reuses an example's market data for your trade; if you have not supplied it, it
-asks for it in paste-able form and stops. An explicitly requested demo price is
-labelled illustrative and names the example used. Engine fixtures whose name or
-description refers to a vendor are not shipped at all.
+The assistant will never type, estimate, recall or invent market data for your trade
+(quotes, discount factors, zero rates, vols, fixings), not as a placeholder, not as a
+test run, not labelled as approximate: until you have pasted or dictated it, it tells
+you what is needed, in paste-able form, and stops. The shipped examples are
+request-shape references only; the assistant never reuses an example's market data for
+your trade, and every curve-building and pricing tool requires it to declare where the
+numbers came from (pasted by you, read from your file or screenshot, an example you
+explicitly asked to run, or a market stored earlier in the session), with no permitted
+value for invented data. Engine fixtures whose name or description refers to a vendor
+are not shipped at all.
 
 Project instructions you can paste into a claude.ai Project that has the
 connector enabled:

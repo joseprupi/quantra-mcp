@@ -38,6 +38,7 @@ async def _build(client: Client, preset_id: str) -> tuple[dict[str, Any], dict[s
         client,
         "build_curve",
         {
+            "market_data_source": "user_pasted",
             "id": preset_id,
             "preset": preset_id,
             "quotes": strip["quotes"],
@@ -101,6 +102,7 @@ async def test_discount_value_curve_round_trip() -> None:
             client,
             "build_value_curve",
             {
+                "market_data_source": "user_pasted",
                 "id": "VC",
                 "kind": "discount",
                 "points": [{"date": "2025-01-15", "value": 1.0}, {"tenor": "1Y", "value": 0.96}],
@@ -140,7 +142,11 @@ async def test_session_reference_resolves_to_the_same_request() -> None:
             "bootstrap_curve",
             {"curves": [built], "as_of": "2025-01-15", "queries": [query]},
         )
-        put = await _call(client, "session_put", {"name": "estr", "kind": "curve", "value": built})
+        put = await _call(
+            client,
+            "session_put",
+            {"market_data_source": "user_pasted", "name": "estr", "kind": "curve", "value": built},
+        )
         via = await _call(
             client,
             "bootstrap_curve",
@@ -173,6 +179,7 @@ async def test_pasted_discount_table_reprices_the_sofr_example() -> None:
             client,
             "build_curve",
             {
+                "market_data_source": "user_pasted",
                 "id": "USD_SOFR_OIS",
                 "preset": "USD_SOFR_OIS",
                 "quotes": strip["quotes"],
@@ -208,7 +215,13 @@ async def test_pasted_discount_table_reprices_the_sofr_example() -> None:
         vc = await _call(
             client,
             "curve_from_pasted_table",
-            {"text": text, "id": "USD_SOFR_OIS", "kind": "discount", "preset": "USD_SOFR_OIS"},
+            {
+                "market_data_source": "user_pasted",
+                "text": text,
+                "id": "USD_SOFR_OIS",
+                "kind": "discount",
+                "preset": "USD_SOFR_OIS",
+            },
         )
         assert vc["ok"], vc
         assert len(vc["parsed_rows"]) == len(dfs) and vc["unparsed"] == []

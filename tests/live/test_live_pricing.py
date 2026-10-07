@@ -82,6 +82,7 @@ async def test_ois_swap_on_a_built_sofr_curve_matches_the_blog_example() -> None
             client,
             "build_curve",
             {
+                "market_data_source": "user_pasted",
                 "id": "USD_SOFR_OIS",
                 "preset": "USD_SOFR_OIS",
                 "quotes": strip["quotes"],
@@ -101,7 +102,11 @@ async def test_engine_error_during_date_resolution_is_reported() -> None:
     market: dict[str, Any] = dict(case.live["market"])
     market["as_of_date"] = "2025-02-30"
     async with live_client() as client:
-        r = await _call(client, "price_vanilla_swap", {**case.live, "market": market})
+        r = await _call(
+            client,
+            "price_vanilla_swap",
+            {"market_data_source": "engine_example", **case.live, "market": market},
+        )
     assert r["ok"] is False and r["status"] is None  # rejected locally: not a real date
     assert "2025-02-30" in r["error"]
 

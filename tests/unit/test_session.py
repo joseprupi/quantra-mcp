@@ -61,7 +61,9 @@ def test_resolve_refs_expands_everything_and_notes_it() -> None:
     )
     assert [c["id"] for c in curves] == ["c1", "c2", "c3", "c4"]
     assert [i["id"] for i in indices] == ["IX", "IX3", "IX", "IX2", "IX3", "IX4"]
-    assert notes[0] == "curves[0] <- session 'sofr' (curve c1, +1 attached index)"
+    assert notes[0] == (
+        "curves[0] <- session 'sofr' (curve c1, +1 attached index; stored market_data_source=None)"
+    )
     assert any("market: 1 curves, 1 indices" in n for n in notes)
     assert is_ref({"session": "x"}) and not is_ref({"session": "x", "id": 1}) and not is_ref("x")
 

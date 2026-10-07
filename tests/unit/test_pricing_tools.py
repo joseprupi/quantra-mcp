@@ -147,6 +147,7 @@ async def test_blog_ois_example_from_a_built_curve(pricing_app: Any) -> None:
             await c.call_tool(
                 "build_curve",
                 {
+                    "market_data_source": "user_pasted",
                     "id": "USD_SOFR_OIS",
                     "preset": "USD_SOFR_OIS",
                     "quotes": strip["quotes"],
@@ -156,7 +157,15 @@ async def test_blog_ois_example_from_a_built_curve(pricing_app: Any) -> None:
         )
         r = _s(await c.call_tool("price_ois_swap", blog_ois_args_explicit(built)))
         put = _s(
-            await c.call_tool("session_put", {"name": "sofr", "kind": "curve", "value": built})
+            await c.call_tool(
+                "session_put",
+                {
+                    "market_data_source": "user_pasted",
+                    "name": "sofr",
+                    "kind": "curve",
+                    "value": built,
+                },
+            )
         )
         args = blog_ois_args_explicit(built)
         args["market"] = {"session": "sofr"}
@@ -171,22 +180,51 @@ async def test_blog_ois_example_from_a_built_curve(pricing_app: Any) -> None:
 async def test_local_errors_never_reach_the_engine(pricing_app: Any, backend: FakeBackend) -> None:
     case = CASES["price_vanilla_swap"]
     async with Client(pricing_app) as c:
-        unknown = _s(await c.call_tool("price_vanilla_swap", {**case.explicit, "preset": "NOPE"}))
+        unknown = _s(
+            await c.call_tool(
+                "price_vanilla_swap",
+                {"market_data_source": "engine_example", **case.explicit, "preset": "NOPE"},
+            )
+        )
         no_trade = _s(
-            await c.call_tool("price_vanilla_swap", {**case.explicit, "preset": "EUR_CDS"})
+            await c.call_tool(
+                "price_vanilla_swap",
+                {"market_data_source": "engine_example", **case.explicit, "preset": "EUR_CDS"},
+            )
         )
-        bad_index = _s(await c.call_tool("price_vanilla_swap", {**case.explicit, "index_id": "X"}))
+        bad_index = _s(
+            await c.call_tool(
+                "price_vanilla_swap",
+                {"market_data_source": "engine_example", **case.explicit, "index_id": "X"},
+            )
+        )
         bad_curve = _s(
-            await c.call_tool("price_vanilla_swap", {**case.explicit, "discounting_curve": "nope"})
+            await c.call_tool(
+                "price_vanilla_swap",
+                {
+                    "market_data_source": "engine_example",
+                    **case.explicit,
+                    "discounting_curve": "nope",
+                },
+            )
         )
-        both = _s(await c.call_tool("price_vanilla_swap", {**case.explicit, "tenor": "5Y"}))
+        both = _s(
+            await c.call_tool(
+                "price_vanilla_swap",
+                {"market_data_source": "engine_example", **case.explicit, "tenor": "5Y"},
+            )
+        )
         as_of = _s(
-            await c.call_tool("price_vanilla_swap", {**case.explicit, "as_of": "2024-01-01"})
+            await c.call_tool(
+                "price_vanilla_swap",
+                {"market_data_source": "engine_example", **case.explicit, "as_of": "2024-01-01"},
+            )
         )
         no_market_as_of = _s(
             await c.call_tool(
                 "price_vanilla_swap",
                 {
+                    "market_data_source": "engine_example",
                     **case.explicit,
                     "market": {"curves": [case.explicit["market"]["rates"]["curves"][0]]},
                 },
@@ -213,6 +251,7 @@ async def test_market_object_with_build_curve_result_and_additions(pricing_app: 
             await c.call_tool(
                 "build_curve",
                 {
+                    "market_data_source": "user_pasted",
                     "id": "E3",
                     "preset": "EUR_EURIBOR_3M",
                     "quotes": strip["quotes"],
@@ -224,6 +263,7 @@ async def test_market_object_with_build_curve_result_and_additions(pricing_app: 
             await c.call_tool(
                 "price_cap_floor",
                 {
+                    "market_data_source": "engine_example",
                     "market": {"curves": [built]},
                     "as_of": "2025-01-15",
                     "preset": "EUR_EURIBOR_3M",
@@ -243,6 +283,7 @@ async def test_market_object_with_build_curve_result_and_additions(pricing_app: 
             await c.call_tool(
                 "price_cap_floor",
                 {
+                    "market_data_source": "engine_example",
                     "market": {
                         "curves": [built],
                         "models": [
@@ -287,7 +328,10 @@ async def test_floating_bond_coupon_pricer_rules(pricing_app: Any) -> None:
     full = fixture_body(case.fixture)["pricing"]  # carries 'iborpricer'
     async with Client(pricing_app) as c:
         ambiguous = _s(
-            await c.call_tool("price_floating_rate_bond", {**case.explicit, "market": full})
+            await c.call_tool(
+                "price_floating_rate_bond",
+                {"market_data_source": "engine_example", **case.explicit, "market": full},
+            )
         )
         chosen = _s(
             await c.call_tool(
@@ -297,7 +341,8 @@ async def test_floating_bond_coupon_pricer_rules(pricing_app: Any) -> None:
         )
         missing = _s(
             await c.call_tool(
-                "price_floating_rate_bond", {**case.explicit, "coupon_pricer": "nope"}
+                "price_floating_rate_bond",
+                {"market_data_source": "engine_example", **case.explicit, "coupon_pricer": "nope"},
             )
         )
     assert ambiguous["ok"] is False and "already has coupon pricers" in ambiguous["error"]
@@ -310,10 +355,21 @@ async def test_inflation_fixings_are_required_and_set(pricing_app: Any) -> None:
     stripped = market_without(case.explicit["market"])
     stripped["inflation"]["inflation_indices"][0].pop("fixings")
     async with Client(pricing_app) as c:
-        r = _s(await c.call_tool("price_zc_inflation_swap", {**case.explicit, "market": stripped}))
+        r = _s(
+            await c.call_tool(
+                "price_zc_inflation_swap",
+                {"market_data_source": "engine_example", **case.explicit, "market": stripped},
+            )
+        )
         empty = _s(
             await c.call_tool(
-                "price_zc_inflation_swap", {**case.explicit, "market": stripped, "fixings": []}
+                "price_zc_inflation_swap",
+                {
+                    "market_data_source": "engine_example",
+                    **case.explicit,
+                    "market": stripped,
+                    "fixings": [],
+                },
             )
         )
     assert r["ok"] and r["request"] == fixture_body(case.fixture)
@@ -358,6 +414,7 @@ async def test_callable_bond_and_equity_variants(pricing_app: Any) -> None:
             await c.call_tool(
                 "price_callable_fixed_rate_bond",
                 {
+                    "market_data_source": "engine_example",
                     "market": market_without(cfrb["pricing"], "volatility"),
                     "preset": "EUR_FIXED_BOND",
                     "face_amount": 1_000_000.0,
@@ -374,6 +431,7 @@ async def test_callable_bond_and_equity_variants(pricing_app: Any) -> None:
             await c.call_tool(
                 "price_equity_option",
                 {
+                    "market_data_source": "engine_example",
                     **CASES["price_equity_option"].explicit,
                     "exercise": "American",
                     "trade_id": "ACME_AMER_CALL_ATM_1Y",
@@ -426,6 +484,7 @@ async def test_yoy_inflation_cap_floor_rebuilds_its_fixture(pricing_app: Any) ->
             await c.call_tool(
                 "price_yoy_inflation_cap_floor",
                 {
+                    "market_data_source": "engine_example",
                     "market": market,
                     "inflation_index_id": "EUHICP_YY",
                     "fixings": fx["pricing"]["inflation"]["inflation_indices"][0]["fixings"],
@@ -443,6 +502,7 @@ async def test_yoy_inflation_cap_floor_rebuilds_its_fixture(pricing_app: Any) ->
             await c.call_tool(
                 "price_yoy_inflation_cap_floor",
                 {
+                    "market_data_source": "engine_example",
                     "market": fx["pricing"],  # carries YOY_VOL_BLACK
                     "inflation_index_id": "EUHICP_YY",
                     "fixings": fx["pricing"]["inflation"]["inflation_indices"][0]["fixings"],
