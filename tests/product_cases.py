@@ -368,3 +368,49 @@ def blog_ois_args_explicit(built_curve: dict[str, Any]) -> dict[str, Any]:
     args.pop("tenor")
     args.update(effective_date="2025-01-17", termination_date="2030-01-17")
     return args
+
+
+def usd_ois_swaption_args(fixture: str, settlement_method: str) -> dict[str, Any]:
+    """price_swaption arguments that must reproduce the engine's USD SOFR OIS swaption
+    fixtures (``swaption_ois_bbg_zerorate_request`` with CollateralizedCashPrice, the
+    Bloomberg SWPM-OV comparison; ``swaption_ois_request`` with ParYieldCurve): 1M x 10Y
+    payer, strike 3.367463%, Bachelier normal vol 102.67bp, cash settled, as-of 2024-08-14.
+    The market is the fixture's own pricing block minus the vol surface and model the
+    tool builds back. Neither fixture carries a QuantLib reference value, so they stay
+    out of ``FIXTURES``."""
+    return dict(
+        market=market_without(fixture_body(fixture)["pricing"], "volatility"),
+        preset="USD_SOFR_OIS",
+        underlying_type="OisSwap",
+        underlying={
+            "swap_type": "Payer",
+            "notional": 1_000_000.0,
+            "fixed_rate": 0.03367463,
+            "effective_date": "spot",
+            "tenor": "10Y",
+        },
+        exercise_date="2024-09-16",
+        settlement_type="Cash",
+        settlement_method=settlement_method,
+        discounting_curve="USD_SOFR",
+        forwarding_curve="USD_SOFR",
+        vol={"constant": 0.010267, "type": "Normal", "id": "usd_sofr_swo_vol"},
+        model="Bachelier",
+    )
+
+
+def usd_ois_swaption_args_explicit(fixture: str, settlement_method: str) -> dict[str, Any]:
+    args = usd_ois_swaption_args(fixture, settlement_method)
+    args["underlying"] = {
+        **args["underlying"],
+        "effective_date": "2024-09-18",
+        "termination_date": "2034-09-18",
+    }
+    args["underlying"].pop("tenor")
+    return args
+
+
+USD_OIS_SWAPTION_FIXTURES = {
+    "swaption_ois_bbg_zerorate_request": "CollateralizedCashPrice",
+    "swaption_ois_request": "ParYieldCurve",
+}

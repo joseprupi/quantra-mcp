@@ -16,7 +16,7 @@ agent ──(MCP: stdio / streamable HTTP)──▶ quantra-mcp ──(HTTP/JSON
                                                                         or api.quantra.io)
 ```
 
-Status: **0.1.0** (discovery, calendars, raw passthrough, market construction,
+Status: **0.1.1** (discovery, calendars, raw passthrough, market construction,
 one pricing tool per product, analytics by composition, the engine's 223
 example requests as a catalog, prompts; stdio and a hardened streamable-HTTP
 mode). Engine contract pinned to **v0.7.0** (`src/quantra_mcp/schema/PIN`);
@@ -42,7 +42,7 @@ Or point the server at the public demo with `QUANTRA_ENGINE_URL=https://api.quan
 ```bash
 uvx quantra-mcp --version        # from PyPI, nothing else to install (needs uv)
 pipx install quantra-mcp         # or pip install quantra-mcp
-docker run --rm -p 8765:8765 -e QUANTRA_ENGINE_URL=http://host.docker.internal:8080 ghcr.io/joseprupi/quantra-mcp:0.1.0
+docker run --rm -p 8765:8765 -e QUANTRA_ENGINE_URL=http://host.docker.internal:8080 ghcr.io/joseprupi/quantra-mcp:0.1.1
 ```
 
 From a checkout: `git clone https://github.com/joseprupi/quantra-mcp && cd quantra-mcp && uv sync && uv run quantra-mcp --help`.
@@ -60,6 +60,55 @@ https://mcp.quantra.io/mcp
 Then ask Claude to call `quantra_meta`, or "price a 5Y EUR payer swap with the
 EUR_EURIBOR_6M preset". The hosted instance has no authentication and the
 limits described under [Security](#security-and-limits).
+
+### For business users (claude.ai)
+
+You do not need to know any of the tool names below. Connect the server (above),
+then talk about the trade: paste a Bloomberg SWPM / SWPM-OV screenshot, a term
+sheet or a ticket and ask "can we price this, and what market data do you need?".
+The assistant answers in trade terms: whether it can be priced, which market
+data is missing and how to paste it, the conventions it will assume, then the
+engine's price reconciled against the number on your screen.
+
+What to paste when asked:
+
+- **The curve.** Licensed vendor curves (Bloomberg ICVS/SWDF, Refinitiv, Markit)
+  are never available on the server side. Paste either the discount factors of the
+  Curves tab as `date, DF` rows, the zero rates as `date, zero %`, or the par quotes
+  of the strip as `tenor, rate %`. CSV, tab- or space-separated, header optional,
+  `%` signs and thousands separators allowed; rows that cannot be read are reported
+  back, nothing is silently dropped or recomputed.
+- **The volatility.** The normal vol in bp (or lognormal %) at the trade's expiry x
+  tenor, or the ATM matrix.
+- **The valuation date** and anything the screen implies but does not show
+  (payment lag, settlement method).
+
+What you get: the engine's NPV / premium and fair rate, every convention that was
+assumed and where it comes from, the dates the engine resolved, the difference to
+your screen with its likely causes, and, on request, the complete request that was
+sent so anyone can replay it. The USD SOFR OIS conventions reproduce the engine's own
+[Bloomberg SWPM-OV swaption comparison](https://quantra.io/docs/bloomberg-swaption-comparison)
+request exactly (1M x 10Y payer, normal vol, cash settled; engine premium
+10,585.40 on the shipped zero-rate curve against Bloomberg's 10,359.49).
+
+Project instructions you can paste into a claude.ai Project that has the
+connector enabled:
+
+```
+You are a desk quant helping a trader price and check derivatives with the Quantra
+pricing engine connected to this project. Speak in trade and market terms; never
+mention tool names, presets, sessions, request bodies, schemas or MCP unless asked
+how it works. When I describe a trade or paste a screenshot or ticket: (1) say
+whether it can be priced here; (2) list exactly the market data that is missing and
+the simplest form I can paste it in (discount factors as date, DF rows; zero rates
+as date, zero %; par quotes as tenor, rate %; vols in bp); (3) list every convention
+you will assume and its source and ask me to confirm; (4) build the curve from what
+I paste, price, and put the engine's number next to the number on my screen (spot
+premium vs spot premium, fair rate vs fair rate) with the difference and its likely
+causes; (5) always show the engine's own numbers with their assumptions and offer
+the full request only if I ask. Never invent or recall a vendor curve; never adjust
+an input to make a number match. If the engine refuses, tell me what to supply.
+```
 
 ### Claude Code
 
@@ -281,6 +330,7 @@ sourced from a named engine fixture at the pin (`field_provenance`):
 | `list_presets()` / `get_preset(id)` | The market-convention presets (data + provenance). No engine call. |
 | `build_curve(id, preset, quotes, reference_date, trait?, interpolator?, day_counter?)` | Quote strip -> `{curve, indices, preset, notes}`; sorted by maturity, duplicate tenors rejected, every convention noted with its source. No engine call. |
 | `build_value_curve(id, kind, points, reference_date, preset? \| conventions?, compounding?, frequency?, interpolator?)` | Explicit zero / discount / forward values -> an `Interpolated*` curve (discount: first point must be 1.0 at the reference date). No engine call. |
+| `curve_from_pasted_table(text, id, kind=discount\|zero\|par, preset?, reference_date?, conventions?, quote_type?, percent?, date_format?, ...)` | A pasted table (CSV / TSV / whitespace, header optional; date or tenor + value; `%` and thousands separators normalised, nothing else) -> `build_value_curve` (discount / zero) or `build_curve` (par quotes); returns the built curve plus `parsed_rows`, `unparsed` (with reasons) and `notes`. No engine call. |
 | `build_query(curve_id, measures, tenors? \| range_grid?, calendar?, business_day_convention?, zero?, fwd?)` | A `CurveQuerySpec`; FWD needs explicit `fwd` options. No engine call. |
 | `bootstrap_curve(curves, as_of, queries, indices?, calendar_overrides?, request_id?)` | `POST /bootstrap-curves`. `curves` items: `TermStructure`, `build_curve` result or `{"session": name}`; echoed `request` is the resolved body; `summary` = per curve `{id, pillars, first_grid_date, last_grid_date, measures}`. |
 | `bootstrap_inflation_curve(body, request_id?)` | `POST /bootstrap-inflation-curves` with a raw body (validated first). |
@@ -405,6 +455,7 @@ reproducing the base NPV (`tests/live/test_live_analytics.py`).
 | `price-a-swap(currency, kind)` | `quantra_meta` -> `list_presets` / `get_preset` -> `build_curve` -> `session_put` -> `price_vanilla_swap` / `price_ois_swap`, reading `request`, `summary`, `notes` and the 400 / 422 distinction. |
 | `bootstrap-from-strip(preset)` | `get_preset` -> `build_curve` -> `build_query` -> `bootstrap_curve`; the grid lives in `response`. |
 | `holiday-check` | `calendar_holidays` -> diff with the user's list -> `calendar_overrides` -> verify with `calendar_advance` -> pass to every pricing tool. |
+| `price-from-screen(product?)` | Screenshot / ticket -> can it be priced -> missing market data in paste-able form -> confirm conventions -> `curve_from_pasted_table` -> `price_*` -> reconcile against the screen (spot premium), business voice. |
 | `explore-examples` | `list_examples` -> `get_example` -> `engine_request`; or reuse an example's `pricing` block as the `market` of a pricing tool. |
 
 ## Examples catalog

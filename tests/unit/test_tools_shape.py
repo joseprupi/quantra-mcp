@@ -43,6 +43,7 @@ async def test_lists_tools_and_resources(app: Any) -> None:
             "get_preset",
             "build_curve",
             "build_value_curve",
+            "curve_from_pasted_table",
             "build_query",
             "bootstrap_curve",
             "bootstrap_inflation_curve",
@@ -89,6 +90,7 @@ async def test_lists_tools_and_resources(app: Any) -> None:
             "bootstrap-from-strip",
             "holiday-check",
             "explore-examples",
+            "price-from-screen",
         }
         templates = {t.uri_template for t in (await c.list_resource_templates()).resource_templates}
         assert templates == {

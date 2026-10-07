@@ -10,14 +10,15 @@ fields, never a computation.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from mcp.server.mcpserver import MCPServer
 
 from quantra_mcp.backend.base import Backend
 from quantra_mcp.builders import curves as cb
+from quantra_mcp.builders import pasted_table as pt
 from quantra_mcp.errors import LocalValidationError
-from quantra_mcp.presets.registry import PresetError, get_preset
+from quantra_mcp.presets.registry import HelperType, PresetError, get_preset
 from quantra_mcp.presets.registry import list_presets as _list_presets
 from quantra_mcp.schema.enums_generated import (
     BootstrapTrait,
@@ -95,6 +96,129 @@ def build_value_curve_impl(
     except LocalValidationError as exc:
         return local_error_result(BOOTSTRAP_CURVES, None, exc.error, exc.problems)
     return _check_built(built)
+
+
+ALL_HELPER_TYPES: tuple[str, ...] = ("deposit", "fra", "future", "swap", "ois")
+
+
+def curve_from_pasted_table_impl(
+    text: str,
+    id: str,
+    kind: pt.TableKind,
+    preset: str | None = None,
+    reference_date: str | None = None,
+    conventions: cb.ValueCurveConventions | None = None,
+    quote_type: HelperType | None = None,
+    percent: bool | None = None,
+    date_format: pt.DateFormat | None = None,
+    compounding: Compounding | None = None,
+    frequency: Frequency | None = None,
+    interpolator: Interpolator | None = None,
+) -> ToolResult:
+    """Parse the table, then hand the rows to build_value_curve (discount / zero)
+    or build_curve (par quotes). Parsing notes and unreadable rows ride along."""
+    if kind not in ("discount", "zero", "par"):
+        return local_error_result(
+            BOOTSTRAP_CURVES, None, f"kind must be discount, zero or par (got {kind!r})"
+        )
+    helper_types: tuple[str, ...] = ALL_HELPER_TYPES
+    p = None
+    if preset is not None:
+        try:
+            p = get_preset(preset)
+        except PresetError as exc:
+            return local_error_result(BOOTSTRAP_CURVES, None, str(exc))
+        if p.helpers is not None:
+            helper_types = tuple(p.helpers.available)
+    table = pt.parse_table(
+        text, kind, percent=percent, date_format=date_format, helper_types=helper_types
+    )
+    extra: dict[str, Any] = {
+        "parsed_rows": [r.as_dict() for r in table.rows],
+        "unparsed": table.unparsed,
+        "header": table.header,
+    }
+
+    def fail(error: str, problems: list[dict[str, str]] | None = None) -> ToolResult:
+        out = local_error_result(BOOTSTRAP_CURVES, None, error, problems)
+        out["notes"] = table.notes
+        out.update(extra)
+        return out
+
+    if not table.rows:
+        return fail(
+            "no row of the pasted table could be read as <date or tenor> <value>; "
+            "see unparsed for the reason per line"
+        )
+    notes = list(table.notes)
+
+    ref = reference_date
+    if ref is None:
+        first = table.rows[0]
+        if kind == "discount" and first.date is not None and first.value == 1.0:
+            ref = first.date
+            notes.append(f"reference_date={ref!r} taken from the first row (discount factor 1.0)")
+        else:
+            return fail(
+                "reference_date is required: the curve date (the as-of / valuation date the "
+                "table was taken at), YYYY-MM-DD"
+            )
+
+    if kind == "par":
+        quotes: list[cb.CurveQuote] = []
+        single = helper_types[0] if len(helper_types) == 1 else None
+        for r in list(table.rows):
+            if r.tenor is None:
+                table.unparsed.append(
+                    {
+                        "line": r.line_no,
+                        "text": r.text,
+                        "reason": "par quotes need a tenor (e.g. 5Y), not a date",
+                    }
+                )
+                continue
+            t = r.helper_type or (str(quote_type) if quote_type is not None else None) or single
+            if t is None:
+                return fail(
+                    "quote_type is required for a par table when the preset offers several "
+                    f"quote types {list(helper_types)} and the rows do not name one"
+                )
+            quotes.append(cb.CurveQuote(type=t, tenor=r.tenor, rate=r.value))  # type: ignore[arg-type]
+        extra["unparsed"] = table.unparsed
+        if not quotes:
+            return fail("no par quote row with a tenor could be used")
+        if preset is None:
+            return fail("par tables need a preset (its helper conventions build the curve)")
+        src = (
+            "rows tagged per line"
+            if any(r.helper_type for r in table.rows)
+            else (
+                f"quote_type={quote_type!s} (argument)"
+                if quote_type
+                else f"the preset's only quote type {single!r}"
+            )
+        )
+        notes.append(f"par quotes -> build_curve helpers of type from {src}")
+        result = build_curve_impl(id, preset, quotes, ref, None, interpolator, None)
+    else:
+        points = [cb.ValuePoint(date=r.date, tenor=r.tenor, value=r.value) for r in table.rows]
+        if kind == "discount":
+            head = points[0]
+            at_ref = head.date == ref or (isinstance(head.tenor, dict) and head.tenor.get("n") == 0)
+            if not at_ref:
+                points.insert(0, cb.ValuePoint(date=ref, value=1.0))
+                notes.append(
+                    f"added the anchor point {{date: {ref}, discount_factor: 1.0}} in front: "
+                    "the engine requires the first discount point to be 1.0 at the reference "
+                    "date (a discount factor of 1.0 on the curve date is a definition, not a "
+                    "computed value); your pasted values are unchanged"
+                )
+        result = build_value_curve_impl(
+            id, kind, points, ref, preset, conventions, compounding, frequency, interpolator
+        )
+    result["notes"] = notes + list(result.get("notes", []))
+    result.update(extra)
+    return result
 
 
 def build_query_impl(
@@ -310,6 +434,70 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
             reference_date,
             preset,
             conventions,
+            compounding,
+            frequency,
+            interpolator,
+        )
+
+    @app.tool()
+    def curve_from_pasted_table(
+        text: str,
+        id: str,
+        kind: Literal["discount", "zero", "par"],
+        preset: str | None = None,
+        reference_date: str | None = None,
+        conventions: cb.ValueCurveConventions | None = None,
+        quote_type: HelperType | None = None,
+        percent: bool | None = None,
+        date_format: Literal["iso", "mdy", "dmy"] | None = None,
+        compounding: Compounding | None = None,
+        frequency: Frequency | None = None,
+        interpolator: Interpolator | None = None,
+    ) -> ToolResult:
+        """A curve from a table the user pasted (Bloomberg Curves tab, a spreadsheet,
+        a ticket): parses it and calls build_value_curve (discount / zero) or
+        build_curve (par quotes). No engine call; no arithmetic on the values.
+
+        Args:
+            text: the pasted rows. CSV / TSV / ';' / '|' / whitespace separated, header
+                optional. Each row: a date (``2034-09-18``, ``18-Sep-2034``,
+                ``09/18/2034`` with ``date_format``) or a tenor (``10Y``), then the
+                value. ``%`` values are divided by 100; ``1,000.5`` loses its commas.
+                An optional word per row (``ois``, ``swap``, ``deposit``) tags a par
+                quote's type.
+            id: curve id to register.
+            kind: ``discount`` (discount factors -> InterpolatedDiscount), ``zero``
+                (zero rates -> InterpolatedZero) or ``par`` (market quotes -> bootstrap
+                helpers of the preset).
+            preset: supplies the curve day counter and point calendar/convention
+                (``USD_SOFR_OIS``...); required for ``par``; or give ``conventions``.
+            reference_date: the curve / as-of date. For ``discount`` it may be omitted
+                when the first row is that date with value 1.0.
+            quote_type: par tables only: the helper type when the rows do not name one
+                and the preset offers several.
+            percent: ``true`` = every value is a percentage; default: only values
+                written with ``%``.
+            date_format: ``mdy`` / ``dmy`` for slash dates; inferred when a field exceeds
+                12, otherwise required.
+            compounding, frequency: zero tables only (default Continuous / Annual).
+            interpolator: override the builder default.
+
+        Returns the builder result (``{ok, curve, indices, preset, notes}``) plus
+        ``parsed_rows`` (line, label, value as read), ``unparsed`` (line, text,
+        reason) and ``header``. For a discount table whose first row is not the
+        reference date, the anchor point ``{reference_date: 1.0}`` the engine
+        requires is added in front and said so in ``notes``.
+        """
+        return curve_from_pasted_table_impl(
+            text,
+            id,
+            kind,
+            preset,
+            reference_date,
+            conventions,
+            quote_type,
+            percent,
+            date_format,
             compounding,
             frequency,
             interpolator,

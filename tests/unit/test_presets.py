@@ -68,7 +68,7 @@ def test_sofr_preset_matches_the_gold_example_conventions() -> None:
         "bootstrap_trait": "Discount",
     }
     # the curve side is fully sourced; the only field-level entry is the trade block's
-    assert set(p.field_provenance) == {"trades.ois_swap"}
+    assert set(p.field_provenance) == {"trades.ois_swap", "trades.swaption"}
 
 
 def test_market_standard_fields_carry_the_exact_provenance_string() -> None:

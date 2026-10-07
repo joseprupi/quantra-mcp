@@ -141,7 +141,19 @@ async def test_prompts_are_concrete(app: Any) -> None:
         boot = await c.get_prompt("bootstrap-from-strip", {"preset": "EUR_ESTR_OIS"})
         hol = await c.get_prompt("holiday-check", {})
         ex = await c.get_prompt("explore-examples", {})
-    assert names == {"price-a-swap", "bootstrap-from-strip", "holiday-check", "explore-examples"}
+        screen = await c.get_prompt("price-from-screen", {"product": "swaption"})
+    assert names == {
+        "price-a-swap",
+        "bootstrap-from-strip",
+        "holiday-check",
+        "explore-examples",
+        "price-from-screen",
+    }
+    screen_text = screen.messages[0].content.text  # type: ignore[union-attr]
+    assert "The user says it is a swaption." in screen_text
+    assert "curve_from_pasted_table" in screen_text and "spot" in screen_text
+    assert "never available on this side" in screen_text  # vendor curves must be pasted
+    assert "mention tool names, presets, sessions" in screen_text  # business voice
     text = swap.messages[0].content.text  # type: ignore[union-attr]
     assert "price_ois_swap(" in text and "build_curve" in text and "`request`" in text
     assert "Never compute a price" in text

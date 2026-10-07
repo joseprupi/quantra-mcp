@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.1.1 (2026-10-07)
+
+Business-user voice and the Bloomberg swaption path (M5.1):
+
+- Server instructions rewritten for a business audience (trade and market terms;
+  can-it-be-priced -> missing market data in paste-able form -> conventions ->
+  price -> reconcile against the screen's spot premium; licensed vendor curves
+  must be pasted, never recalled), with a "for developers" technical map at the end.
+  Prompt titles / descriptions in the same voice.
+- `USD_SOFR_OIS` gains a `trades.swaption` block (swap index `USD_SOFR_OIS`, vol
+  base UnitedStatesGovernmentBond / ModifiedFollowing / Actual365Fixed, settlement
+  2 business days; underlying = the preset's `ois_swap`: annual Act/360 both legs,
+  SOFR compounded, payment lag 2) sourced from the engine fixtures
+  `swaption_ois_bbg_zerorate_request.json` / `swaption_ois_request.json` (v0.7.0)
+  and the Bloomberg SWPM-OV comparison post. `price_swaption` with
+  `underlying_type: OisSwap` now reads an underlying given with the shared swap
+  fields only as an OIS trade (the pydantic union used to pick the vanilla model
+  and reject it). Both fixtures are rebuilt JSON-equal (goldens
+  `price_swaption.swaption_ois_*.json`); live, the engine NPV equals a direct
+  POST of the fixture (10585.395459259198 CollateralizedCashPrice;
+  9743.012590146607 ParYieldCurve).
+- New tool `curve_from_pasted_table(text, id, kind=discount|zero|par, ...)`:
+  parses a pasted CSV / TSV / whitespace table (header optional; ISO, `DD-Mon-YYYY`
+  or slash dates with an explicit or inferable format; tenors; `%` -> decimal via
+  decimal arithmetic; thousands separators stripped; nothing else transformed)
+  into `build_value_curve` or `build_curve`; returns the built curve plus
+  `parsed_rows`, `unparsed` with reasons and parsing `notes`. For a discount table
+  the engine's required anchor `{reference_date: 1.0}` is added in front and said so.
+- New prompt `price-from-screen(product?)`.
+- Live findings (engine 0.7.0): pasting the bootstrapped SOFR curve's discount
+  factors back on a daily grid reprices the blog OIS to -7.5e-6 of
+  337986.79130030936 (the engine prints DFs with 12 significant digits, so byte
+  identity is not reachable); pasting only the true curve nodes (spot + tenor +
+  2bd payment lag) gives +1.6e-6; pasting the DFs at the engine's reported
+  `pillar_dates` (tenor dates from the reference date, not the helper nodes)
+  does not reproduce the curve (+13.78).
+- README: "For business users" section with a claude.ai Project instructions
+  snippet.
+
 ## 0.1.0 (2026-10-07)
 
 First release (phases M1 to M5): discovery, calendars, raw passthrough,

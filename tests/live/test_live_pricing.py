@@ -20,7 +20,13 @@ import pytest
 from quantra_mcp import examples_catalog as cat
 from quantra_mcp.resources import load_example
 from tests.live.test_live_engine import ENGINE_URL, _call, canonical, live_client, replay
-from tests.product_cases import blog_ois_args, fixture_body, product_cases
+from tests.product_cases import (
+    USD_OIS_SWAPTION_FIXTURES,
+    blog_ois_args,
+    fixture_body,
+    product_cases,
+    usd_ois_swaption_args,
+)
 from tests.strips import STRIPS
 
 pytestmark = [
@@ -98,3 +104,22 @@ async def test_engine_error_during_date_resolution_is_reported() -> None:
         r = await _call(client, "price_vanilla_swap", {**case.live, "market": market})
     assert r["ok"] is False and r["status"] is None  # rejected locally: not a real date
     assert "2025-02-30" in r["error"]
+
+
+@pytest.mark.parametrize("fixture", sorted(USD_OIS_SWAPTION_FIXTURES))
+async def test_usd_ois_swaption_reproduces_the_engine_fixture(fixture: str) -> None:
+    """price_swaption on the USD_SOFR_OIS preset rebuilds the engine's USD SOFR OIS
+    swaption fixtures (the Bloomberg SWPM-OV comparison request among them) JSON-equal,
+    with spot / 10Y resolved by the engine; the engine's NPV equals a direct POST of the
+    fixture (no QuantLib oracle exists for these two)."""
+    method = USD_OIS_SWAPTION_FIXTURES[fixture]
+    body = fixture_body(fixture)
+    async with live_client() as client:
+        r = await _call(client, "price_swaption", usd_ois_swaption_args(fixture, method))
+    assert r["ok"], r
+    assert r["request"] == body
+    assert len(r["date_resolution"]) == 2
+    direct = await replay("/price-swaption", body)
+    assert r["response"]["swaptions"][0]["npv"] == direct["swaptions"][0]["npv"]
+    assert canonical(r["response"]) == canonical(await replay("/price-swaption", r["request"]))
+    assert r["summary"]["swaptions"][0]["used_strike"] == 0.03367463

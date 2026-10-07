@@ -151,3 +151,77 @@ async def test_session_reference_resolves_to_the_same_request() -> None:
     assert via["request"]["pricing"]["rates"]["curves"][0] == built["curve"]
     assert canonical(via["response"]) == canonical(direct["response"])
     assert via["notes"][0].startswith("curves[0] <- session 'estr'")
+
+
+async def test_pasted_discount_table_reprices_the_sofr_example() -> None:
+    """Bootstrap the SOFR strip, sample its discount factors on a daily grid, paste them
+    back as a ``date,DF`` table through curve_from_pasted_table and reprice the blog OIS.
+
+    Byte-identity is NOT expected: the engine prints the sampled DFs with 12 significant
+    digits, so the pasted curve is the bootstrapped one rounded at every point. The
+    observed difference on engine 0.7.0 is -7.5e-6 on 337,986.79 (2.2e-11 relative);
+    the test bounds it at 1e-9 relative and reports the actual difference on failure.
+    Pasting only the curve's nodes (spot + tenor + 2bd payment lag, found as the slope
+    changes of log DF) reprices to +1.6e-6; pasting the reported ``pillar_dates`` (tenor
+    dates from the reference date, not the helper nodes) does not reproduce the curve
+    (+13.78)."""
+    from tests.product_cases import blog_ois_args
+
+    strip = STRIPS["USD_SOFR_OIS"]
+    async with live_client() as client:
+        built = await _call(
+            client,
+            "build_curve",
+            {
+                "id": "USD_SOFR_OIS",
+                "preset": "USD_SOFR_OIS",
+                "quotes": strip["quotes"],
+                "reference_date": strip["reference_date"],
+            },
+        )
+        base = await _call(client, "price_ois_swap", blog_ois_args(built))
+        assert base["ok"], base
+        npv0 = base["response"]["swaps"][0]["npv"]
+        q = await _call(
+            client,
+            "build_query",
+            {
+                "curve_id": "USD_SOFR_OIS",
+                "measures": ["DF"],
+                "range_grid": {
+                    "start_date": "2025-01-15",
+                    "end_date": "2031-01-15",
+                    "step_number": 1,
+                    "step_time_unit": "Days",
+                },
+            },
+        )
+        bs = await _call(
+            client, "bootstrap_curve", {"curves": [built], "as_of": "2025-01-15", "queries": [q]}
+        )
+        assert bs["ok"], bs
+        res = bs["response"]["results"][0]
+        dfs = _df(bs, "USD_SOFR_OIS")
+        text = "Date,DF\n" + "\n".join(
+            f"{d},{v!r}" for d, v in zip(res["grid_dates"], dfs, strict=True)
+        )
+        vc = await _call(
+            client,
+            "curve_from_pasted_table",
+            {"text": text, "id": "USD_SOFR_OIS", "kind": "discount", "preset": "USD_SOFR_OIS"},
+        )
+        assert vc["ok"], vc
+        assert len(vc["parsed_rows"]) == len(dfs) and vc["unparsed"] == []
+        assert vc["curve"]["reference_date"] == "2025-01-15"
+        args = blog_ois_args(vc)
+        args["market"] = {"curves": [vc], "indices": built["indices"]}
+        r = await _call(client, "price_ois_swap", args)
+    assert r["ok"], r
+    npv = r["response"]["swaps"][0]["npv"]
+    assert (
+        r["request"]["pricing"]["rates"]["curves"][0]["bootstrap_trait"] == "InterpolatedDiscount"
+    )
+    assert abs(npv - npv0) <= 1e-9 * abs(npv0), (
+        f"pasted-curve NPV {npv!r} vs {npv0!r}: {npv - npv0:+e}"
+    )
+    assert canonical(r["response"]) == canonical(await replay("/price-ois-swap", r["request"]))

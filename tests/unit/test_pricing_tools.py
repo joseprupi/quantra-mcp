@@ -24,10 +24,13 @@ from quantra_mcp.server import build_server
 from tests.conftest import FakeBackend
 from tests.product_cases import (
     FIXTURES,
+    USD_OIS_SWAPTION_FIXTURES,
     blog_ois_args_explicit,
     fixture_body,
     market_without,
     product_cases,
+    usd_ois_swaption_args,
+    usd_ois_swaption_args_explicit,
 )
 from tests.strips import STRIPS
 
@@ -458,3 +461,39 @@ async def test_yoy_inflation_cap_floor_rebuilds_its_fixture(pricing_app: Any) ->
     assert any("YoYOptionletVolSpec constant 0.01 Black" in n for n in r["notes"])
     assert wrong["ok"] is False and "Floor needs floor_rate" in wrong["error"]
     _golden("price_yoy_inflation_cap_floor", r["request"])
+
+
+@pytest.mark.parametrize("fixture", sorted(USD_OIS_SWAPTION_FIXTURES))
+async def test_usd_ois_swaption_rebuilds_the_bloomberg_fixtures(
+    pricing_app: Any, backend: FakeBackend, fixture: str
+) -> None:
+    """A swaption on a USD SOFR OIS underlying from the USD_SOFR_OIS preset: the
+    underlying is given with the shared swap fields only (no OIS-only field), so the
+    union would read it as a vanilla trade without the OisSwap coercion."""
+    method = USD_OIS_SWAPTION_FIXTURES[fixture]
+    async with Client(pricing_app) as c:
+        r = _s(await c.call_tool("price_swaption", usd_ois_swaption_args_explicit(fixture, method)))
+        live = _s(await c.call_tool("price_swaption", usd_ois_swaption_args(fixture, method)))
+    assert r["ok"], r
+    assert r["request"] == fixture_body(fixture)
+    assert r["request"]["swaptions"][0]["swaption"]["underlying_type"] == "OisSwap"
+    assert "payment_lag" in r["request"]["swaptions"][0]["swaption"]["underlying"]["overnight_leg"]
+    assert any("trades.swaption" in n and "bloomberg" in n.lower() for n in r["notes"])
+    _golden(f"price_swaption.{fixture}", r["request"])
+    assert live["ok"], live
+    assert len(live["date_resolution"]) == 2  # spot (exercise + 2 bd) and the 10Y end
+
+
+async def test_ois_underlying_keeps_ois_only_fields_and_rejects_vanilla_ones(
+    pricing_app: Any,
+) -> None:
+    fixture = "swaption_ois_bbg_zerorate_request"
+    args = usd_ois_swaption_args_explicit(fixture, "CollateralizedCashPrice")
+    args["underlying"] = {**args["underlying"], "payment_lag": 0}
+    async with Client(pricing_app) as c:
+        r = _s(await c.call_tool("price_swaption", args))
+    assert r["ok"], r
+    assert (
+        r["request"]["swaptions"][0]["swaption"]["underlying"]["overnight_leg"]["payment_lag"] == 0
+    )
+    assert r["request"] != fixture_body(fixture)

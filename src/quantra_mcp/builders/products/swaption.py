@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from quantra_mcp.builders.products._common import (
     AtmMatrixVol,
@@ -55,6 +55,22 @@ class SwaptionTrade(BaseModel):
         description="VanillaSwapTrade (default) or OisSwapTrade; preset must carry that block."
     )
     underlying_type: str = Field(default="VanillaSwap", description="VanillaSwap | OisSwap.")
+
+    @model_validator(mode="after")
+    def _coerce_underlying(self) -> SwaptionTrade:
+        """``underlying_type: OisSwap`` with an underlying that only carries the fields the
+        two trade models share (swap_type, notional, fixed_rate, dates, spread, index_id)
+        is parsed by the union as a VanillaSwapTrade; re-read it as the OIS trade so a
+        USD SOFR swaption needs no OIS-only field to be recognised."""
+        if self.underlying_type == "OisSwap" and isinstance(self.underlying, VanillaSwapTrade):
+            data = self.underlying.model_dump(exclude_unset=True)
+            if "floating_leg_overrides" in data:
+                data["overnight_leg_overrides"] = data.pop("floating_leg_overrides")
+            try:
+                self.underlying = OisSwapTrade.model_validate(data)
+            except ValidationError as exc:
+                raise problem("/underlying", f"not a valid OIS underlying: {exc}") from exc
+        return self
 
 
 def check_exercise(trade: SwaptionTrade) -> None:
