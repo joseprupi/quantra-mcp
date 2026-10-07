@@ -1,0 +1,373 @@
+# Versioning Policy
+
+This repository uses Semantic Versioning: `MAJOR.MINOR.PATCH`.
+
+## Rules
+
+- `MAJOR`: breaking API, schema, or contract changes
+- `MINOR`: backward-compatible features and endpoint additions
+- `PATCH`: backward-compatible fixes and internal improvements
+
+While the project is in `0.x` (pre-stable), semver permits breaking changes on
+a `MINOR` bump; each one is documented below. `1.0.0` is reserved for the
+first release that promises wire stability.
+
+## Contract Discipline
+
+- OpenAPI is treated as an API contract
+- breaking contract changes require a major version bump
+- non-breaking additions require a minor version bump
+- fixes and docs-only updates require a patch bump
+
+## Release Flow
+
+1. Merge changes into `master`
+2. Bump `VERSION`
+3. Create tag `vX.Y.Z`
+4. Publish release notes
+
+## Version 0.7.0 (October 2026) — per-request calendar holiday overrides, backward-compatible
+
+`v0.7.0` adds one feature, requested during an external validation POC: a
+request can carry its own holiday corrections, so a short-notice or one-off
+holiday no longer needs a new server image. Every 0.6.0 request prices
+identically on 0.7.0: the change is one new optional field, and a request
+without it behaves — and is cached — exactly as before. No migration is needed.
+
+### Calendar holiday overrides
+
+- New optional `calendar_overrides` list: one entry per calendar, with
+  `added_holidays` (dates that must be holidays) and `removed_holidays` (dates
+  that must be business days).
+- It goes inside `pricing`, beside `as_of_date`, on every endpoint that has a
+  `pricing` block (pricing, curve bootstrapping, calibration, sampling), and at
+  the top level of `/calendar-holidays`, `/calendar-advance` and
+  `/calendar-business-days`.
+- Overrides apply for the duration of that one request and to every use of the
+  calendar in it (indices, curve helpers, schedules, query grids). Nothing is
+  stored on the server.
+- An override that is already true is accepted with no effect, so a client's
+  override list keeps working if a later server version already includes that
+  holiday.
+- Rejected with `400`, naming the field path: an entry without a calendar, an
+  unparseable date, a date in both lists, a duplicate date, the same calendar
+  in two entries (`UnitedStates` and `UnitedStatesSettlement` are the same
+  calendar), `BespokeCalendar` / `NullCalendar`, and a weekend date in
+  `removed_holidays`.
+- Cached curves and calibrations are kept per override set: requests with
+  different overrides never share a cached result.
+
+The intended workflow is to fetch the server's holidays from
+`/calendar-holidays`, reconcile them against your own calendar client-side, and
+send only the differences. Full reference:
+[`docs/http-api.md`](http-api.md#calendar-holiday-overrides).
+
+## Version 0.6.0 (July 2026) — BREAKING: explicit OIS conventions
+
+`v0.6.0` closes a gap reported by an external validation POC: the OIS curve
+helpers could not be given the market-standard payment lag (or the other
+overnight-coupon conventions), so a curve bootstrapped from OIS quotes
+silently assumed a zero-day lag. The per-coupon effect is tiny but compounds
+along the bootstrap into a measurable long-end discount-factor shift.
+
+### OIS helpers and the OIS swap leg: conventions are now explicit and required
+
+`OISHelper` and `DatedOISHelper` gain five required fields, mirroring the
+priced `OisFloatingLeg` field-for-field:
+
+- `payment_lag` — business days between accrual end and coupon payment
+  (US SOFR market standard: 2). Must be >= 0.
+- `averaging_method` — `Compound` or `Simple` averaging of the overnight
+  fixings.
+- `lookback_days` — observation lookback; `0` = no lookback. Must be >= 0.
+- `lockout_days` — end-of-period fixing lockout; `0` = no lockout. Must
+  be >= 0.
+- `apply_observation_shift` — whether lookback uses the shifted date's
+  day-count weight.
+
+On the priced `OisFloatingLeg`, the same fields (plus `payment_convention`
+and `payment_calendar`) are now required rather than silently defaulted, and
+the old `lookback_days = -1` "none" sentinel is gone — `0` means no lookback.
+Internally a wire `0` maps to QuantLib's null lookback (measurably different
+from a literal zero-day lookback on indices with fixing days).
+
+Two behavior corrections ride along:
+
+- The helper fields `fixed_leg_convention`, `fixed_leg_frequency` and
+  `calendar` were previously accepted but **ignored** (QuantLib used
+  Following / Annual / the index calendar regardless). They are now honored —
+  they feed QuantLib's payment convention/frequency/calendar — and the
+  migrated examples state the values the engine previously applied, so
+  results are unchanged for migrated requests. If your payloads stated
+  different values, your curves will now (correctly) reflect them.
+- `fixed_leg_day_counter` on both helpers and `day_counter` on the overnight
+  leg are deprecated: no QuantLib overload consumes them (the day count comes
+  from the overnight index). They are accepted-but-ignored and documented as
+  such.
+
+### Migration (0.5.0 → 0.6.0)
+
+Add the five fields to every OIS helper point and the required conventions to
+every OIS swap leg. A standard US SOFR curve is:
+
+```json
+"payment_lag": 2,
+"averaging_method": "Compound",
+"lookback_days": 0,
+"lockout_days": 0,
+"apply_observation_shift": false
+```
+
+To reproduce pre-0.6.0 behavior exactly, state `payment_lag: 0` and, on
+helper points, `fixed_leg_convention: Following`, `fixed_leg_frequency:
+Annual` (the values the engine silently used). The functional catalog
+contains worked SOFR-style examples, including a payment-lag-2 curve, its
+zero-lag twin (documenting the long-end divergence between them), and a
+lookback/lockout curve, each verified against QuantLib.
+
+## Version 0.5.0 (July 2026) — BREAKING: no implicit values, richer curves
+
+`v0.5.0` completes the "an omitted field is an error, never a silent default"
+theme across the whole request surface, redesigns curve construction around an
+explicit trait, and cleans up response-side sentinels. It is **wire-breaking**:
+requests that omitted a field and relied on its default, and gRPC/FlatBuffers
+consumers reading response fields whose accessor type changed, must migrate.
+Numbers are unchanged — a request made fully explicit prices exactly as before.
+
+### Curve construction is now trait-driven (six explicit families)
+
+`TermStructure.bootstrap_trait` is **required** and selects the curve family;
+the server no longer guesses from the point types, and each trait validates the
+points it receives (mismatch → 400):
+
+- `Discount` / `ZeroRate` / `FwdRate` — bootstrap a `PiecewiseYieldCurve` from
+  rate helpers (deposits, swaps, …).
+- `InterpolatedZero` — interpolate zero rates directly from `ZeroRatePoint`s.
+- `InterpolatedDiscount` — interpolate discount factors from the new
+  `DiscountFactorPoint`s.
+- `InterpolatedFwd` — interpolate instantaneous forwards from the new
+  `ForwardRatePoint`s (Linear / BackwardFlat / ForwardFlat only — QuantLib
+  cannot integrate a log-interpolated forward).
+
+The three interpolated families are genuinely distinct curves (interpolating
+zeros, discount factors or forwards off the same points yields different values
+between nodes). **Explicit zero-rate curves that previously sent
+`bootstrap_trait: Discount` must send `InterpolatedZero`.** Zero-rate points in
+one curve must share one `compounding`/`frequency` (a mixed set was silently
+mis-built before).
+
+### Every request value and convention must be explicit
+
+- **Values** (were silent zeros): notionals, `base_nominal`, `face_amount`,
+  `redemption`, strikes and digital `cash`, `QuoteSpec.value`, `coupon_rate`,
+  optionlet `volatility`, inflation helper quotes, and `CdsQuote.quote_type`.
+  Amounts must be positive; rates may be negative but must be present and finite.
+- **Conventions** (were hard defaults): calendars, day counters, frequencies,
+  business-day conventions, settlement/fixing days, `recovery_rate`,
+  `end_of_month`, `Period` unit/count, curve interpolator, and the CDS ISDA
+  accrual flags, across the index, swap-index, curve-helper, inflation and
+  credit-curve specs. Omission → 400 naming the field.
+- **Duplicate ids** in a curves / indices / vol-surfaces / models /
+  credit-curves list are rejected (were silently first-wins).
+
+### Response changes
+
+- Swaption Hull-White diagnostics, swaption implied volatility and the
+  vanilla-swap CMS diagnostics are now **omitted when inapplicable** instead of
+  reporting a `-1.0` / `-1` sentinel (which was ambiguous for a legitimate
+  negative value). The `has_cms_swap_rate` flag is removed — the `cms_swap_rate`
+  field alone carries presence. JSON consumers: those keys are simply absent;
+  the only visible removal is `has_cms_swap_rate`. gRPC/FlatBuffers consumers:
+  the accessors are now optional.
+
+### Behavior fixes
+
+- `in_arrears` / `fixing_days` on a floating swap leg are now honored on the
+  vanilla-swap path (an in-arrears swap was silently priced in advance); the
+  swaption underlying rejects `in_arrears` (QuantLib's `VanillaSwap` cannot
+  express it) rather than mispricing it.
+- The unused `FRA` day-counter/calendar/convention fields are no longer
+  required (accepted-but-ignored, deprecated); discrete equity-barrier
+  monitoring is rejected with a clear message (no native QuantLib engine).
+
+### Migration
+
+Make every request fully explicit — the ~130 payloads under `examples/data/`
+are all valid, fully-explicit 0.5.0 requests and serve as templates. The
+functional catalog (`tests/functional/CATALOG.md`) maps each to its expected
+QuantLib result. `bootstrap_trait` and the presence rules are runtime contracts
+the OpenAPI schema cannot express, so this section is authoritative.
+
+## Version 0.4.0 (July 2026) — product expansion, backward-compatible
+
+`v0.4.0` widens the product catalog. Every 0.3.0 request prices identically on
+0.4.0: all schema changes are additive (new optional fields, new tables, new
+endpoints), with one exception noted below that only affects previously
+rejected inputs.
+
+### New products (four new endpoints)
+
+- **Zero-coupon bond** (`/price-zero-coupon-bond`) and **zero-coupon swap**
+  (`/price-zero-coupon-swap`). The swap's fixed side is either an explicit
+  `fixed_payment` or a `fixed_rate` + day-counter pair (exactly one form;
+  QuantLib's rate form compounds annually by definition, so there are no
+  compounding/frequency fields).
+- **Year-on-year inflation cap/floor/collar**
+  (`/price-year-on-year-inflation-cap-floor`), priced under Black,
+  unit-displaced Black or Bachelier engines over a constant year-on-year
+  optionlet volatility spec (a strike/tenor surface form is a planned
+  additive extension).
+- **Callable/puttable fixed-rate bond**
+  (`/price-callable-fixed-rate-bond`): call/put schedule of dated clean
+  prices, priced on the tree-based Hull-White engine; the model is referenced
+  by id exactly like swaptions (explicit or calibrated, calibration cache
+  applies). Response is npv + clean/dirty price; option-adjusted spread and
+  risk measures are a planned optional extension.
+
+### Widened existing products (all additive)
+
+- **Amortizing/step-up notionals**: optional `notionals` vector (one entry
+  per coupon period) on vanilla-swap legs and fixed/floating bonds. Paths
+  that do not support it yet (OIS fixed leg, basis legs, swaption
+  underlyings) reject it explicitly rather than ignoring it.
+- **CMS capped/floored coupons**: the CMS leg's `cap`/`floor` now price
+  (previously rejected as unsupported). These two fields changed from a
+  negative-sentinel convention to optional-with-presence — the one
+  non-additive change, affecting only requests that were rejected before.
+- **Stub periods**: optional `first_date` / `next_to_last_date` on the shared
+  `Schedule`, enabling short/long first and last coupons on every
+  schedule-carrying product.
+
+### Verification
+
+- CMS legs gained full independent parity coverage against native QuantLib
+  (matched to ~1e-7); every new product/feature above ships with functional
+  parity cases and error-contract tests. The suite grew 537 → 624 cases.
+
+## Version 0.3.0 (July 2026) — features + minor behavior changes
+
+`v0.3.0` adds engine introspection, broader equity coverage, and
+robustness/performance hardening. Requests that were valid and priced
+correctly on 0.2.0 price identically on 0.3.0; the behavior changes below
+affect only degenerate cases (no-op flags, requests slower than the new edge
+timeout).
+
+### New
+
+- **gRPC `Meta` RPC** on the engine: `api_version` (the `VERSION` file
+  verbatim), `backend_version`, `git_sha`, `build_time_utc`, `products[]`,
+  `rpc_methods[]`, and `dependencies{quantlib, grpc, flatbuffers}`. gRPC-only;
+  the JSON gateway keeps its richer `GET /meta`.
+- **Standard `grpc.health.v1.Health`** (Check/Watch) served by the engine;
+  Envoy now health-checks workers over gRPC instead of TCP, distinguishing a
+  dead worker from a busy one.
+- **Equity options: American and Bermudan exercise, digital payoffs.**
+  American/Bermudan vanilla via finite-difference, European digitals
+  analytically, American digitals via the analytic at-hit engine.
+  Combinations QuantLib does not natively support (e.g. discrete cash
+  dividends with American/Bermudan or digital payoffs) return a 400 naming
+  the combination. Greeks an engine cannot compute are omitted from the
+  response instead of serializing as invalid JSON.
+- **Hull-White calibration cache** (`QUANTRA_HW_CACHE_ENABLED`, on in the
+  shipped container): repeat calibrations ~150ms → ~47ms, bit-for-bit
+  transparent (gated by the cache-correctness suite).
+
+### Behavior changes (degenerate cases only)
+
+- **Requests are bounded end-to-end.** Envoy route timeout is 30s (was
+  unlimited; configurable), client `grpc-timeout` is capped at 60s, and the
+  engine abandons work when the caller's deadline has already expired —
+  mid-request, at per-curve/per-trade checkpoints (`DEADLINE_EXCEEDED`,
+  HTTP 504). Calibration iteration knobs from the wire are clamped
+  (`max_iterations` ≤ 1000, `function_evaluations` ≤ 5000).
+- **ZCIIS `adjust_observation_dates=true` is rejected** (400). The flag is
+  numerically inert in the pinned QuantLib — it never changed any NPV — so it
+  now errors instead of implying an adjustment that does not happen.
+- Load balancing is least-request (was round-robin); worker count defaults to
+  `min(cores, 8)` (was fixed 4). `QUANTRA_WORKERS` still overrides.
+
+No schema fields were removed or renamed; no request that priced on 0.2.0
+prices differently on 0.3.0.
+
+## Version 0.2.0 (July 2026) — BREAKING
+
+> **Why 0.2.0 and not a major bump:** the only published releases are the
+> `v0.1.x` tags. The `2.0.0` previously recorded in `VERSION` was an internal
+> development number that never shipped as a tag or container. While the wire
+> contract is still stabilizing the project stays in `0.x`, where semver allows
+> breaking changes on a minor bump.
+
+`v0.2.0` bundles two coordinated wire-hardening batches with one theme: **an
+omitted field no longer silently selects a default — it is an error.**
+Previously, on the FlatBuffers wire a missing scalar/enum was indistinguishable
+from its zero value, so forgetting a field could silently mis-price (an omitted
+calendar meant Argentina; an omitted CDS side meant protection Buyer). Now the
+server returns `400 INVALID_ARGUMENT` naming the missing field.
+
+### Migration guide (0.1.x → 0.2.0)
+
+To migrate a client, make every request fully explicit:
+
+1. **State every convention.** Schedules (`calendar`, `frequency`,
+   `convention`, `termination_date_convention`, `date_generation_rule`), curve
+   helpers (calendars, business-day conventions, day counters, and the term
+   structure's `day_counter`/`interpolator`), volatility specs, swap legs
+   (`day_counter`, `payment_convention`), bonds (`accrual_day_counter`,
+   `payment_convention`), the `Yield` spec (`day_counter`, `compounding`,
+   `frequency`), FRA/cap-floor/CDS conventions, and the coupon-pricer's
+   optionlet volatility conventions are all mandatory. Omission → 400 naming
+   the field, e.g. `Schedule.calendar is required`.
+2. **State the product discriminators.** `FRA.fra_type`,
+   `CapFloor.cap_floor_type` and `CDS.side` are mandatory (previously an
+   omitted `side` silently priced as protection Buyer — a sign flip).
+3. **Give every curve helper an explicit quote.** `rate` / `spread` /
+   `fx_points` / `price` are presence-based; supply the value or a `quote_id`.
+   Omitting all of them → 400. The old sentinel-zero conventions are gone,
+   which also makes a genuine 0 value representable.
+4. **CDS quote fields are presence-based.** `flat_hazard_rate`,
+   `running_coupon` and `upfront` must be supplied where the trade needs them;
+   an empty credit curve is an error (the server no longer invents a hazard
+   rate). In responses, `fair_spread` is omitted when QuantLib cannot express
+   it (e.g. zero-running-coupon trades) instead of reporting 0.
+5. **Use ISO-8601 dates.** All date strings are exactly `YYYY-MM-DD`. Slash
+   formats and impossible dates (`2024-02-30`) → 400
+   `Invalid date '<value>': expected YYYY-MM-DD`. Response dates are ISO too.
+6. **Bond/future helper prices are explicit fields** (from the v2 batch below,
+   also first published in 0.2.0): use `price` / `futures_price` instead of
+   the old price-in-`rate` sentinels.
+
+Every JSON under `examples/data/` is a valid, fully-explicit 0.2.0 request and
+doubles as a migration reference; the browsable catalog
+(`tests/functional/CATALOG.md`) maps each to its expected QuantLib result. The
+OpenAPI spec cannot express runtime presence rules for scalars, so this prose
+is the authoritative list of newly-required fields.
+
+Interoperability notes: the served API version is visible at `/meta`, in the
+OpenAPI `info.version`, and echoed on every response in the
+`X-Quantra-Api-Version` header (all sourced from the `VERSION` file). The
+internal curve-cache key namespace moved to `yc:v3:` so entries from older
+builds cannot collide.
+
+### Schema hardening batch v2 (June 2026) — BREAKING (first published in 0.2.0)
+
+One coordinated wire-breaking FlatBuffers schema batch. Breaking parts:
+
+- **Flow precision (breaking, responses):** `FlowInterest`/`FlowPastInterest`/
+  `FlowNotional` fields `discount`, `rate`, `price` widened `float` → `double`.
+  Response payload layout changes and these numbers gain precision digits;
+  NPVs are unaffected (always computed in double).
+- **Presence-based helper quotes (breaking, requests):** `BondHelper.price`/
+  `.rate` and `FutureHelper.futures_price`/`.rate` are now optional scalars
+  (`= null`). Field selection is by presence (price wins over rate), replacing
+  the old sentinel-zero conventions ("if price==0 use rate" / "if
+  futures_price!=0, rate ignored"). Omitting all of price/rate/quote_id is now
+  a 400 INVALID_ARGUMENT instead of a silent zero quote. In JSON, omitted =
+  absent. The internal curve-cache key serialization includes presence and its
+  version moved `yc:v1:` → `yc:v2:` so old keys cannot collide.
+
+Non-breaking parts shipped in the same batch:
+
+- Every enum enumerator now carries its explicit numeric value (locks the
+  existing wire values against future reordering; no value changed).
+- Removed dead, never-referenced tables `FlowInterestFloat` and
+  `FlowPastInterestFloat`.

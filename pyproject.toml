@@ -1,0 +1,67 @@
+[project]
+name = "quantra-mcp"
+version = "0.1.0.dev0"
+description = "MCP server that fronts the Quantra pricing engine's JSON API for agents"
+readme = "README.md"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [{ name = "Josep Rubió Piqué" }]
+requires-python = ">=3.12"
+keywords = ["mcp", "quantlib", "pricing", "derivatives", "quantra"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: OS Independent",
+  "Topic :: Office/Business :: Financial",
+]
+dependencies = [
+  "mcp>=2,<3",
+  "httpx>=0.28",
+  "pydantic>=2",
+  "jsonschema>=4.23",
+]
+
+[project.urls]
+Homepage = "https://github.com/joseprupi/quantra-mcp"
+Engine = "https://github.com/joseprupi/quantraserver"
+
+[project.scripts]
+quantra-mcp = "quantra_mcp.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/quantra_mcp"]
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=0.24",
+  "ruff>=0.6",
+  "mypy>=1.11",
+  "respx>=0.21",
+  "types-jsonschema",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = ["live: needs a running engine at QUANTRA_ENGINE_URL"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["quantra_mcp"]
+mypy_path = "src"
