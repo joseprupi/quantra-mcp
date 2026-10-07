@@ -1,7 +1,6 @@
 # quantra-mcp
 
-An [MCP](https://modelcontextprotocol.io) server that lets any MCP-capable agent
-(Claude Desktop, Claude Code, Cursor, custom agents) price swaps, bonds, options,
+An [MCP](https://modelcontextprotocol.io) server that lets any MCP-capable agent price swaps, bonds, options,
 CDS and inflation trades, bootstrap curves, calibrate volatilities and query
 business calendars on a [Quantra](https://quantra.io) pricing engine
 (QuantLib-based, open source), with market conventions supplied by named presets.
