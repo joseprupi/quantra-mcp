@@ -95,6 +95,7 @@ async def test_lists_tools_and_resources(app: Any) -> None:
             "holiday-check",
             "explore-examples",
             "price-from-screen",
+            "reconcile-external-price",
         }
         templates = {t.uri_template for t in (await c.list_resource_templates()).resource_templates}
         assert templates == {

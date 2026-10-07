@@ -197,6 +197,85 @@ audit or replay it; offer it, do not paste it unasked.
 """
 
 
+RECONCILE_EXTERNAL_PRICE = (
+    """\
+Goal: the user has a number from another system (a vendor screen, a counterparty's
+confirmation, a spreadsheet, a risk report) and asks whether Quantra can price the
+same trade, how Quantra computes it, and why the two differ. Any vendor, any product.
+Work like a desk quant: every statement about a difference is either cited from the
+engine's own documentation or demonstrated by a reprice. Never assert a cause.
+
+"""
+    + VOICE
+    + """
+Step 1, identify the instrument from what was pasted. Write it down in trade terms:
+product and side, notional and currency, valuation date, start / expiry / maturity or
+tenor, strike or fixed rate, index, settlement style, the vol quoted (normal in bp or
+lognormal in %, with any shift), and the external number(s) with their labels and units
+(premium / NPV / DV01 / gamma / vega / theta / fair rate / fair spread / yield / price).
+Say whether the product is supported (vanilla and overnight-index swaps, fixed /
+floating / zero-coupon / callable bonds, FRAs, caps and floors, European / Bermudan /
+American swaptions, CDS, equity options, inflation swaps and inflation caps/floors).
+
+Step 2, list the inputs Quantra needs and the simplest form to paste each:
+- the curve(s): as `date, DF` rows, or `date, zero %` rows (say which compounding), or
+  the par quotes of the strip as `tenor, rate %`; discount and forward curves separately
+  when they differ. Vendor curves are never available on this side and are never
+  recalled from memory.
+- the vol: one number at the trade's expiry x tenor, or the ATM matrix;
+- the conventions the screen implies but does not show (day counts, payment lag,
+  settlement method, fixing lag, calendar).
+
+Step 3, confirm conventions before pricing: list every one you will assume and its
+source (get_preset(id) gives the source of each field); ask the user to confirm or
+correct the ones the screen shows.
+
+Step 4, build the market from the pasted data: curve_from_pasted_table(text, id,
+kind="discount" | "zero" | "par", preset=<the currency's set>, reference_date=<valuation
+date>) (read `parsed_rows`, `unparsed`, `notes`; report every row that could not be
+read); build_value_curve / build_curve for hand-typed values; session_put to reuse.
+
+Step 5, price with the product's tool (price_swaption, price_vanilla_swap,
+price_ois_swap, price_cap_floor, price_fixed_rate_bond, price_cds, ...) with the
+trade economics, the dates from the ticket and the preset. For sensitivities the
+screen shows, set the request flags that produce them (swaption analytics:
+`swaption_pricing_details` / `swaption_pricing_rebump` via market.options; bond
+analytics: include_details). If `ok` is false, explain the engine's `error` in plain
+words and what to paste to fix it.
+
+Step 6, side by side: compare_results(external={<label>: <number>, ...},
+quantra=<the pricing result>). Give the external numbers in the engine's units
+(currency amounts; rates and vols as decimals). Read `rows` (abs_diff, rel_diff, the
+`topic` per metric) and `unmapped` (say plainly which external numbers have no
+counterpart in the engine's response and why).
+
+Step 7, explain each difference, generically and honestly:
+- explain_method(<row.topic>) for every metric that differs: quote the page's
+  definition (with its path@tag:line citation) and read its "not documented" section.
+- Name the candidate reasons in the order they usually matter for that metric:
+  definition (e.g. rebump vs analytic, one-day roll theta), sign convention, settlement
+  method, curve construction (pasted nodes vs the vendor's full curve, bootstrap vs
+  value curve, zeros vs discount factors), interpolation between nodes, day count /
+  compounding, vol type and shift, calendar, forward vs spot premium, rounding of the
+  pasted values.
+- TEST every hypothesis you can with reprice_with(result, changes): flip
+  `swaptions[0].swaption.settlement_method`, change `pricing.rates.curves[0].interpolator`,
+  set a vol type or displacement, bump a quote (`bump_bp`), roll `pricing.as_of_date`
+  by one day, replace the pasted zeros with pasted discount factors. Report
+  `differences` (changed - base, both engine numbers shown): a hypothesis that moves the
+  number by the observed gap is demonstrated; one that does not is ruled out and you
+  say so. A cause you could neither cite nor reprice is reported as a possibility, not
+  a conclusion.
+
+Step 8, report: the external number, Quantra's number with the assumptions it rests on
+and the exact dates resolved, the demonstrated causes (with the reprice that showed
+each), the remaining unexplained part, and the complete request on demand. Never adjust
+an input to make the numbers match; never claim access to the other system's data or
+methodology.
+"""
+)
+
+
 def register(app: MCPServer) -> None:
     @app.prompt(
         name="price-a-swap",
@@ -256,3 +335,16 @@ def register(app: MCPServer) -> None:
     def price_from_screen(product: str = "") -> str:
         """Args: product hint (optional), e.g. 'swaption', 'OIS swap', 'cap'."""
         return _price_from_screen(product)
+
+    @app.prompt(
+        name="reconcile-external-price",
+        title="Reconcile a price from another system",
+        description=(
+            "The user has a number from another system (any vendor, any product): identify "
+            "the instrument, list the inputs in paste-able form, confirm conventions, build "
+            "the market, price, put the two numbers side by side, and explain each difference "
+            "from the engine's cited methodology, testing every candidate cause with a reprice."
+        ),
+    )
+    def reconcile_external_price() -> str:
+        return RECONCILE_EXTERNAL_PRICE

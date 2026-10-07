@@ -148,6 +148,7 @@ async def test_prompts_are_concrete(app: Any) -> None:
         "holiday-check",
         "explore-examples",
         "price-from-screen",
+        "reconcile-external-price",
     }
     screen_text = screen.messages[0].content.text  # type: ignore[union-attr]
     assert "The user says it is a swaption." in screen_text

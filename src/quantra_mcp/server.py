@@ -73,10 +73,19 @@ How to work with a business user (a trader, a risk manager, a treasurer):
 - Market conventions come in named sets per currency and index (USD SOFR OIS, EUR
   Euribor 6M / 3M, EUR ESTR OIS, GBP SONIA, and trade-only sets for bonds, CDS, equity
   and inflation); each field carries its source.
+- When the user brings a number from another system (a vendor screen, a counterparty,
+  a spreadsheet, a risk report), follow the reconcile-external-price order: identify
+  the instrument, list the inputs needed in paste-able form, confirm conventions, build
+  the market from what was pasted, price, put the two numbers side by side
+  (compare_results), then for each difference consult explain_method for that metric
+  and TEST the candidate cause with reprice_with (flip the settlement method, swap
+  zeros for discount factors, change the vol type or interpolator, bump a quote, roll
+  the date) so the explanation is demonstrated, not asserted.
 - "How is this computed?" is answered from explain_method (quantra://methodology/*):
   the engine's own documentation and source at the pinned tag, each statement with its
   path@tag:line citation. Where the page says the engine does not document something,
-  say so. Never claim access to vendor data or vendor methodology.
+  say so. Never claim access to vendor data or vendor methodology. Never assert a cause
+  for a difference without either a citation or a reprice that demonstrates it.
 
 For developers (the technical map): quantra_meta reports the engine version and
 products; list_endpoints / engine_schema / list_enums describe request shapes;
@@ -90,8 +99,11 @@ build_query -> bootstrap_curve; session_put stores a built curve so later calls 
 whose trade block supplies every convention, and the trade economics; "spot" and
 tenor dates are resolved by the engine's /calendar-advance and reported in
 `date_resolution`. Analytics by composition: swap_dv01, key_rate_ladder, scenario,
-fair_rate (each reprice's full result is in `calls`). explain_method(topic) returns the
-cited methodology page for a metric or mechanism. Every result echoes the exact
+fair_rate (each reprice's full result is in `calls`). Reconciliation: compare_results
+(external {label: number} vs a result; abs / rel differences; topic per metric),
+explain_method(topic) (the cited methodology page) and reprice_with(result, changes)
+(edit fields of an echoed request by path, reprice, diff both requests and the numeric
+fields). Every result echoes the exact
 request sent (`request`) and the engine body verbatim (`response`); on an engine error
 `ok` is false and `error` is the engine's text (400 = request wrong, 422 = well-formed
 but unpriceable). The engine does not default omitted fields; every convention a
