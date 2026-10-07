@@ -1,0 +1,59 @@
+{
+  "id": "EUR_FIXED_BOND",
+  "description": "EUR fixed-rate bond conventions: spot T+2, annual Thirty360 coupons, ModifiedFollowing on TARGET, Forward date generation, redemption 100, yields quoted Actual365Fixed / Compounded / Annual; zero-coupon bonds settle T+3 on TARGET; callable bonds price on a Hull-White lattice (100 lattice steps, 500 tree steps) with explicit a / sigma.",
+  "currency": "EUR",
+  "provenance": "engine fixture (quantraserver v0.7.0) examples/data/bonds/frb_eur_5y_at_par_annual_30360.json (fixed_rate_bond), bonds/zcb_eur_10y_discount.json (zero_coupon_bond), callable_bonds/cfrb_eur_8y_5pct_call_100_itm.json (callable_fixed_rate_bond)",
+  "trades": {
+    "fixed_rate_bond": {
+      "settlement_days": 2,
+      "schedule": {
+        "calendar": "TARGET",
+        "convention": "ModifiedFollowing",
+        "termination_date_convention": "ModifiedFollowing",
+        "date_generation_rule": "Forward",
+        "end_of_month": false
+      },
+      "frequency": "Annual",
+      "accrual_day_counter": "Thirty360",
+      "payment_convention": "ModifiedFollowing",
+      "redemption": 100.0,
+      "yield": {
+        "day_counter": "Actual365Fixed",
+        "compounding": "Compounded",
+        "frequency": "Annual"
+      }
+    },
+    "callable_fixed_rate_bond": {
+      "settlement_days": 2,
+      "schedule": {
+        "calendar": "TARGET",
+        "convention": "ModifiedFollowing",
+        "termination_date_convention": "ModifiedFollowing",
+        "date_generation_rule": "Forward",
+        "end_of_month": false
+      },
+      "frequency": "Annual",
+      "accrual_day_counter": "Thirty360",
+      "payment_convention": "ModifiedFollowing",
+      "redemption": 100.0,
+      "lattice_steps": 100,
+      "tree_steps": 500
+    },
+    "zero_coupon_bond": {
+      "settlement_days": 3,
+      "calendar": "TARGET",
+      "payment_convention": "ModifiedFollowing",
+      "redemption": 100.0,
+      "yield": {
+        "day_counter": "Actual365Fixed",
+        "compounding": "Compounded",
+        "frequency": "Annual"
+      }
+    }
+  },
+  "field_provenance": {
+    "trades.fixed_rate_bond": "engine fixture (quantraserver v0.7.0) examples/data/bonds/frb_eur_5y_at_par_annual_30360.json",
+    "trades.callable_fixed_rate_bond": "engine fixture (quantraserver v0.7.0) examples/data/callable_bonds/cfrb_eur_8y_5pct_call_100_itm.json (HullWhiteLattice lattice_steps 100, tree_steps 500)",
+    "trades.zero_coupon_bond": "engine fixture (quantraserver v0.7.0) examples/data/bonds/zcb_eur_10y_discount.json (settlement_days 3)"
+  }
+}

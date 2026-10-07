@@ -1,0 +1,70 @@
+{
+  "id": "EUR_HICP",
+  "description": "EUR HICP inflation swap and cap/floor conventions: 3M observation lag, Linear CPI interpolation, Actual365Fixed, TARGET ModifiedFollowing; the ZCIIS inflation leg uses NullCalendar / Following with adjust_observation_dates false; YoY swaps and caps pay annually. Base CPI / YoY fixings are a required argument of the tools (the engine needs the fixing at start minus the observation lag and the server has no market-data source).",
+  "currency": "EUR",
+  "provenance": "engine fixture (quantraserver v0.7.0) examples/data/inflation/zciis_eur_5y_payer_linear_obs.json (zc_inflation_swap), inflation/yyiis_eur_5y_payer_annual.json (yoy_inflation_swap), inflation_cap_floor/yoy_cf_eur_5y_cap_150bp_black_bites.json (yoy_inflation_cap_floor)",
+  "trades": {
+    "zc_inflation_swap": {
+      "fixed_calendar": "TARGET",
+      "fixed_convention": "ModifiedFollowing",
+      "day_counter": "Actual365Fixed",
+      "observation_lag": {
+        "n": 3,
+        "unit": "Months"
+      },
+      "observation_interpolation": "Linear",
+      "adjust_observation_dates": false,
+      "inflation_calendar": "NullCalendar",
+      "inflation_convention": "Following"
+    },
+    "yoy_inflation_swap": {
+      "schedule": {
+        "calendar": "TARGET",
+        "convention": "ModifiedFollowing",
+        "termination_date_convention": "ModifiedFollowing",
+        "date_generation_rule": "Forward",
+        "end_of_month": false
+      },
+      "frequency": "Annual",
+      "fixed_day_counter": "Actual365Fixed",
+      "yoy_day_counter": "Actual365Fixed",
+      "payment_calendar": "TARGET",
+      "payment_convention": "ModifiedFollowing",
+      "observation_lag": {
+        "n": 3,
+        "unit": "Months"
+      },
+      "observation_interpolation": "Linear"
+    },
+    "yoy_inflation_cap_floor": {
+      "schedule": {
+        "calendar": "TARGET",
+        "convention": "ModifiedFollowing",
+        "termination_date_convention": "ModifiedFollowing",
+        "date_generation_rule": "Forward",
+        "end_of_month": false
+      },
+      "frequency": "Annual",
+      "day_counter": "Actual365Fixed",
+      "payment_convention": "ModifiedFollowing",
+      "observation_lag": {
+        "n": 3,
+        "unit": "Months"
+      },
+      "vol": {
+        "day_counter": "Actual365Fixed",
+        "calendar": "TARGET",
+        "business_day_convention": "ModifiedFollowing",
+        "observation_lag": {
+          "n": 3,
+          "unit": "Months"
+        }
+      }
+    }
+  },
+  "field_provenance": {
+    "trades.zc_inflation_swap": "engine fixture (quantraserver v0.7.0) examples/data/inflation/zciis_eur_5y_payer_linear_obs.json",
+    "trades.yoy_inflation_swap": "engine fixture (quantraserver v0.7.0) examples/data/inflation/yyiis_eur_5y_payer_annual.json",
+    "trades.yoy_inflation_cap_floor": "engine fixture (quantraserver v0.7.0) examples/data/inflation_cap_floor/yoy_cf_eur_5y_cap_150bp_black_bites.json (YoYOptionletVolSpec conventions)"
+  }
+}

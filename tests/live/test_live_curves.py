@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 from mcp import Client
 
-from quantra_mcp.presets.registry import get_preset, preset_ids
+from quantra_mcp.presets.registry import curve_preset_ids, get_preset
 from quantra_mcp.resources import load_example
 from tests.live.test_live_engine import (
     BOOTSTRAP_50Y_DF_ORACLE,
@@ -80,7 +80,7 @@ async def test_sofr_strip_reproduces_the_gold_example_and_oracle() -> None:
     assert canonical(r["response"]) == canonical(await replay("/bootstrap-curves", r["request"]))
 
 
-@pytest.mark.parametrize("preset_id", [p for p in preset_ids() if p != "USD_SOFR_OIS"])
+@pytest.mark.parametrize("preset_id", [p for p in curve_preset_ids() if p != "USD_SOFR_OIS"])
 async def test_presets_bootstrap_with_monotone_discount_factors(preset_id: str) -> None:
     async with live_client() as client:
         built, query = await _build(client, preset_id)

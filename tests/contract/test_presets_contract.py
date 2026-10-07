@@ -15,7 +15,7 @@ import json
 
 import pytest
 
-from quantra_mcp.presets.registry import POINT_TYPE, get_preset, preset_ids
+from quantra_mcp.presets.registry import POINT_TYPE, curve_preset_ids, get_preset
 from quantra_mcp.schema.loader import load_spec
 from quantra_mcp.schema.validate import validate_component, validate_request
 from tests.strips import GOLDEN_DIR
@@ -30,7 +30,7 @@ EXCLUDED: dict[str, set[str]] = {
 }
 
 
-@pytest.mark.parametrize("preset_id", preset_ids())
+@pytest.mark.parametrize("preset_id", curve_preset_ids())
 def test_helper_blocks_cover_every_schema_field(preset_id: str) -> None:
     spec = load_spec()
     preset = get_preset(preset_id)
@@ -43,7 +43,7 @@ def test_helper_blocks_cover_every_schema_field(preset_id: str) -> None:
         assert have == expected, (preset_id, helper_type, have ^ expected)
 
 
-@pytest.mark.parametrize("preset_id", preset_ids())
+@pytest.mark.parametrize("preset_id", curve_preset_ids())
 def test_preset_index_is_a_valid_indexdef(preset_id: str) -> None:
     from quantra_mcp.builders.curves import index_def
 
@@ -52,7 +52,7 @@ def test_preset_index_is_a_valid_indexdef(preset_id: str) -> None:
 
 def test_every_golden_validates_against_the_spec() -> None:
     goldens = sorted(p for p in GOLDEN_DIR.glob("*.json") if p.name != "strips.json")
-    assert len(goldens) >= len(preset_ids()) + 1, [g.name for g in goldens]
+    assert len(goldens) >= len(curve_preset_ids()) + 1, [g.name for g in goldens]
     for path in goldens:
         body = json.loads(path.read_text())
         assert validate_request("/bootstrap-curves", body) == [], path.name

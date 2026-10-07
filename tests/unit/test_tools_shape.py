@@ -50,19 +50,48 @@ async def test_lists_tools_and_resources(app: Any) -> None:
             "session_get",
             "session_list",
             "session_delete",
+            "price_vanilla_swap",
+            "price_ois_swap",
+            "price_fixed_rate_bond",
+            "price_floating_rate_bond",
+            "price_zero_coupon_bond",
+            "price_callable_fixed_rate_bond",
+            "price_fra",
+            "price_cap_floor",
+            "price_swaption",
+            "price_cds",
+            "price_equity_option",
+            "price_zc_inflation_swap",
+            "price_yoy_inflation_swap",
+            "price_yoy_inflation_cap_floor",
+            "calibrate_swaption_vol",
+            "calibrate_swaption_model",
+            "sample_vol_surface",
+            "list_examples",
+            "get_example",
         }
         uris = {str(r.uri) for r in (await c.list_resources()).resources}
         assert {
             "quantra://docs/http-api",
             "quantra://docs/versioning",
+            "quantra://docs/engine-catalog",
             "quantra://pin",
             "quantra://presets",
+            "quantra://examples",
         } <= uris
+        prompts = {p.name for p in (await c.list_prompts()).prompts}
+        assert prompts == {
+            "price-a-swap",
+            "bootstrap-from-strip",
+            "holiday-check",
+            "explore-examples",
+        }
         templates = {t.uri_template for t in (await c.list_resource_templates()).resource_templates}
         assert templates == {
             "quantra://schema/{endpoint}",
             "quantra://enums/{name}",
             "quantra://examples/{name}",
+            "quantra://examples/{category}/{name}",
             "quantra://presets/{id}",
         }
 

@@ -8,7 +8,10 @@
     "name": "Euribor",
     "index_type": "Ibor",
     "currency": "EUR",
-    "tenor": {"n": 6, "unit": "Months"},
+    "tenor": {
+      "n": 6,
+      "unit": "Months"
+    },
     "fixing_days": 2,
     "calendar": "TARGET",
     "day_counter": "Actual360",
@@ -49,6 +52,91 @@
     "helpers.swap.sw_fixed_leg_convention": "market standard (ISDA/CCP), not from an in-repo source",
     "helpers.swap.sw_fixed_leg_day_counter": "market standard (ISDA/CCP), not from an in-repo source; the engine maps Thirty360 to QuantLib Thirty360(BondBasis)",
     "helpers.swap.spread": "explicit zero: the engine reads an absent spread as 0.0 (term_structure_point_parser.cpp); stated so nothing is implicit",
-    "helpers.swap.fwd_start_days": "explicit zero: the engine reads an absent fwd_start_days as 0 (term_structure_point_parser.cpp); stated so nothing is implicit"
+    "helpers.swap.fwd_start_days": "explicit zero: the engine reads an absent fwd_start_days as 0 (term_structure_point_parser.cpp); stated so nothing is implicit",
+    "trades.vanilla_swap": "engine fixture (quantraserver v0.7.0) examples/data/ir_swaps/irs_eur_5y_payer_ois_discounted_multicurve.json (fixed Annual/Thirty360/MF vs Euribor 6M Semiannual/Actual360/MF, TARGET, Forward, spot T+2)",
+    "trades.floating_rate_bond": "engine fixture (quantraserver v0.7.0) examples/data/bonds/frn_eur_5y_euribor6m_flat_semiannual.json (incl. the zero-vol BlackIborCouponPricer 'iborpricer')",
+    "trades.fra": "engine fixture (quantraserver v0.7.0) examples/data/fra/fra_eur_6x12_long_euribor6m.json",
+    "trades.cap_floor": "engine fixture (quantraserver v0.7.0) examples/data/cap_floor/cap_eur_10y_euribor6m_semiannual.json (Semiannual on Euribor 6M; OptionletVolSpec base TARGET/MF/Actual365Fixed)",
+    "trades.swaption": "engine fixture (quantraserver v0.7.0) examples/data/swaption/swpt_eur_1y5y_payer_near_atm_physical.json (swap_index_id EUR_SWAP_6M, PhysicalOTC, SwaptionVolSpec base TARGET/MF/Actual365Fixed; underlying = trades.vanilla_swap)"
+  },
+  "trades": {
+    "vanilla_swap": {
+      "settlement_days": 2,
+      "schedule": {
+        "calendar": "TARGET",
+        "convention": "ModifiedFollowing",
+        "termination_date_convention": "ModifiedFollowing",
+        "date_generation_rule": "Forward",
+        "end_of_month": false
+      },
+      "fixed_leg": {
+        "frequency": "Annual",
+        "day_counter": "Thirty360",
+        "payment_convention": "ModifiedFollowing"
+      },
+      "floating_leg": {
+        "frequency": "Semiannual",
+        "day_counter": "Actual360",
+        "payment_convention": "ModifiedFollowing"
+      }
+    },
+    "floating_rate_bond": {
+      "settlement_days": 2,
+      "schedule": {
+        "calendar": "TARGET",
+        "convention": "ModifiedFollowing",
+        "termination_date_convention": "ModifiedFollowing",
+        "date_generation_rule": "Forward",
+        "end_of_month": false
+      },
+      "frequency": "Semiannual",
+      "accrual_day_counter": "Actual360",
+      "payment_convention": "ModifiedFollowing",
+      "fixing_days": 2,
+      "in_arrears": false,
+      "redemption": 100.0,
+      "coupon_pricer": {
+        "id": "iborpricer",
+        "settlement_days": 2,
+        "calendar": "TARGET",
+        "business_day_convention": "ModifiedFollowing",
+        "volatility": 0.0,
+        "day_counter": "Actual365Fixed"
+      }
+    },
+    "fra": {
+      "settlement_days": 2,
+      "day_counter": "Actual360",
+      "calendar": "TARGET",
+      "business_day_convention": "ModifiedFollowing"
+    },
+    "cap_floor": {
+      "settlement_days": 2,
+      "schedule": {
+        "calendar": "TARGET",
+        "convention": "ModifiedFollowing",
+        "termination_date_convention": "ModifiedFollowing",
+        "date_generation_rule": "Forward",
+        "end_of_month": false
+      },
+      "frequency": "Semiannual",
+      "day_counter": "Actual360",
+      "business_day_convention": "ModifiedFollowing",
+      "vol_base": {
+        "calendar": "TARGET",
+        "business_day_convention": "ModifiedFollowing",
+        "day_counter": "Actual365Fixed"
+      }
+    },
+    "swaption": {
+      "settlement_days": 2,
+      "swap_index_id": "EUR_SWAP_6M",
+      "physical_settlement_method": "PhysicalOTC",
+      "vol_base": {
+        "calendar": "TARGET",
+        "business_day_convention": "ModifiedFollowing",
+        "day_counter": "Actual365Fixed"
+      }
+    }
   }
 }

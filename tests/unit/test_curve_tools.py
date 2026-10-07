@@ -78,7 +78,7 @@ async def test_presets_tools_and_resources(app: Any) -> None:
         "market standard"
     )
     assert bad["ok"] is False and "USD_SOFR_OIS" in bad["error"]
-    assert json.loads(idx.contents[0].text)["presets"][0]["uri"] == "quantra://presets/EUR_ESTR_OIS"  # type: ignore[union-attr]
+    assert json.loads(idx.contents[0].text)["presets"][0]["uri"] == "quantra://presets/EUR_CDS"  # type: ignore[union-attr]
     assert json.loads(res.contents[0].text)["index"]["id"] == "USD_SOFR"  # type: ignore[union-attr]
 
 

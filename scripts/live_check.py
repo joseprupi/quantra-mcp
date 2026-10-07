@@ -1,4 +1,4 @@
-"""Live check: every tool and both examples against a real engine.
+"""Live check: every tool and every vendored example against a real engine.
 
 For each call the MCP tool's ``response`` must equal a direct ``httpx`` POST of
 the tool's echoed ``request`` (byte-equal canonical JSON). Prints a table and
@@ -10,7 +10,15 @@ gold example and return the 50Y DF oracle; a discount value curve round-trips;
 every other preset bootstraps with monotone DFs; a session reference resolves
 to the same request as the inline curve.
 
+The M3 section (a) sweeps all vendored examples through ``engine_request``
+(status must equal the index's ``expected_status``; where the engine catalog
+has a reference value the primary number must match it) and (b) runs each
+pricing convenience tool against its mapped fixture (built request JSON-equal
+to the fixture, engine number equal to the oracle, response byte-equal to a
+replay) plus the SOFR blog OIS example from a build_curve market.
+
     QUANTRA_ENGINE_URL=http://localhost:18087 uv run python scripts/live_check.py
+    ... --sweep-table   # also print one row per example (223 rows)
 """
 
 from __future__ import annotations
@@ -27,10 +35,15 @@ from typing import Any
 import httpx
 from mcp import Client
 
+from quantra_mcp import examples_catalog as cat
 from quantra_mcp.config import Settings
-from quantra_mcp.presets.registry import get_preset, preset_ids
+from quantra_mcp.presets.registry import curve_preset_ids, get_preset
 from quantra_mcp.resources import EXAMPLE_ENDPOINTS, example_names, load_example
 from quantra_mcp.server import build_server
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from tests.product_cases import blog_ois_args, fixture_body, product_cases  # noqa: E402
 
 STRIPS_PATH = Path(__file__).resolve().parents[1] / "tests" / "golden" / "strips.json"
 BOOTSTRAP_50Y_DF_ORACLE = "0.262755579831"
@@ -306,7 +319,7 @@ async def m2_checks(client: Client, http: httpx.AsyncClient, rows: list[Row]) ->
         )
 
     # --- every other preset: 200 + monotone DFs -----------------------------
-    for preset_id in preset_ids():
+    for preset_id in curve_preset_ids():
         if preset_id == "USD_SOFR_OIS":
             continue
         strip = strips[preset_id]
@@ -377,12 +390,132 @@ async def m2_checks(client: Client, http: httpx.AsyncClient, rows: list[Row]) ->
     return failed
 
 
+async def m3_sweep(
+    client: Client, rows: list[Row], sweep_rows: list[Row]
+) -> tuple[bool, dict[str, Any]]:
+    """Every vendored example via engine_request; returns (failed, summary)."""
+    failed = False
+    n_200 = n_checked = n_matched = 0
+    mismatches: list[str] = []
+    for r in cat.rows():
+        body = cat.load_body(r)
+        data = await _tool(client, "engine_request", {"endpoint": r["endpoint"], "body": body})
+        expected = int(r.get("expected_status", 200))
+        status = 200 if data.get("ok") else data.get("status")
+        status_ok = status == expected
+        n_200 += 1 if status == 200 else 0
+        check = cat.oracle_check(r, data.get("response")) if data.get("ok") else None
+        oracle = "n/a"
+        if check and check["checked"]:
+            n_checked += 1
+            if check["ok"]:
+                n_matched += 1
+                oracle = f"match ({check['kind']})"
+            else:
+                oracle = f"MISMATCH expected={check['expected']!r} actual={check['actual']!r}"
+                mismatches.append(f"{r['name']}: {oracle}")
+        failed |= not status_ok or (check is not None and check["checked"] and not check["ok"])
+        sweep_rows.append(
+            Row(
+                r["name"],
+                str(r["endpoint"]),
+                f"{status}" + ("" if status_ok else f" (expected {expected})"),
+                "-",
+                oracle if status == 200 else str(data.get("error"))[:70],
+            )
+        )
+    summary = {
+        "examples": len(cat.rows()),
+        "status_200": n_200,
+        "expected_non_200": sum(1 for r in cat.rows() if r.get("expected_status", 200) != 200),
+        "oracles_checked": n_checked,
+        "oracles_matched": n_matched,
+        "mismatches": mismatches,
+    }
+    rows.append(
+        Row(
+            "engine_request sweep (all vendored examples)",
+            "(many)",
+            "ok" if not failed else "FAIL",
+            "n/a",
+            f"{summary['examples']} examples, {n_200} x 200 (+{summary['expected_non_200']} "
+            f"expected non-200), oracles {n_matched}/{n_checked} matched",
+        )
+    )
+    return failed, summary
+
+
+async def m3_tools(client: Client, http: httpx.AsyncClient, rows: list[Row]) -> bool:
+    """Each convenience tool vs its fixture, and the blog OIS example from a built curve."""
+    failed = False
+    for case in product_cases():
+        data = await _tool(client, case.tool, case.live)
+        row = cat.find(case.fixture)
+        if not data.get("ok"):
+            failed = True
+            rows.append(
+                Row(case.tool, "-", f"FAIL {data.get('status')}", "-", str(data.get("error"))[:80])
+            )
+            continue
+        same = await _replay_equal(http, data)
+        json_equal = data["request"] == fixture_body(case.fixture)
+        number = case.number(data["response"])
+        check = cat.oracle_check(row, data["response"])
+        ok = same and json_equal and bool(check["ok"])
+        failed |= not ok
+        rows.append(
+            Row(
+                f"{case.tool} <-> {case.fixture}",
+                data["endpoint"],
+                "ok" if ok else "FAIL",
+                "byte-equal" if same else "MISMATCH",
+                f"json_equal={json_equal} engine={number!r} oracle={row['reference_value']} "
+                f"match={check['ok']} calendar_calls={len(data.get('date_resolution', []))}",
+            )
+        )
+    strip = _strips()["USD_SOFR_OIS"]
+    built = await _tool(
+        client,
+        "build_curve",
+        {
+            "id": "USD_SOFR_OIS",
+            "preset": "USD_SOFR_OIS",
+            "quotes": strip["quotes"],
+            "reference_date": strip["reference_date"],
+        },
+    )
+    data = await _tool(client, "price_ois_swap", blog_ois_args(built))
+    if data.get("ok"):
+        same = await _replay_equal(http, data)
+        json_equal = data["request"] == load_example("sofr-ois-swap-request")
+        npv = data["response"]["swaps"][0]["npv"]
+        ok = same and json_equal and npv == 337986.79130030936
+        failed |= not ok
+        rows.append(
+            Row(
+                "price_ois_swap <-> sofr-ois-swap-request (build_curve market)",
+                data["endpoint"],
+                "ok" if ok else "FAIL",
+                "byte-equal" if same else "MISMATCH",
+                f"json_equal={json_equal} npv={npv!r} oracle=337986.79130030936",
+            )
+        )
+    else:
+        failed = True
+        rows.append(
+            Row("price_ois_swap blog", "/price-ois-swap", "FAIL", "-", str(data.get("error"))[:80])
+        )
+    return failed
+
+
 async def main() -> int:
     engine_url = os.environ.get("QUANTRA_ENGINE_URL", "").rstrip("/")
     if not engine_url:
         print("QUANTRA_ENGINE_URL is not set", file=sys.stderr)
         return 2
+    sweep_table = "--sweep-table" in sys.argv[1:]
     rows: list[Row] = []
+    sweep_rows: list[Row] = []
     failed = False
     app = build_server(Settings(engine_url=engine_url))
     async with (
@@ -441,23 +574,33 @@ async def main() -> int:
             )
 
         failed |= await m2_checks(client, http, rows)
+        sweep_failed, summary = await m3_sweep(client, rows, sweep_rows)
+        failed |= sweep_failed
+        failed |= await m3_tools(client, http, rows)
 
-    fields = ("tool", "endpoint", "status", "replay", "note")
-    header = Row(*fields)
-    widths = [max(len(getattr(r, f)) for r in [header, *rows]) for f in fields]
-    for r in [header, *rows]:
-        print(
-            " | ".join(
-                getattr(r, f).ljust(w)
-                for f, w in zip(
-                    ("tool", "endpoint", "status", "replay", "note"), widths, strict=True
-                )
-            )
-        )
-        if r is header:
-            print("-+-".join("-" * w for w in widths))
+    if sweep_table:
+        _print_table(sweep_rows, ("example", "endpoint", "status", "replay", "oracle"))
+        print()
+    _print_table(rows, ("tool", "endpoint", "status", "replay", "note"))
+    print(
+        f"\nsweep: {summary['examples']} examples, {summary['status_200']} returned 200, "
+        f"{summary['expected_non_200']} expected non-200, oracles matched "
+        f"{summary['oracles_matched']}/{summary['oracles_checked']}"
+    )
+    for m in summary["mismatches"]:
+        print(f"  MISMATCH {m}")
     print(f"\nengine={engine_url} calls={len(rows)} result={'FAIL' if failed else 'PASS'}")
     return 1 if failed else 0
+
+
+def _print_table(rows: list[Row], labels: tuple[str, ...]) -> None:
+    fields = ("tool", "endpoint", "status", "replay", "note")
+    header = Row(*labels)
+    widths = [max(len(getattr(r, f)) for r in [header, *rows]) for f in fields]
+    for r in [header, *rows]:
+        print(" | ".join(getattr(r, f).ljust(w) for f, w in zip(fields, widths, strict=True)))
+        if r is header:
+            print("-+-".join("-" * w for w in widths))
 
 
 if __name__ == "__main__":

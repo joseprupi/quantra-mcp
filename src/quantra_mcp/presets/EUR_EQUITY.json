@@ -1,0 +1,19 @@
+{
+  "id": "EUR_EQUITY",
+  "description": "EUR equity option conventions: flat rate / dividend curves as two-point InterpolatedZero curves (Actual365Fixed, Linear, continuous annual zeros on TARGET ModifiedFollowing), BlackVolSpec constant vol with the same base, physical settlement.",
+  "currency": "EUR",
+  "provenance": "engine fixture (quantraserver v0.7.0) examples/data/equity/eqopt_eur_call_atm_1y.json",
+  "trades": {
+    "equity_option": {
+      "currency": "EUR",
+      "calendar": "TARGET",
+      "business_day_convention": "ModifiedFollowing",
+      "day_counter": "Actual365Fixed",
+      "interpolator": "Linear",
+      "compounding": "Continuous",
+      "frequency": "Annual",
+      "settlement": "Physical"
+    }
+  },
+  "field_provenance": {}
+}

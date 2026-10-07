@@ -1,0 +1,44 @@
+{
+  "id": "EUR_CDS",
+  "description": "EUR single-name CDS, standard (SNAC-style) conventions: quarterly premium on TwentiethIMM dates, Following, Unadjusted termination, Actual360, accrual settled / paid at default / rebated, protection from the trade date, cash settlement T+3; credit curve bootstrapped from par spreads (MidPoint helper, recovery 40%, LogLinear, Actual365Fixed on TARGET); MidPoint pricing engine.",
+  "currency": "EUR",
+  "provenance": "engine fixture (quantraserver v0.7.0) examples/data/cds/cds_eur_5y_buyer_100bp_spread_curve.json",
+  "trades": {
+    "cds": {
+      "schedule": {
+        "calendar": "TARGET",
+        "convention": "Following",
+        "termination_date_convention": "Unadjusted",
+        "date_generation_rule": "TwentiethIMM",
+        "end_of_month": false
+      },
+      "frequency": "Quarterly",
+      "day_counter": "Actual360",
+      "business_day_convention": "Following",
+      "settles_accrual": true,
+      "pays_at_default_time": true,
+      "rebates_accrual": true,
+      "last_period_day_counter": "Actual360",
+      "cash_settlement_days": 3,
+      "credit_curve": {
+        "calendar": "TARGET",
+        "day_counter": "Actual365Fixed",
+        "curve_interpolator": "LogLinear",
+        "recovery_rate": 0.4,
+        "helper_conventions": {
+          "settlement_days": 0,
+          "frequency": "Quarterly",
+          "business_day_convention": "Following",
+          "date_generation_rule": "TwentiethIMM",
+          "last_period_day_counter": "Actual360",
+          "settles_accrual": true,
+          "pays_at_default_time": true,
+          "rebates_accrual": true,
+          "helper_model": "MidPoint"
+        }
+      },
+      "engine_type": "MidPoint"
+    }
+  },
+  "field_provenance": {}
+}

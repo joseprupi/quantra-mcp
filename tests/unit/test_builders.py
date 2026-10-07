@@ -15,7 +15,7 @@ import pytest
 
 from quantra_mcp.builders import curves as cb
 from quantra_mcp.errors import LocalValidationError
-from quantra_mcp.presets.registry import get_preset, preset_ids
+from quantra_mcp.presets.registry import curve_preset_ids, get_preset
 from quantra_mcp.resources import load_example
 from tests.strips import GOLDEN_DIR, STRIPS, bootstrap_body_for
 
@@ -35,7 +35,7 @@ def _canon(obj: Any) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"))
 
 
-@pytest.mark.parametrize("preset_id", preset_ids())
+@pytest.mark.parametrize("preset_id", curve_preset_ids())
 def test_build_curve_matches_golden(preset_id: str) -> None:
     assert preset_id in STRIPS, f"no canonical strip for {preset_id} in strips.json"
     body, built = bootstrap_body_for(preset_id)

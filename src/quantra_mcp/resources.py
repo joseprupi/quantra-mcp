@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ResourceNotFoundError
 
+from quantra_mcp import examples_catalog as cat
+from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.presets.registry import PresetError, get_preset, list_presets
 from quantra_mcp.schema.loader import SpecError, load_spec, normalize_endpoint, pin
 from quantra_mcp.tools.discovery import endpoint_schema, enum_listing
@@ -24,17 +25,17 @@ EXAMPLE_ENDPOINTS: dict[str, str] = {
 
 
 def example_names() -> list[str]:
-    return sorted(p.stem for p in EXAMPLES_DIR.glob("*.json"))
+    """The two blog examples at the top of ``examples/`` (the M1 resource set)."""
+    return sorted(p.stem for p in EXAMPLES_DIR.glob("*.json") if p.name != "INDEX.json")
 
 
 def load_example(name: str) -> dict[str, Any]:
-    path = EXAMPLES_DIR / f"{name}.json"
-    if not path.is_file() or "/" in name or name.startswith("."):
-        raise ResourceNotFoundError(
-            f"unknown example {name!r}; available: {', '.join(example_names())}"
-        )
-    data: dict[str, Any] = json.loads(path.read_text())
-    return data
+    """Any vendored example by name (blog examples and engine fixtures alike)."""
+    try:
+        row = cat.find(name)
+    except LocalValidationError as exc:
+        raise ResourceNotFoundError(exc.error) from None
+    return cat.load_body(row)
 
 
 def read_doc(name: str) -> str:
@@ -65,6 +66,18 @@ def register(app: MCPServer) -> None:
     )
     def docs_versioning() -> str:
         return read_doc("versioning")
+
+    @app.resource(
+        "quantra://docs/engine-catalog",
+        name="engine-catalog",
+        description=(
+            "The engine's functional parity catalog at the pinned tag: one row per example "
+            "with its description and QuantLib reference value."
+        ),
+        mime_type="text/markdown",
+    )
+    def docs_engine_catalog() -> str:
+        return read_doc("engine-catalog")
 
     @app.resource(
         "quantra://pin",
@@ -119,27 +132,58 @@ def register(app: MCPServer) -> None:
     @app.resource(
         "quantra://examples",
         name="engine-examples",
-        description="Names of the live-verified example requests and their endpoints.",
+        description=(
+            "Index of every vendored example request (engine fixtures at the pin + the two "
+            "blog examples): name, category, endpoint, title, reference value."
+        ),
         mime_type="application/json",
     )
     def examples_index() -> dict[str, Any]:
+        index = cat.load_index()
         return {
-            "examples": [
-                {"name": n, "endpoint": EXAMPLE_ENDPOINTS.get(n), "uri": f"quantra://examples/{n}"}
-                for n in example_names()
-            ]
+            "engine_tag": index["engine_tag"],
+            "count": index["count"],
+            "categories": cat.categories(),
+            "examples": [cat.summary_row(r) for r in cat.rows()],
+        }
+
+    @app.resource(
+        "quantra://examples/{category}/{name}",
+        name="engine-example-in-category",
+        description=(
+            "One vendored example body with its catalog metadata, e.g. "
+            "quantra://examples/ir_swaps/irs_eur_5y_payer_ois_discounted_multicurve."
+        ),
+        mime_type="application/json",
+    )
+    def example_in_category(category: str, name: str) -> dict[str, Any]:
+        try:
+            row = cat.find(name)
+        except LocalValidationError as exc:
+            raise ResourceNotFoundError(exc.error) from None
+        if row["category"] != category:
+            raise ResourceNotFoundError(
+                f"example {name!r} is in category {row['category']!r}, not {category!r}"
+            )
+        return {
+            **cat.summary_row(row),
+            "description": row.get("description"),
+            "body": cat.load_body(row),
         }
 
     @app.resource(
         "quantra://examples/{name}",
         name="engine-example",
         description=(
-            "A live-verified request body, e.g. quantra://examples/sofr-ois-swap-request "
-            "(POST /price-ois-swap, NPV 337986.7913...)."
+            "A vendored example request body by name (any category), e.g. "
+            "quantra://examples/sofr-ois-swap-request (POST /price-ois-swap, NPV 337986.7913...); "
+            "a category name (quantra://examples/bonds) lists that category."
         ),
         mime_type="application/json",
     )
     def example_resource(name: str) -> dict[str, Any]:
+        if name in cat.categories():
+            return {"category": name, "examples": cat.list_examples(category=name)}
         return load_example(name)
 
     @app.resource(

@@ -214,7 +214,7 @@ def _conv(model: BaseModel) -> dict[str, Any]:
 
 def index_def(preset: Preset) -> dict[str, Any]:
     """The preset's index as an engine ``IndexDef`` (gold-example key order)."""
-    ix = preset.index
+    ix, _, _ = preset.require_curve()
     return {
         "id": ix.id,
         "name": ix.name,
@@ -251,12 +251,13 @@ def _helper_point(
     q: CurveQuote, i: int, preset: Preset, reference: dt.date
 ) -> tuple[dict[str, Any], float, str]:
     """-> (point body, ordering key in approx days, human label for messages)."""
-    block = preset.helpers.block(q.type)
+    ix, _, helpers = preset.require_curve()
+    block = helpers.block(q.type)
     if block is None:
         raise _problem(
             f"/quotes/{i}/type",
             f"quotes[{i}]: preset {preset.id} has no {q.type!r} helper conventions "
-            f"(available: {', '.join(preset.helpers.available)})",
+            f"(available: {', '.join(helpers.available)})",
         )
     conv = _conv(block)
     if q.type in ("deposit", "swap", "ois"):
@@ -276,14 +277,14 @@ def _helper_point(
             point = {
                 "rate": rate,
                 "tenor": tenor,
-                "float_index": {"id": preset.index.id},
+                "float_index": {"id": ix.id},
                 **conv,
             }
         else:  # ois: gold-example key order
             point = {
                 "rate": rate,
                 "settlement_days": conv["settlement_days"],
-                "overnight_index": {"id": preset.index.id},
+                "overnight_index": {"id": ix.id},
                 "tenor": tenor,
                 "calendar": conv["calendar"],
                 "fixed_leg_convention": conv["fixed_leg_convention"],
@@ -350,8 +351,9 @@ def _helper_point(
 
 
 def _convention_notes(preset: Preset, used: dict[str, int], notes: list[str]) -> None:
+    _, _, helpers = preset.require_curve()
     for helper_type, count in used.items():
-        block = preset.helpers.block(helper_type)
+        block = helpers.block(helper_type)
         assert block is not None
         for key, value in _conv(block).items():
             dotted = f"helpers.{helper_type}.{key}"
@@ -384,6 +386,7 @@ def build_curve(
     """
     if not curve_id or not isinstance(curve_id, str):
         raise _problem("/id", "id: a non-empty curve id is required")
+    _, c, _ = preset.require_curve()
     ref = check_date(reference_date, "reference_date")
     ref_date = dt.date.fromisoformat(ref)
     if not quotes:
@@ -410,7 +413,6 @@ def build_curve(
     if [b[1] for b in built] != list(range(len(built))):
         notes.append("quotes were re-ordered by maturity")
 
-    c = preset.curve
     dc = str(day_counter) if day_counter is not None else str(c.day_counter)
     interp = str(interpolator) if interpolator is not None else str(c.interpolator)
     tr = str(trait) if trait is not None else str(c.bootstrap_trait)
@@ -529,9 +531,10 @@ def build_value_curve(
 
     notes: list[str] = []
     if preset is not None:
-        dc = str(preset.curve.day_counter)
-        cal = str(preset.index.calendar)
-        bdc = str(preset.index.business_day_convention)
+        p_index, p_curve, _ = preset.require_curve()
+        dc = str(p_curve.day_counter)
+        cal = str(p_index.calendar)
+        bdc = str(p_index.business_day_convention)
         src = (
             f"preset {preset.id} (curve.day_counter, index.calendar, index.business_day_convention)"
         )

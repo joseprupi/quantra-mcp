@@ -8,7 +8,10 @@
     "name": "Euribor",
     "index_type": "Ibor",
     "currency": "EUR",
-    "tenor": {"n": 3, "unit": "Months"},
+    "tenor": {
+      "n": 3,
+      "unit": "Months"
+    },
     "fixing_days": 2,
     "calendar": "TARGET",
     "day_counter": "Actual360",
@@ -58,6 +61,55 @@
     "helpers.swap.sw_fixed_leg_convention": "market standard (ISDA/CCP), not from an in-repo source",
     "helpers.swap.sw_fixed_leg_day_counter": "market standard (ISDA/CCP), not from an in-repo source; the engine maps Thirty360 to QuantLib Thirty360(BondBasis)",
     "helpers.swap.spread": "explicit zero: the engine reads an absent spread as 0.0 (term_structure_point_parser.cpp); stated so nothing is implicit",
-    "helpers.swap.fwd_start_days": "explicit zero: the engine reads an absent fwd_start_days as 0 (term_structure_point_parser.cpp); stated so nothing is implicit"
+    "helpers.swap.fwd_start_days": "explicit zero: the engine reads an absent fwd_start_days as 0 (term_structure_point_parser.cpp); stated so nothing is implicit",
+    "trades.vanilla_swap": "engine fixture (quantraserver v0.7.0) examples/data/ir_swaps/irs_eur_4y_payer_vs_euribor3m_quarterly.json",
+    "trades.fra": "engine fixture (quantraserver v0.7.0) examples/data/fra/fra_eur_3x6_long_at_forward.json",
+    "trades.cap_floor": "engine fixture (quantraserver v0.7.0) examples/data/cap_floor/cap_eur_5y_itm_strike_2pct.json (Quarterly on Euribor 3M; OptionletVolSpec base TARGET/MF/Actual365Fixed)"
+  },
+  "trades": {
+    "vanilla_swap": {
+      "settlement_days": 2,
+      "schedule": {
+        "calendar": "TARGET",
+        "convention": "ModifiedFollowing",
+        "termination_date_convention": "ModifiedFollowing",
+        "date_generation_rule": "Forward",
+        "end_of_month": false
+      },
+      "fixed_leg": {
+        "frequency": "Annual",
+        "day_counter": "Thirty360",
+        "payment_convention": "ModifiedFollowing"
+      },
+      "floating_leg": {
+        "frequency": "Quarterly",
+        "day_counter": "Actual360",
+        "payment_convention": "ModifiedFollowing"
+      }
+    },
+    "fra": {
+      "settlement_days": 2,
+      "day_counter": "Actual360",
+      "calendar": "TARGET",
+      "business_day_convention": "ModifiedFollowing"
+    },
+    "cap_floor": {
+      "settlement_days": 2,
+      "schedule": {
+        "calendar": "TARGET",
+        "convention": "ModifiedFollowing",
+        "termination_date_convention": "ModifiedFollowing",
+        "date_generation_rule": "Forward",
+        "end_of_month": false
+      },
+      "frequency": "Quarterly",
+      "day_counter": "Actual360",
+      "business_day_convention": "ModifiedFollowing",
+      "vol_base": {
+        "calendar": "TARGET",
+        "business_day_convention": "ModifiedFollowing",
+        "day_counter": "Actual365Fixed"
+      }
+    }
   }
 }

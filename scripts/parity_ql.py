@@ -29,7 +29,7 @@ from typing import Any
 import QuantLib as ql
 
 from quantra_mcp.builders import curves as cb
-from quantra_mcp.presets.registry import Preset, get_preset, preset_ids
+from quantra_mcp.presets.registry import Preset, curve_preset_ids, get_preset
 
 STRIPS_PATH = Path(__file__).resolve().parents[1] / "tests" / "golden" / "strips.json"
 TOL = 1e-10
@@ -227,7 +227,7 @@ def check_preset(engine_url: str, preset: Preset, strip: dict[str, Any]) -> tupl
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--engine", default=os.environ.get("QUANTRA_ENGINE_URL", ""))
-    ap.add_argument("--presets", nargs="*", default=preset_ids())
+    ap.add_argument("--presets", nargs="*", default=curve_preset_ids())
     args = ap.parse_args()
     if not args.engine:
         print("QUANTRA_ENGINE_URL (or --engine) is required", file=sys.stderr)

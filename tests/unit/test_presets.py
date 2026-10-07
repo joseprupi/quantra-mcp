@@ -6,13 +6,27 @@ from quantra_mcp.presets.registry import (
     HELPER_TYPES,
     MARKET_STANDARD,
     PRESETS_DIR,
+    TRADE_TYPES,
     PresetError,
+    curve_preset_ids,
     get_preset,
     list_presets,
     preset_ids,
 )
 
 EXPECTED = [
+    "EUR_CDS",
+    "EUR_EQUITY",
+    "EUR_ESTR_OIS",
+    "EUR_EURIBOR_3M",
+    "EUR_EURIBOR_6M",
+    "EUR_FIXED_BOND",
+    "EUR_HICP",
+    "GBP_SONIA_OIS",
+    "GBP_SONIA_SWAP",
+    "USD_SOFR_OIS",
+]
+CURVE_PRESETS = [
     "EUR_ESTR_OIS",
     "EUR_EURIBOR_3M",
     "EUR_EURIBOR_6M",
@@ -26,9 +40,15 @@ def test_registry_lists_the_v1_set() -> None:
     assert preset_ids() == EXPECTED
     rows = list_presets()
     assert [r["id"] for r in rows] == EXPECTED
+    assert curve_preset_ids() == CURVE_PRESETS
     for r in rows:
-        assert r["provenance"] and r["description"] and r["helpers"]
+        assert r["provenance"] and r["description"] and (r["helpers"] or r["trades"])
         assert set(r["helpers"]) <= set(HELPER_TYPES)
+        assert set(r["trades"]) <= set(TRADE_TYPES)
+        if r["id"] in CURVE_PRESETS:
+            assert r["index"] and r["curve"] and r["helpers"]
+        else:
+            assert r["index"] is None and r["curve"] is None and r["helpers"] == []
 
 
 def test_unknown_preset_lists_available() -> None:
@@ -47,7 +67,8 @@ def test_sofr_preset_matches_the_gold_example_conventions() -> None:
         "interpolator": "LogLinear",
         "bootstrap_trait": "Discount",
     }
-    assert p.field_provenance == {}  # fully sourced
+    # the curve side is fully sourced; the only field-level entry is the trade block's
+    assert set(p.field_provenance) == {"trades.ois_swap"}
 
 
 def test_market_standard_fields_carry_the_exact_provenance_string() -> None:

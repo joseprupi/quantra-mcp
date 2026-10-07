@@ -1,4 +1,4 @@
-"""The MCP application: registers tools and resources; selects the transport."""
+"""The MCP application: registers tools, resources and prompts; selects the transport."""
 
 from __future__ import annotations
 
@@ -10,14 +10,14 @@ from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
-from quantra_mcp import __version__, resources
+from quantra_mcp import __version__, prompts, resources
 from quantra_mcp.backend.base import Backend
 from quantra_mcp.backend.engine_http import EngineHttpBackend
 from quantra_mcp.config import Settings
 from quantra_mcp.errors import EngineError, TransportError
 from quantra_mcp.schema.loader import load_spec, pin
 from quantra_mcp.session import SessionStore
-from quantra_mcp.tools import calendar, curves, discovery, raw
+from quantra_mcp.tools import calendar, curves, discovery, examples, pricing, raw
 from quantra_mcp.tools import session as session_tools
 
 log = logging.getLogger("quantra_mcp")
@@ -34,7 +34,18 @@ engine_request to POST any endpoint. To build a yield curve from a quote
 strip: list_presets -> build_curve(preset, quotes) -> build_query ->
 bootstrap_curve; build_value_curve makes a curve from explicit zero / discount
 / forward values; session_put stores a built curve so later calls can pass
-{"session": "<name>"}. Every result echoes the exact request sent (`request`,
+{"session": "<name>"}. To price: price_vanilla_swap / price_ois_swap /
+price_fixed_rate_bond / price_floating_rate_bond / price_zero_coupon_bond /
+price_callable_fixed_rate_bond / price_fra / price_cap_floor / price_swaption /
+price_cds / price_equity_option / price_zc_inflation_swap /
+price_yoy_inflation_swap / price_yoy_inflation_cap_floor take a `market`
+({"session": name} | an engine pricing block | {curves, indices, ...}), a
+`preset` whose trade block supplies every convention, and the trade
+economics; dates like effective_date "spot" or a tenor are resolved by the
+engine's /calendar-advance and reported in `date_resolution`.
+list_examples / get_example give 223 complete, verified engine requests (the
+engine's own fixtures with their QuantLib reference values); an example's
+`pricing` block is a valid `market`. Every result echoes the exact request sent (`request`,
 session references resolved) and the engine body verbatim (`response`); on an
 engine error `ok` is false and `error` is the engine's text (400 = request
 wrong, 422 = well-formed but unpriceable). The engine does not default omitted
@@ -136,8 +147,11 @@ def build_server(
     calendar.register(app, the_backend)
     raw.register(app, the_backend)
     curves.register(app, the_backend, the_store)
+    pricing.register(app, the_backend, the_store)
+    examples.register(app)
     session_tools.register(app, the_store)
     resources.register(app)
+    prompts.register(app)
     return app
 
 
