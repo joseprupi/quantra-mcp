@@ -14,7 +14,7 @@ from typing import Any
 from jsonschema import Draft7Validator
 from jsonschema.exceptions import ValidationError
 
-from quantra_mcp.schema.loader import REF_PREFIX, Spec, load_spec
+from quantra_mcp.schema.loader import COMPONENT_PREFIX, REF_PREFIX, Spec, SpecError, load_spec
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,6 +72,31 @@ def validate_request(endpoint: str, body: Any, spec: Spec | None = None) -> list
     spec = spec or load_spec()
     info = spec.endpoint(endpoint)
     validator = _validator(info.request_schema)
+    errors = sorted(validator.iter_errors(body), key=lambda e: (list(e.absolute_path), e.message))
+    seen: set[tuple[str, str]] = set()
+    out: list[ValidationProblem] = []
+    for err in errors:
+        cand = _most_relevant(err)
+        key = (_pointer(cand), _message(cand))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(ValidationProblem(path=key[0], message=key[1]))
+    return out
+
+
+def _full_component_name(name: str, spec: Spec) -> str:
+    if name in spec.schemas:
+        return name
+    if COMPONENT_PREFIX + name in spec.schemas:
+        return COMPONENT_PREFIX + name
+    raise SpecError(f"unknown schema {name!r}")
+
+
+def validate_component(name: str, body: Any, spec: Spec | None = None) -> list[ValidationProblem]:
+    """Problems in ``body`` against one component schema (``TermStructure``, ``IndexDef``...)."""
+    spec = spec or load_spec()
+    validator = _validator(_full_component_name(name, spec))
     errors = sorted(validator.iter_errors(body), key=lambda e: (list(e.absolute_path), e.message))
     seen: set[tuple[str, str]] = set()
     out: list[ValidationProblem] = []

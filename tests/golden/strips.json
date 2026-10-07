@@ -1,0 +1,103 @@
+{
+  "_comment": "Canonical quote strips per preset used by the golden tests, the live tests, scripts/live_check.py and scripts/parity_ql.py. Rates are decimals. USD_SOFR_OIS is the 14-pillar strip of the SOFR blog post (gold example).",
+  "USD_SOFR_OIS": {
+    "reference_date": "2025-01-15",
+    "quotes": [
+      {"type": "ois", "tenor": "1M", "rate": 0.0533},
+      {"type": "ois", "tenor": "3M", "rate": 0.053},
+      {"type": "ois", "tenor": "6M", "rate": 0.052},
+      {"type": "ois", "tenor": "1Y", "rate": 0.0495},
+      {"type": "ois", "tenor": "2Y", "rate": 0.044},
+      {"type": "ois", "tenor": "3Y", "rate": 0.0405},
+      {"type": "ois", "tenor": "5Y", "rate": 0.0375},
+      {"type": "ois", "tenor": "7Y", "rate": 0.0365},
+      {"type": "ois", "tenor": "10Y", "rate": 0.036},
+      {"type": "ois", "tenor": "15Y", "rate": 0.0358},
+      {"type": "ois", "tenor": "20Y", "rate": 0.0352},
+      {"type": "ois", "tenor": "25Y", "rate": 0.0342},
+      {"type": "ois", "tenor": "30Y", "rate": 0.0332},
+      {"type": "ois", "tenor": "40Y", "rate": 0.031},
+      {"type": "ois", "tenor": "50Y", "rate": 0.0295}
+    ],
+    "grid": ["1M", "6M", "1Y", "2Y", "5Y", "10Y", "15Y", "20Y", "30Y", "40Y", "50Y"]
+  },
+  "EUR_ESTR_OIS": {
+    "reference_date": "2025-01-15",
+    "quotes": [
+      {"type": "ois", "tenor": "1M", "rate": 0.029},
+      {"type": "ois", "tenor": "3M", "rate": 0.0285},
+      {"type": "ois", "tenor": "6M", "rate": 0.028},
+      {"type": "ois", "tenor": "1Y", "rate": 0.027},
+      {"type": "ois", "tenor": "2Y", "rate": 0.0255},
+      {"type": "ois", "tenor": "5Y", "rate": 0.025},
+      {"type": "ois", "tenor": "10Y", "rate": 0.026},
+      {"type": "ois", "tenor": "30Y", "rate": 0.025}
+    ],
+    "grid": ["1M", "6M", "1Y", "2Y", "5Y", "10Y", "20Y", "30Y"]
+  },
+  "GBP_SONIA_OIS": {
+    "reference_date": "2025-01-15",
+    "quotes": [
+      {"type": "ois", "tenor": "1M", "rate": 0.047},
+      {"type": "ois", "tenor": "3M", "rate": 0.046},
+      {"type": "ois", "tenor": "6M", "rate": 0.045},
+      {"type": "ois", "tenor": "1Y", "rate": 0.043},
+      {"type": "ois", "tenor": "2Y", "rate": 0.041},
+      {"type": "ois", "tenor": "5Y", "rate": 0.04},
+      {"type": "ois", "tenor": "10Y", "rate": 0.041},
+      {"type": "ois", "tenor": "30Y", "rate": 0.04}
+    ],
+    "grid": ["1M", "6M", "1Y", "2Y", "5Y", "10Y", "20Y", "30Y"]
+  },
+  "GBP_SONIA_SWAP": {
+    "reference_date": "2025-01-15",
+    "quotes": [
+      {"type": "deposit", "tenor": "6M", "rate": 0.045},
+      {"type": "swap", "tenor": "1Y", "rate": 0.043},
+      {"type": "swap", "tenor": "2Y", "rate": 0.041},
+      {"type": "swap", "tenor": "3Y", "rate": 0.0405},
+      {"type": "swap", "tenor": "5Y", "rate": 0.04},
+      {"type": "swap", "tenor": "7Y", "rate": 0.0402},
+      {"type": "swap", "tenor": "10Y", "rate": 0.041},
+      {"type": "swap", "tenor": "15Y", "rate": 0.0415},
+      {"type": "swap", "tenor": "20Y", "rate": 0.041},
+      {"type": "swap", "tenor": "25Y", "rate": 0.04}
+    ],
+    "grid": ["1M", "6M", "1Y", "2Y", "5Y", "10Y", "20Y", "25Y"]
+  },
+  "EUR_EURIBOR_6M": {
+    "reference_date": "2025-01-15",
+    "quotes": [
+      {"type": "deposit", "tenor": "6M", "rate": 0.029},
+      {"type": "fra", "months_to_start": 6, "months_to_end": 12, "rate": 0.0285},
+      {"type": "swap", "tenor": "2Y", "rate": 0.0275},
+      {"type": "swap", "tenor": "3Y", "rate": 0.027},
+      {"type": "swap", "tenor": "5Y", "rate": 0.0265},
+      {"type": "swap", "tenor": "7Y", "rate": 0.0268},
+      {"type": "swap", "tenor": "10Y", "rate": 0.0275},
+      {"type": "swap", "tenor": "15Y", "rate": 0.028},
+      {"type": "swap", "tenor": "20Y", "rate": 0.0278},
+      {"type": "swap", "tenor": "30Y", "rate": 0.0265}
+    ],
+    "grid": ["1M", "6M", "1Y", "2Y", "5Y", "10Y", "20Y", "30Y"]
+  },
+  "EUR_EURIBOR_3M": {
+    "reference_date": "2025-01-15",
+    "quotes": [
+      {"type": "deposit", "tenor": "3M", "rate": 0.0295},
+      {"type": "future", "future_start_date": "2025-03-19", "price": 97.1},
+      {"type": "future", "future_start_date": "2025-06-18", "price": 97.25},
+      {"type": "future", "future_start_date": "2025-09-17", "price": 97.35},
+      {"type": "future", "future_start_date": "2025-12-17", "price": 97.4},
+      {"type": "swap", "tenor": "2Y", "rate": 0.026},
+      {"type": "swap", "tenor": "3Y", "rate": 0.0255},
+      {"type": "swap", "tenor": "5Y", "rate": 0.025},
+      {"type": "swap", "tenor": "7Y", "rate": 0.0253},
+      {"type": "swap", "tenor": "10Y", "rate": 0.026},
+      {"type": "swap", "tenor": "15Y", "rate": 0.0265},
+      {"type": "swap", "tenor": "20Y", "rate": 0.0263},
+      {"type": "swap", "tenor": "30Y", "rate": 0.025}
+    ],
+    "grid": ["1M", "6M", "1Y", "2Y", "5Y", "10Y", "20Y", "30Y"]
+  }
+}

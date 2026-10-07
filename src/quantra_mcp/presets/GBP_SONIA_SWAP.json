@@ -1,0 +1,45 @@
+{
+  "id": "GBP_SONIA_SWAP",
+  "description": "GBP SONIA curve built the way the platform's seeded 'GBP SONIA OIS (BoE, daily public)' curve is: a 6M deposit plus annual SwapHelpers (fixed leg Annual / ModifiedFollowing / Actual365Fixed on the UK calendar) whose float index is the SONIA overnight index, so the Bank of England public par strip reproduces. Curve Actual365Fixed / LogLinear / Discount.",
+  "currency": "GBP",
+  "provenance": "quantra-backend scripts/seed_demo_entities.py: SONIA index (UnitedKingdom, Actual365Fixed, fixing_days 0), GBP SONIA OIS curve (Actual365Fixed, LogLinear, Discount; DepositHelper fixing_days 0 / UnitedKingdom / ModifiedFollowing / Actual365Fixed; SwapHelper UnitedKingdom / Annual / ModifiedFollowing / Actual365Fixed)",
+  "index": {
+    "id": "GBP_SONIA",
+    "name": "SONIA",
+    "index_type": "Overnight",
+    "currency": "GBP",
+    "tenor": {"n": 0, "unit": "Days"},
+    "fixing_days": 0,
+    "calendar": "UnitedKingdom",
+    "day_counter": "Actual365Fixed",
+    "business_day_convention": "ModifiedFollowing",
+    "end_of_month": true
+  },
+  "curve": {
+    "day_counter": "Actual365Fixed",
+    "interpolator": "LogLinear",
+    "bootstrap_trait": "Discount"
+  },
+  "helpers": {
+    "deposit": {
+      "fixing_days": 0,
+      "calendar": "UnitedKingdom",
+      "business_day_convention": "ModifiedFollowing",
+      "day_counter": "Actual365Fixed"
+    },
+    "swap": {
+      "calendar": "UnitedKingdom",
+      "sw_fixed_leg_frequency": "Annual",
+      "sw_fixed_leg_convention": "ModifiedFollowing",
+      "sw_fixed_leg_day_counter": "Actual365Fixed",
+      "spread": 0.0,
+      "fwd_start_days": 0
+    }
+  },
+  "field_provenance": {
+    "index.business_day_convention": "market standard (ISDA/CCP), not from an in-repo source",
+    "index.end_of_month": "market standard (ISDA/CCP), not from an in-repo source",
+    "helpers.swap.spread": "explicit zero: the engine reads an absent spread as 0.0 (term_structure_point_parser.cpp); stated so nothing is implicit",
+    "helpers.swap.fwd_start_days": "explicit zero: the engine reads an absent fwd_start_days as 0 (term_structure_point_parser.cpp); stated so nothing is implicit"
+  }
+}

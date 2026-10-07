@@ -1,0 +1,266 @@
+{
+  "pricing": {
+    "as_of_date": "2025-01-15",
+    "rates": {
+      "indices": [
+        {
+          "id": "GBP_SONIA",
+          "name": "SONIA",
+          "index_type": "Overnight",
+          "currency": "GBP",
+          "tenor": {
+            "n": 0,
+            "unit": "Days"
+          },
+          "fixing_days": 0,
+          "calendar": "UnitedKingdom",
+          "day_counter": "Actual365Fixed",
+          "business_day_convention": "ModifiedFollowing",
+          "end_of_month": true
+        }
+      ],
+      "curves": [
+        {
+          "id": "GBP_SONIA_OIS",
+          "reference_date": "2025-01-15",
+          "day_counter": "Actual365Fixed",
+          "interpolator": "LogLinear",
+          "bootstrap_trait": "Discount",
+          "points": [
+            {
+              "point_type": "OISHelper",
+              "point": {
+                "rate": 0.047,
+                "settlement_days": 0,
+                "overnight_index": {
+                  "id": "GBP_SONIA"
+                },
+                "tenor": {
+                  "n": 1,
+                  "unit": "Months"
+                },
+                "calendar": "UnitedKingdom",
+                "fixed_leg_convention": "ModifiedFollowing",
+                "fixed_leg_frequency": "Annual",
+                "payment_lag": 0,
+                "averaging_method": "Compound",
+                "lookback_days": 0,
+                "lockout_days": 0,
+                "apply_observation_shift": false
+              }
+            },
+            {
+              "point_type": "OISHelper",
+              "point": {
+                "rate": 0.046,
+                "settlement_days": 0,
+                "overnight_index": {
+                  "id": "GBP_SONIA"
+                },
+                "tenor": {
+                  "n": 3,
+                  "unit": "Months"
+                },
+                "calendar": "UnitedKingdom",
+                "fixed_leg_convention": "ModifiedFollowing",
+                "fixed_leg_frequency": "Annual",
+                "payment_lag": 0,
+                "averaging_method": "Compound",
+                "lookback_days": 0,
+                "lockout_days": 0,
+                "apply_observation_shift": false
+              }
+            },
+            {
+              "point_type": "OISHelper",
+              "point": {
+                "rate": 0.045,
+                "settlement_days": 0,
+                "overnight_index": {
+                  "id": "GBP_SONIA"
+                },
+                "tenor": {
+                  "n": 6,
+                  "unit": "Months"
+                },
+                "calendar": "UnitedKingdom",
+                "fixed_leg_convention": "ModifiedFollowing",
+                "fixed_leg_frequency": "Annual",
+                "payment_lag": 0,
+                "averaging_method": "Compound",
+                "lookback_days": 0,
+                "lockout_days": 0,
+                "apply_observation_shift": false
+              }
+            },
+            {
+              "point_type": "OISHelper",
+              "point": {
+                "rate": 0.043,
+                "settlement_days": 0,
+                "overnight_index": {
+                  "id": "GBP_SONIA"
+                },
+                "tenor": {
+                  "n": 1,
+                  "unit": "Years"
+                },
+                "calendar": "UnitedKingdom",
+                "fixed_leg_convention": "ModifiedFollowing",
+                "fixed_leg_frequency": "Annual",
+                "payment_lag": 0,
+                "averaging_method": "Compound",
+                "lookback_days": 0,
+                "lockout_days": 0,
+                "apply_observation_shift": false
+              }
+            },
+            {
+              "point_type": "OISHelper",
+              "point": {
+                "rate": 0.041,
+                "settlement_days": 0,
+                "overnight_index": {
+                  "id": "GBP_SONIA"
+                },
+                "tenor": {
+                  "n": 2,
+                  "unit": "Years"
+                },
+                "calendar": "UnitedKingdom",
+                "fixed_leg_convention": "ModifiedFollowing",
+                "fixed_leg_frequency": "Annual",
+                "payment_lag": 0,
+                "averaging_method": "Compound",
+                "lookback_days": 0,
+                "lockout_days": 0,
+                "apply_observation_shift": false
+              }
+            },
+            {
+              "point_type": "OISHelper",
+              "point": {
+                "rate": 0.04,
+                "settlement_days": 0,
+                "overnight_index": {
+                  "id": "GBP_SONIA"
+                },
+                "tenor": {
+                  "n": 5,
+                  "unit": "Years"
+                },
+                "calendar": "UnitedKingdom",
+                "fixed_leg_convention": "ModifiedFollowing",
+                "fixed_leg_frequency": "Annual",
+                "payment_lag": 0,
+                "averaging_method": "Compound",
+                "lookback_days": 0,
+                "lockout_days": 0,
+                "apply_observation_shift": false
+              }
+            },
+            {
+              "point_type": "OISHelper",
+              "point": {
+                "rate": 0.041,
+                "settlement_days": 0,
+                "overnight_index": {
+                  "id": "GBP_SONIA"
+                },
+                "tenor": {
+                  "n": 10,
+                  "unit": "Years"
+                },
+                "calendar": "UnitedKingdom",
+                "fixed_leg_convention": "ModifiedFollowing",
+                "fixed_leg_frequency": "Annual",
+                "payment_lag": 0,
+                "averaging_method": "Compound",
+                "lookback_days": 0,
+                "lockout_days": 0,
+                "apply_observation_shift": false
+              }
+            },
+            {
+              "point_type": "OISHelper",
+              "point": {
+                "rate": 0.04,
+                "settlement_days": 0,
+                "overnight_index": {
+                  "id": "GBP_SONIA"
+                },
+                "tenor": {
+                  "n": 30,
+                  "unit": "Years"
+                },
+                "calendar": "UnitedKingdom",
+                "fixed_leg_convention": "ModifiedFollowing",
+                "fixed_leg_frequency": "Annual",
+                "payment_lag": 0,
+                "averaging_method": "Compound",
+                "lookback_days": 0,
+                "lockout_days": 0,
+                "apply_observation_shift": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "queries": [
+    {
+      "curve_id": "GBP_SONIA_OIS",
+      "measures": [
+        "DF",
+        "ZERO"
+      ],
+      "grid": {
+        "grid_type": "TenorGrid",
+        "grid": {
+          "tenors": [
+            {
+              "n": 1,
+              "unit": "Months"
+            },
+            {
+              "n": 6,
+              "unit": "Months"
+            },
+            {
+              "n": 1,
+              "unit": "Years"
+            },
+            {
+              "n": 2,
+              "unit": "Years"
+            },
+            {
+              "n": 5,
+              "unit": "Years"
+            },
+            {
+              "n": 10,
+              "unit": "Years"
+            },
+            {
+              "n": 20,
+              "unit": "Years"
+            },
+            {
+              "n": 30,
+              "unit": "Years"
+            }
+          ],
+          "calendar": "UnitedKingdom",
+          "business_day_convention": "ModifiedFollowing"
+        }
+      },
+      "zero": {
+        "use_curve_day_counter": true,
+        "compounding": "Continuous",
+        "frequency": "Annual"
+      }
+    }
+  ]
+}

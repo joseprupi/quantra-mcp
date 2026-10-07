@@ -4,6 +4,12 @@ For each call the MCP tool's ``response`` must equal a direct ``httpx`` POST of
 the tool's echoed ``request`` (byte-equal canonical JSON). Prints a table and
 exits non-zero on any mismatch or failed call.
 
+The M2 section chains the market-construction tools: build_curve(USD_SOFR_OIS,
+the 14-pillar SOFR strip) -> bootstrap_curve must be JSON-equal to the shipped
+gold example and return the 50Y DF oracle; a discount value curve round-trips;
+every other preset bootstraps with monotone DFs; a session reference resolves
+to the same request as the inline curve.
+
     QUANTRA_ENGINE_URL=http://localhost:18087 uv run python scripts/live_check.py
 """
 
@@ -14,14 +20,20 @@ import json
 import os
 import sys
 from dataclasses import dataclass
+from itertools import pairwise
+from pathlib import Path
 from typing import Any
 
 import httpx
 from mcp import Client
 
 from quantra_mcp.config import Settings
+from quantra_mcp.presets.registry import get_preset, preset_ids
 from quantra_mcp.resources import EXAMPLE_ENDPOINTS, example_names, load_example
 from quantra_mcp.server import build_server
+
+STRIPS_PATH = Path(__file__).resolve().parents[1] / "tests" / "golden" / "strips.json"
+BOOTSTRAP_50Y_DF_ORACLE = "0.262755579831"
 
 OVERRIDE = {
     "calendar": "TARGET",
@@ -101,6 +113,270 @@ def _number_note(response: Any) -> str:
     return ""
 
 
+def _strips() -> dict[str, Any]:
+    return {k: v for k, v in json.loads(STRIPS_PATH.read_text()).items() if k[0] != "_"}
+
+
+def _df_values(result: dict[str, Any], curve_id: str) -> list[float]:
+    res = next(r for r in result["response"]["results"] if r["id"] == curve_id)
+    # the engine omits ``measure`` when it is the schema default DF
+    series = next(s for s in res["series"] if s.get("measure", "DF") == "DF")
+    return list(series["values"])
+
+
+async def _tool(client: Client, name: str, args: dict[str, Any]) -> dict[str, Any]:
+    result = await client.call_tool(name, args)
+    if result.is_error or result.structured_content is None:
+        return {"ok": False, "error": str(result.content)[:120]}
+    return dict(result.structured_content)
+
+
+async def _replay_equal(http: httpx.AsyncClient, data: dict[str, Any]) -> bool:
+    r = await http.post(
+        data["endpoint"],
+        content=json.dumps(data["request"]).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    r.raise_for_status()
+    return canonical(r.json()) == canonical(data["response"])
+
+
+async def _build_and_query(
+    client: Client, preset_id: str, strip: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    preset = get_preset(preset_id)
+    built = await _tool(
+        client,
+        "build_curve",
+        {
+            "id": preset_id,
+            "preset": preset_id,
+            "quotes": strip["quotes"],
+            "reference_date": strip["reference_date"],
+        },
+    )
+    query = await _tool(
+        client,
+        "build_query",
+        {
+            "curve_id": preset_id,
+            "measures": ["DF", "ZERO"],
+            "tenors": strip["grid"],
+            "calendar": str(preset.index.calendar),
+            "business_day_convention": str(preset.index.business_day_convention),
+        },
+    )
+    return built, query
+
+
+async def m2_checks(client: Client, http: httpx.AsyncClient, rows: list[Row]) -> bool:
+    """Market construction: presets -> build -> bootstrap; returns True on any failure."""
+    failed = False
+    strips = _strips()
+
+    lst = await _tool(client, "list_presets", {})
+    rows.append(
+        Row(
+            "list_presets",
+            "(local)",
+            "ok" if lst.get("ok") else "FAIL",
+            "n/a",
+            f"presets={[p['id'] for p in lst.get('presets', [])]}",
+        )
+    )
+    failed |= not lst.get("ok")
+    one = await _tool(client, "get_preset", {"id": "USD_SOFR_OIS"})
+    rows.append(
+        Row(
+            "get_preset USD_SOFR_OIS",
+            "(local)",
+            "ok" if one.get("ok") else "FAIL",
+            "n/a",
+            "ois.payment_lag="
+            + str(one.get("preset", {}).get("helpers", {}).get("ois", {}).get("payment_lag")),
+        )
+    )
+    failed |= not one.get("ok")
+
+    # --- SOFR oracle --------------------------------------------------------
+    built, query = await _build_and_query(client, "USD_SOFR_OIS", strips["USD_SOFR_OIS"])
+    rows.append(
+        Row(
+            "build_curve USD_SOFR_OIS",
+            "(local)",
+            "ok" if built.get("ok") else f"FAIL {built.get('error')}",
+            "n/a",
+            f"points={len(built.get('curve', {}).get('points', []))} "
+            f"notes={len(built.get('notes', []))}",
+        )
+    )
+    rows.append(
+        Row(
+            "build_query USD_SOFR_OIS",
+            "(local)",
+            "ok" if query.get("ok") else f"FAIL {query.get('error')}",
+            "n/a",
+            f"measures={query.get('query', {}).get('measures')}",
+        )
+    )
+    failed |= not (built.get("ok") and query.get("ok"))
+    boot = await _tool(
+        client,
+        "bootstrap_curve",
+        {"curves": [built], "as_of": strips["USD_SOFR_OIS"]["reference_date"], "queries": [query]},
+    )
+    if boot.get("ok"):
+        same = await _replay_equal(http, boot)
+        json_equal = canonical(boot["request"]) == canonical(load_example("sofr-bootstrap-request"))
+        df50 = _df_values(boot, "USD_SOFR_OIS")[-1]
+        oracle_ok = repr(df50).startswith(BOOTSTRAP_50Y_DF_ORACLE)
+        failed |= not (same and json_equal and oracle_ok)
+        rows.append(
+            Row(
+                "bootstrap_curve USD_SOFR_OIS",
+                boot["endpoint"],
+                "ok",
+                "byte-equal" if same else "MISMATCH",
+                f"json-equal-to-example={json_equal} 50Y_DF={df50!r} oracle={oracle_ok}",
+            )
+        )
+    else:
+        failed = True
+        rows.append(
+            Row(
+                "bootstrap_curve USD_SOFR_OIS",
+                "/bootstrap-curves",
+                f"FAIL {boot.get('status')}",
+                "-",
+                str(boot.get("error"))[:80],
+            )
+        )
+
+    # --- discount value curve ----------------------------------------------
+    vc = await _tool(
+        client,
+        "build_value_curve",
+        {
+            "id": "VC",
+            "kind": "discount",
+            "points": [{"date": "2025-01-15", "value": 1.0}, {"tenor": "1Y", "value": 0.96}],
+            "reference_date": "2025-01-15",
+            "preset": "USD_SOFR_OIS",
+        },
+    )
+    vq = await _tool(
+        client,
+        "build_query",
+        {
+            "curve_id": "VC",
+            "measures": ["DF", "ZERO"],
+            "tenors": ["1Y"],
+            "calendar": "UnitedStatesGovernmentBond",
+            "business_day_convention": "ModifiedFollowing",
+        },
+    )
+    vboot = await _tool(
+        client, "bootstrap_curve", {"curves": [vc], "as_of": "2025-01-15", "queries": [vq]}
+    )
+    if vc.get("ok") and vboot.get("ok"):
+        same = await _replay_equal(http, vboot)
+        res = vboot["response"]["results"][0]
+        zero = next(s for s in res["series"] if s.get("measure") == "ZERO")["values"][0]
+        df = _df_values(vboot, "VC")[0]
+        failed |= not same or df != 0.96
+        rows.append(
+            Row(
+                "build_value_curve discount -> bootstrap",
+                vboot["endpoint"],
+                "ok",
+                "byte-equal" if same else "MISMATCH",
+                f"DF@1Y={df!r} ZERO@1Y={zero!r} (engine; -ln 0.96 expected)",
+            )
+        )
+    else:
+        failed = True
+        rows.append(
+            Row(
+                "build_value_curve discount",
+                "/bootstrap-curves",
+                "FAIL",
+                "-",
+                str(vc.get("error") or vboot.get("error"))[:80],
+            )
+        )
+
+    # --- every other preset: 200 + monotone DFs -----------------------------
+    for preset_id in preset_ids():
+        if preset_id == "USD_SOFR_OIS":
+            continue
+        strip = strips[preset_id]
+        b, q = await _build_and_query(client, preset_id, strip)
+        r = await _tool(
+            client,
+            "bootstrap_curve",
+            {"curves": [b], "as_of": strip["reference_date"], "queries": [q]},
+        )
+        if not (b.get("ok") and q.get("ok") and r.get("ok")):
+            failed = True
+            rows.append(
+                Row(
+                    f"build+bootstrap {preset_id}",
+                    "/bootstrap-curves",
+                    f"FAIL {r.get('status')}",
+                    "-",
+                    str(b.get("error") or q.get("error") or r.get("error"))[:80],
+                )
+            )
+            continue
+        same = await _replay_equal(http, r)
+        dfs = _df_values(r, preset_id)
+        mono = all(0 < y < x <= 1.0 for x, y in pairwise(dfs))
+        failed |= not (same and mono)
+        rows.append(
+            Row(
+                f"build+bootstrap {preset_id}",
+                r["endpoint"],
+                "ok",
+                "byte-equal" if same else "MISMATCH",
+                f"DF_monotone={mono} pillars={r['summary']['curves'][0]['pillars']} "
+                f"last_DF={dfs[-1]!r}",
+            )
+        )
+
+    # --- session round trip -------------------------------------------------
+    put = await _tool(client, "session_put", {"name": "sofr", "kind": "curve", "value": built})
+    via = await _tool(
+        client,
+        "bootstrap_curve",
+        {"curves": [{"session": "sofr"}], "as_of": "2025-01-15", "queries": [query]},
+    )
+    if put.get("ok") and via.get("ok") and boot.get("ok"):
+        resolved = via["request"] == boot["request"]
+        same = await _replay_equal(http, via)
+        failed |= not (resolved and same)
+        rows.append(
+            Row(
+                "session_put -> bootstrap_curve [{session}]",
+                via["endpoint"],
+                "ok",
+                "byte-equal" if same else "MISMATCH",
+                f"request==inline_request={resolved} note={via.get('notes', [''])[0][:40]!r}",
+            )
+        )
+    else:
+        failed = True
+        rows.append(
+            Row(
+                "session round trip",
+                "/bootstrap-curves",
+                "FAIL",
+                "-",
+                str(put.get("error") or via.get("error"))[:80],
+            )
+        )
+    return failed
+
+
 async def main() -> int:
     engine_url = os.environ.get("QUANTRA_ENGINE_URL", "").rstrip("/")
     if not engine_url:
@@ -163,6 +439,8 @@ async def main() -> int:
                     _number_note(data["response"]),
                 )
             )
+
+        failed |= await m2_checks(client, http, rows)
 
     fields = ("tool", "endpoint", "status", "replay", "note")
     header = Row(*fields)

@@ -39,14 +39,31 @@ async def test_lists_tools_and_resources(app: Any) -> None:
             "calendar_business_days",
             "calendar_advance",
             "engine_request",
+            "list_presets",
+            "get_preset",
+            "build_curve",
+            "build_value_curve",
+            "build_query",
+            "bootstrap_curve",
+            "bootstrap_inflation_curve",
+            "session_put",
+            "session_get",
+            "session_list",
+            "session_delete",
         }
         uris = {str(r.uri) for r in (await c.list_resources()).resources}
-        assert {"quantra://docs/http-api", "quantra://docs/versioning", "quantra://pin"} <= uris
+        assert {
+            "quantra://docs/http-api",
+            "quantra://docs/versioning",
+            "quantra://pin",
+            "quantra://presets",
+        } <= uris
         templates = {t.uri_template for t in (await c.list_resource_templates()).resource_templates}
         assert templates == {
             "quantra://schema/{endpoint}",
             "quantra://enums/{name}",
             "quantra://examples/{name}",
+            "quantra://presets/{id}",
         }
 
 

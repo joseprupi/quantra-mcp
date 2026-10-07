@@ -1,0 +1,37 @@
+{
+  "id": "USD_SOFR_OIS",
+  "description": "USD SOFR OIS discount curve from the cleared SOFR OIS strip: spot T+2, annual fixed leg (Actual/360 via the index), ModifiedFollowing on the US government securities calendar, payment lag 2 business days, compounded averaging, no lookback, no lockout. Curve Actual365Fixed / LogLinear / Discount.",
+  "currency": "USD",
+  "provenance": "quantra.io/blog/bootstrapping-a-sofr-curve (2026-08-03) cleared-OIS conventions table + src/quantra_mcp/examples/sofr-bootstrap-request.json (byte-verified against engine 0.6.0/0.7.0, 50Y DF 0.262755579831); overnight-index conventions also in quantra-backend pricing/_translator.py _KNOWN_OVERNIGHT_INDICES (SOFR: Actual360, fixing_days 0)",
+  "index": {
+    "id": "USD_SOFR",
+    "name": "SOFR",
+    "index_type": "Overnight",
+    "currency": "USD",
+    "tenor": {"n": 0, "unit": "Days"},
+    "fixing_days": 0,
+    "calendar": "UnitedStatesGovernmentBond",
+    "day_counter": "Actual360",
+    "business_day_convention": "ModifiedFollowing",
+    "end_of_month": true
+  },
+  "curve": {
+    "day_counter": "Actual365Fixed",
+    "interpolator": "LogLinear",
+    "bootstrap_trait": "Discount"
+  },
+  "helpers": {
+    "ois": {
+      "settlement_days": 2,
+      "calendar": "UnitedStatesGovernmentBond",
+      "fixed_leg_frequency": "Annual",
+      "fixed_leg_convention": "ModifiedFollowing",
+      "payment_lag": 2,
+      "averaging_method": "Compound",
+      "lookback_days": 0,
+      "lockout_days": 0,
+      "apply_observation_shift": false
+    }
+  },
+  "field_provenance": {}
+}

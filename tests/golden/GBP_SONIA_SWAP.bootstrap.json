@@ -1,0 +1,275 @@
+{
+  "pricing": {
+    "as_of_date": "2025-01-15",
+    "rates": {
+      "indices": [
+        {
+          "id": "GBP_SONIA",
+          "name": "SONIA",
+          "index_type": "Overnight",
+          "currency": "GBP",
+          "tenor": {
+            "n": 0,
+            "unit": "Days"
+          },
+          "fixing_days": 0,
+          "calendar": "UnitedKingdom",
+          "day_counter": "Actual365Fixed",
+          "business_day_convention": "ModifiedFollowing",
+          "end_of_month": true
+        }
+      ],
+      "curves": [
+        {
+          "id": "GBP_SONIA_SWAP",
+          "reference_date": "2025-01-15",
+          "day_counter": "Actual365Fixed",
+          "interpolator": "LogLinear",
+          "bootstrap_trait": "Discount",
+          "points": [
+            {
+              "point_type": "DepositHelper",
+              "point": {
+                "rate": 0.045,
+                "tenor": {
+                  "n": 6,
+                  "unit": "Months"
+                },
+                "fixing_days": 0,
+                "calendar": "UnitedKingdom",
+                "business_day_convention": "ModifiedFollowing",
+                "day_counter": "Actual365Fixed"
+              }
+            },
+            {
+              "point_type": "SwapHelper",
+              "point": {
+                "rate": 0.043,
+                "tenor": {
+                  "n": 1,
+                  "unit": "Years"
+                },
+                "float_index": {
+                  "id": "GBP_SONIA"
+                },
+                "calendar": "UnitedKingdom",
+                "sw_fixed_leg_frequency": "Annual",
+                "sw_fixed_leg_convention": "ModifiedFollowing",
+                "sw_fixed_leg_day_counter": "Actual365Fixed",
+                "spread": 0.0,
+                "fwd_start_days": 0
+              }
+            },
+            {
+              "point_type": "SwapHelper",
+              "point": {
+                "rate": 0.041,
+                "tenor": {
+                  "n": 2,
+                  "unit": "Years"
+                },
+                "float_index": {
+                  "id": "GBP_SONIA"
+                },
+                "calendar": "UnitedKingdom",
+                "sw_fixed_leg_frequency": "Annual",
+                "sw_fixed_leg_convention": "ModifiedFollowing",
+                "sw_fixed_leg_day_counter": "Actual365Fixed",
+                "spread": 0.0,
+                "fwd_start_days": 0
+              }
+            },
+            {
+              "point_type": "SwapHelper",
+              "point": {
+                "rate": 0.0405,
+                "tenor": {
+                  "n": 3,
+                  "unit": "Years"
+                },
+                "float_index": {
+                  "id": "GBP_SONIA"
+                },
+                "calendar": "UnitedKingdom",
+                "sw_fixed_leg_frequency": "Annual",
+                "sw_fixed_leg_convention": "ModifiedFollowing",
+                "sw_fixed_leg_day_counter": "Actual365Fixed",
+                "spread": 0.0,
+                "fwd_start_days": 0
+              }
+            },
+            {
+              "point_type": "SwapHelper",
+              "point": {
+                "rate": 0.04,
+                "tenor": {
+                  "n": 5,
+                  "unit": "Years"
+                },
+                "float_index": {
+                  "id": "GBP_SONIA"
+                },
+                "calendar": "UnitedKingdom",
+                "sw_fixed_leg_frequency": "Annual",
+                "sw_fixed_leg_convention": "ModifiedFollowing",
+                "sw_fixed_leg_day_counter": "Actual365Fixed",
+                "spread": 0.0,
+                "fwd_start_days": 0
+              }
+            },
+            {
+              "point_type": "SwapHelper",
+              "point": {
+                "rate": 0.0402,
+                "tenor": {
+                  "n": 7,
+                  "unit": "Years"
+                },
+                "float_index": {
+                  "id": "GBP_SONIA"
+                },
+                "calendar": "UnitedKingdom",
+                "sw_fixed_leg_frequency": "Annual",
+                "sw_fixed_leg_convention": "ModifiedFollowing",
+                "sw_fixed_leg_day_counter": "Actual365Fixed",
+                "spread": 0.0,
+                "fwd_start_days": 0
+              }
+            },
+            {
+              "point_type": "SwapHelper",
+              "point": {
+                "rate": 0.041,
+                "tenor": {
+                  "n": 10,
+                  "unit": "Years"
+                },
+                "float_index": {
+                  "id": "GBP_SONIA"
+                },
+                "calendar": "UnitedKingdom",
+                "sw_fixed_leg_frequency": "Annual",
+                "sw_fixed_leg_convention": "ModifiedFollowing",
+                "sw_fixed_leg_day_counter": "Actual365Fixed",
+                "spread": 0.0,
+                "fwd_start_days": 0
+              }
+            },
+            {
+              "point_type": "SwapHelper",
+              "point": {
+                "rate": 0.0415,
+                "tenor": {
+                  "n": 15,
+                  "unit": "Years"
+                },
+                "float_index": {
+                  "id": "GBP_SONIA"
+                },
+                "calendar": "UnitedKingdom",
+                "sw_fixed_leg_frequency": "Annual",
+                "sw_fixed_leg_convention": "ModifiedFollowing",
+                "sw_fixed_leg_day_counter": "Actual365Fixed",
+                "spread": 0.0,
+                "fwd_start_days": 0
+              }
+            },
+            {
+              "point_type": "SwapHelper",
+              "point": {
+                "rate": 0.041,
+                "tenor": {
+                  "n": 20,
+                  "unit": "Years"
+                },
+                "float_index": {
+                  "id": "GBP_SONIA"
+                },
+                "calendar": "UnitedKingdom",
+                "sw_fixed_leg_frequency": "Annual",
+                "sw_fixed_leg_convention": "ModifiedFollowing",
+                "sw_fixed_leg_day_counter": "Actual365Fixed",
+                "spread": 0.0,
+                "fwd_start_days": 0
+              }
+            },
+            {
+              "point_type": "SwapHelper",
+              "point": {
+                "rate": 0.04,
+                "tenor": {
+                  "n": 25,
+                  "unit": "Years"
+                },
+                "float_index": {
+                  "id": "GBP_SONIA"
+                },
+                "calendar": "UnitedKingdom",
+                "sw_fixed_leg_frequency": "Annual",
+                "sw_fixed_leg_convention": "ModifiedFollowing",
+                "sw_fixed_leg_day_counter": "Actual365Fixed",
+                "spread": 0.0,
+                "fwd_start_days": 0
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "queries": [
+    {
+      "curve_id": "GBP_SONIA_SWAP",
+      "measures": [
+        "DF",
+        "ZERO"
+      ],
+      "grid": {
+        "grid_type": "TenorGrid",
+        "grid": {
+          "tenors": [
+            {
+              "n": 1,
+              "unit": "Months"
+            },
+            {
+              "n": 6,
+              "unit": "Months"
+            },
+            {
+              "n": 1,
+              "unit": "Years"
+            },
+            {
+              "n": 2,
+              "unit": "Years"
+            },
+            {
+              "n": 5,
+              "unit": "Years"
+            },
+            {
+              "n": 10,
+              "unit": "Years"
+            },
+            {
+              "n": 20,
+              "unit": "Years"
+            },
+            {
+              "n": 25,
+              "unit": "Years"
+            }
+          ],
+          "calendar": "UnitedKingdom",
+          "business_day_convention": "ModifiedFollowing"
+        }
+      },
+      "zero": {
+        "use_curve_day_counter": true,
+        "compounding": "Continuous",
+        "frequency": "Annual"
+      }
+    }
+  ]
+}

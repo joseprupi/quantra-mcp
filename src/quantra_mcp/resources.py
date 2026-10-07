@@ -9,6 +9,7 @@ from typing import Any
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ResourceNotFoundError
 
+from quantra_mcp.presets.registry import PresetError, get_preset, list_presets
 from quantra_mcp.schema.loader import SpecError, load_spec, normalize_endpoint, pin
 from quantra_mcp.tools.discovery import endpoint_schema, enum_listing
 
@@ -140,3 +141,31 @@ def register(app: MCPServer) -> None:
     )
     def example_resource(name: str) -> dict[str, Any]:
         return load_example(name)
+
+    @app.resource(
+        "quantra://presets",
+        name="market-presets",
+        description=(
+            "Market-convention presets for build_curve / build_value_curve "
+            "(id, currency, index, helper types, provenance)."
+        ),
+        mime_type="application/json",
+    )
+    def presets_index() -> dict[str, Any]:
+        return {
+            "presets": [{**row, "uri": f"quantra://presets/{row['id']}"} for row in list_presets()]
+        }
+
+    @app.resource(
+        "quantra://presets/{id}",
+        name="market-preset",
+        description=(
+            "One preset as data with per-field provenance, e.g. quantra://presets/USD_SOFR_OIS."
+        ),
+        mime_type="application/json",
+    )
+    def preset_resource(id: str) -> dict[str, Any]:
+        try:
+            return get_preset(id).as_data()
+        except PresetError as exc:
+            raise ResourceNotFoundError(str(exc)) from None

@@ -5,6 +5,7 @@
 | ``QUANTRA_ENGINE_URL`` | ``http://localhost:8080`` | Engine JSON gateway. |
 | ``QUANTRA_TIMEOUT_S`` | ``60`` | Per-request timeout in seconds. |
 | ``QUANTRA_MCP_LOG`` | ``info`` | stderr log level (stdout is the MCP channel). |
+| ``QUANTRA_SESSION_MAX_ITEMS`` | ``64`` | Cap on in-memory session scratch items (LRU). |
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from dataclasses import dataclass
 DEFAULT_ENGINE_URL = "http://localhost:8080"
 DEFAULT_TIMEOUT_S = 60.0
 DEFAULT_LOG_LEVEL = "info"
+DEFAULT_SESSION_MAX_ITEMS = 64
 
 _LOG_LEVELS = ("debug", "info", "warning", "error", "critical")
 
@@ -29,6 +31,7 @@ class Settings:
     engine_url: str = DEFAULT_ENGINE_URL
     timeout_s: float = DEFAULT_TIMEOUT_S
     log_level: str = DEFAULT_LOG_LEVEL
+    session_max_items: int = DEFAULT_SESSION_MAX_ITEMS
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
@@ -58,4 +61,16 @@ class Settings:
         if level not in _LOG_LEVELS:
             raise SettingsError(f"QUANTRA_MCP_LOG must be one of {_LOG_LEVELS}, got {level!r}")
 
-        return cls(engine_url=url, timeout_s=timeout, log_level=level)
+        raw_cap = source.get("QUANTRA_SESSION_MAX_ITEMS", "").strip()
+        cap = DEFAULT_SESSION_MAX_ITEMS
+        if raw_cap:
+            try:
+                cap = int(raw_cap)
+            except ValueError as exc:
+                raise SettingsError(
+                    f"QUANTRA_SESSION_MAX_ITEMS must be an integer, got {raw_cap!r}"
+                ) from exc
+            if cap < 1:
+                raise SettingsError(f"QUANTRA_SESSION_MAX_ITEMS must be >= 1, got {raw_cap!r}")
+
+        return cls(engine_url=url, timeout_s=timeout, log_level=level, session_max_items=cap)

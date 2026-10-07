@@ -1,0 +1,49 @@
+{
+  "id": "GBP_SONIA_OIS",
+  "description": "GBP SONIA OIS discount curve from the cleared SONIA OIS strip: spot T+0, annual fixed leg (Actual/365 Fixed via the index), ModifiedFollowing on the UK calendar, payment lag 0, compounded averaging, no lookback, no lockout. Curve Actual365Fixed / LogLinear / Discount.",
+  "currency": "GBP",
+  "provenance": "index: quantra-backend scripts/seed_demo_entities.py SONIA (UnitedKingdom, Actual365Fixed, fixing_days 0) and pricing/_translator.py _KNOWN_OVERNIGHT_INDICES['SONIA']; OIS helper conventions: market standard (ISDA/CCP), not from an in-repo source; curve day counter / interpolator / trait: seed_demo_entities.py GBP SONIA OIS curve body",
+  "index": {
+    "id": "GBP_SONIA",
+    "name": "SONIA",
+    "index_type": "Overnight",
+    "currency": "GBP",
+    "tenor": {"n": 0, "unit": "Days"},
+    "fixing_days": 0,
+    "calendar": "UnitedKingdom",
+    "day_counter": "Actual365Fixed",
+    "business_day_convention": "ModifiedFollowing",
+    "end_of_month": true
+  },
+  "curve": {
+    "day_counter": "Actual365Fixed",
+    "interpolator": "LogLinear",
+    "bootstrap_trait": "Discount"
+  },
+  "helpers": {
+    "ois": {
+      "settlement_days": 0,
+      "calendar": "UnitedKingdom",
+      "fixed_leg_frequency": "Annual",
+      "fixed_leg_convention": "ModifiedFollowing",
+      "payment_lag": 0,
+      "averaging_method": "Compound",
+      "lookback_days": 0,
+      "lockout_days": 0,
+      "apply_observation_shift": false
+    }
+  },
+  "field_provenance": {
+    "index.business_day_convention": "market standard (ISDA/CCP), not from an in-repo source",
+    "index.end_of_month": "market standard (ISDA/CCP), not from an in-repo source",
+    "helpers.ois.settlement_days": "market standard (ISDA/CCP), not from an in-repo source",
+    "helpers.ois.calendar": "market standard (ISDA/CCP), not from an in-repo source",
+    "helpers.ois.fixed_leg_frequency": "market standard (ISDA/CCP), not from an in-repo source",
+    "helpers.ois.fixed_leg_convention": "market standard (ISDA/CCP), not from an in-repo source",
+    "helpers.ois.payment_lag": "market standard (ISDA/CCP), not from an in-repo source",
+    "helpers.ois.averaging_method": "market standard (ISDA/CCP), not from an in-repo source",
+    "helpers.ois.lookback_days": "market standard (ISDA/CCP), not from an in-repo source",
+    "helpers.ois.lockout_days": "market standard (ISDA/CCP), not from an in-repo source",
+    "helpers.ois.apply_observation_shift": "market standard (ISDA/CCP), not from an in-repo source"
+  }
+}

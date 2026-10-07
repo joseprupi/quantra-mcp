@@ -16,7 +16,9 @@ from quantra_mcp.backend.engine_http import EngineHttpBackend
 from quantra_mcp.config import Settings
 from quantra_mcp.errors import EngineError, TransportError
 from quantra_mcp.schema.loader import load_spec, pin
-from quantra_mcp.tools import calendar, discovery, raw
+from quantra_mcp.session import SessionStore
+from quantra_mcp.tools import calendar, curves, discovery, raw
+from quantra_mcp.tools import session as session_tools
 
 log = logging.getLogger("quantra_mcp")
 
@@ -28,10 +30,16 @@ number in a tool result comes from the engine; this server computes nothing.
 Start with quantra_meta (engine version and products). Use list_endpoints,
 engine_schema and list_enums to discover request shapes, the
 quantra://examples/* resources for complete working requests, and
-engine_request to POST any endpoint. Every result echoes the exact request
-sent (`request`) and the engine body verbatim (`response`); on an engine error
-`ok` is false and `error` is the engine's text (400 = request wrong, 422 =
-well-formed but unpriceable). The engine does not default omitted fields.
+engine_request to POST any endpoint. To build a yield curve from a quote
+strip: list_presets -> build_curve(preset, quotes) -> build_query ->
+bootstrap_curve; build_value_curve makes a curve from explicit zero / discount
+/ forward values; session_put stores a built curve so later calls can pass
+{"session": "<name>"}. Every result echoes the exact request sent (`request`,
+session references resolved) and the engine body verbatim (`response`); on an
+engine error `ok` is false and `error` is the engine's text (400 = request
+wrong, 422 = well-formed but unpriceable). The engine does not default omitted
+fields; every convention a builder applies is listed in `notes` with its
+preset source.
 """
 
 
@@ -90,10 +98,16 @@ async def check_engine(backend: Backend) -> None:
         log.info("engine at %s reports API %s (pin %s)", backend.base_url, engine_version, pinned)
 
 
-def build_server(settings: Settings | None = None, backend: Backend | None = None) -> MCPServer:
-    """Create the app. ``backend`` defaults to the HTTP engine at ``settings.engine_url``."""
+def build_server(
+    settings: Settings | None = None,
+    backend: Backend | None = None,
+    store: SessionStore | None = None,
+) -> MCPServer:
+    """Create the app. ``backend`` defaults to the HTTP engine at ``settings.engine_url``;
+    ``store`` defaults to a fresh in-memory session store capped by the settings."""
     settings = settings or Settings.from_env()
     owned = backend is None
+    the_store = store or SessionStore(settings.session_max_items)
     the_backend: Backend = backend or EngineHttpBackend(
         settings.engine_url, settings.timeout_s, user_agent=f"quantra-mcp/{__version__}"
     )
@@ -121,6 +135,8 @@ def build_server(settings: Settings | None = None, backend: Backend | None = Non
     discovery.register(app, the_backend)
     calendar.register(app, the_backend)
     raw.register(app, the_backend)
+    curves.register(app, the_backend, the_store)
+    session_tools.register(app, the_store)
     resources.register(app)
     return app
 
