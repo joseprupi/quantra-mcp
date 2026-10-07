@@ -38,7 +38,8 @@
   },
   "field_provenance": {
     "trades.ois_swap": "the SOFR post's OIS example (sofr-ois-swap-request.json: payment lag 2, Annual/Actual360/MF both legs on UnitedStatesGovernmentBond, spot T+2); the same conventions with payment_lag 0 are engine fixture (quantraserver v0.7.0) examples/data/ir_swaps/ois_usd_3y_payer_sofr.json",
-    "trades.swaption": "engine fixture (quantraserver v0.7.0) examples/data/swaption_ois_request.json (1M x 10Y payer on USD SOFR OIS, Bachelier normal vol 102.67bp, Cash ParYieldCurve, swap_index_id USD_SOFR_OIS, SwaptionVolSpec base UnitedStatesGovernmentBond/MF/Actual365Fixed, exercise + 2 business days to the underlying's effective date; underlying = trades.ois_swap). physical_settlement_method PhysicalOTC is market standard (ISDA), not from an in-repo source (the fixture is cash settled)"
+    "trades.swaption": "engine fixture (quantraserver v0.7.0) examples/data/swaption_ois_request.json (1M x 10Y payer on USD SOFR OIS, Bachelier normal vol 102.67bp, Cash ParYieldCurve, swap_index_id USD_SOFR_OIS, SwaptionVolSpec base UnitedStatesGovernmentBond/MF/Actual365Fixed, exercise + 2 business days to the underlying's effective date; underlying = trades.ois_swap). physical_settlement_method PhysicalOTC is market standard (ISDA), not from an in-repo source (the fixture is cash settled)",
+    "trades.ois_swap.schedule.date_generation_rule": "market standard: short front stub (Backward generation); verified against a Bloomberg SWPM screen of a 15-month USD SOFR OIS, 2023-08-17, where Backward matched the screen NPV within 1 USD and Forward was 5,400 USD away. Not from an in-repo fixture (the engine fixtures this block otherwise follows use Forward); override per trade with fixed_leg_overrides / floating_leg_overrides / overnight_leg_overrides .schedule.date_generation_rule"
   },
   "trades": {
     "ois_swap": {
@@ -47,7 +48,7 @@
         "calendar": "UnitedStatesGovernmentBond",
         "convention": "ModifiedFollowing",
         "termination_date_convention": "ModifiedFollowing",
-        "date_generation_rule": "Forward",
+        "date_generation_rule": "Backward",
         "end_of_month": false
       },
       "fixed_leg": {

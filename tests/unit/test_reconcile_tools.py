@@ -15,6 +15,7 @@ from quantra_mcp.server import build_server
 from quantra_mcp.tools import reconcile
 from quantra_mcp.tools.reconcile import FieldChange, apply_change, parse_path, request_diff
 from tests.conftest import FakeBackend
+from tests.product_cases import product_cases
 
 FIXTURE = "irs_eur_5y_payer_ois_discounted_multicurve"
 
@@ -232,10 +233,13 @@ async def test_reprice_with_changes_exactly_one_field_and_subtracts() -> None:
         "reprice_with",
         {
             "result_or_request": base,
+            "market_data_source": "engine_example",
             "changes": [{"path": "swaps[0].vanilla_swap.fixed_leg.rate", "value": 0.035}],
         },
     )
     assert r["ok"] is True and r["endpoint"] == "/price-vanilla-swap"
+    assert r["market_data_source"] == "engine_example"
+    assert r["notes"][0].startswith("market_data_source=engine_example (declared")
     assert r["base_source"] == "given result" and len(backend.bodies) == n_calls + 1
     assert r["request_diff"] == [
         {"path": "swaps[0].vanilla_swap.fixed_leg.rate", "before": 0.032, "after": 0.035}
@@ -263,6 +267,7 @@ async def test_reprice_with_bump_bp_on_a_curve_quote_and_reprice_base() -> None:
         "reprice_with",
         {
             "result_or_request": {"endpoint": "price-vanilla-swap", "body": body},
+            "market_data_source": "engine_example",
             "changes": [{"path": "pricing.rates.curves[0].points[0].point.rate", "bump_bp": 1.0}],
             "reprice_base": True,
         },
@@ -285,6 +290,7 @@ async def test_reprice_with_flip_side_and_several_changes() -> None:
         "reprice_with",
         {
             "result_or_request": {"endpoint": "/price-vanilla-swap", "body": body},
+            "market_data_source": "engine_example",
             "changes": [
                 {"path": "swaps[0].vanilla_swap.swap_type", "value": "Receiver"},
                 {"path": "pricing.as_of_date", "value": "2025-01-16"},
@@ -304,6 +310,7 @@ async def test_reprice_with_validates_before_sending_and_reports_engine_errors()
         "reprice_with",
         {
             "result_or_request": {"endpoint": "/price-vanilla-swap", "body": body},
+            "market_data_source": "engine_example",
             "changes": [{"path": "swaps[0].vanilla_swap.swap_type", "value": "Sideways"}],
         },
     )
@@ -316,6 +323,7 @@ async def test_reprice_with_validates_before_sending_and_reports_engine_errors()
         "reprice_with",
         {
             "result_or_request": {"endpoint": "/price-vanilla-swap", "body": body},
+            "market_data_source": "engine_example",
             "changes": [{"path": "swaps[3].vanilla_swap.swap_type", "value": "Payer"}],
         },
     )
@@ -326,6 +334,7 @@ async def test_reprice_with_validates_before_sending_and_reports_engine_errors()
         "reprice_with",
         {
             "result_or_request": {"endpoint": "/nope", "body": body},
+            "market_data_source": "engine_example",
             "changes": [{"path": "pricing.as_of_date", "value": "2025-01-16"}],
         },
     )
@@ -335,6 +344,7 @@ async def test_reprice_with_validates_before_sending_and_reports_engine_errors()
         "reprice_with",
         {
             "result_or_request": {"endpoint": "/price-vanilla-swap"},
+            "market_data_source": "engine_example",
             "changes": [{"path": "pricing.as_of_date", "value": "2025-01-16"}],
         },
     )
@@ -358,9 +368,59 @@ async def test_reprice_with_validates_before_sending_and_reports_engine_errors()
         "reprice_with",
         {
             "result_or_request": {"endpoint": "/price-vanilla-swap", "body": body},
+            "market_data_source": "engine_example",
             "changes": [{"path": "swaps[0].vanilla_swap.fixed_leg.rate", "value": 5.0}],
         },
     )
     assert r["ok"] is False and r["status"] == 422 and "silly rate" in r["error"]
     assert r["base"]["ok"] is True and r["changed"]["ok"] is False
     assert "differences" not in r
+
+
+async def test_reprice_with_market_data_source_is_carried_or_required() -> None:
+    """M5.4: a stamped pricing result carries its declaration into the reprice; an
+    explicit request (or an unstamped result) must declare one; a disagreeing
+    declaration is refused; nothing is sent in either failure."""
+    from tests.unit.test_pricing_tools import CANNED
+
+    backend = FakeBackend(CANNED)
+    case = next(k for k in product_cases() if k.tool == "price_vanilla_swap")
+    priced = await _call(backend, "price_vanilla_swap", case.explicit)
+    assert priced["ok"] and priced["market_data_source"] == "engine_example"
+
+    def posts() -> int:
+        return sum(1 for c in backend.calls if c[0] == "POST")
+
+    n = posts()
+    change = [{"path": "swaps[0].vanilla_swap.fixed_leg.rate", "value": 0.035}]
+    carried = await _call(backend, "reprice_with", {"result_or_request": priced, "changes": change})
+    assert carried["ok"], carried
+    assert carried["market_data_source"] == "engine_example"
+    assert any("carried from the given result (engine_example)" in x for x in carried["notes"])
+    assert posts() == n + 1
+    same = await _call(
+        backend,
+        "reprice_with",
+        {"result_or_request": priced, "changes": change, "market_data_source": "engine_example"},
+    )
+    assert same["ok"] and same["market_data_source"] == "engine_example"
+    clash = await _call(
+        backend,
+        "reprice_with",
+        {"result_or_request": priced, "changes": change, "market_data_source": "user_pasted"},
+    )
+    assert (
+        clash["ok"] is False and "differs from the one the given result carries" in clash["error"]
+    )
+    missing = await _call(
+        backend,
+        "reprice_with",
+        {
+            "result_or_request": {"endpoint": "/price-vanilla-swap", "body": priced["request"]},
+            "changes": change,
+        },
+    )
+    assert missing["ok"] is False and missing["status"] is None
+    assert "market_data_source is required" in missing["error"]
+    assert missing["problems"][0]["path"] == "/market_data_source"
+    assert posts() == n + 2  # the clash and the missing declaration sent nothing

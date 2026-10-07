@@ -31,6 +31,12 @@ from quantra_mcp.backend.base import Backend
 from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.schema.loader import SpecError, load_spec, normalize_endpoint
 from quantra_mcp.schema.validate import validate_request
+from quantra_mcp.tools._market_source import (
+    MARKET_DATA_SOURCES,
+    MarketDataSource,
+    check_source,
+    stamp,
+)
 from quantra_mcp.tools._result import ToolResult, local_error_result, new_request_id, run_post
 
 # --------------------------------------------------------------------------
@@ -447,6 +453,34 @@ def _source(src: Any) -> tuple[str, dict[str, Any], ToolResult | None]:
     )
 
 
+def _resolve_source(result_or_request: Any, declared: Any) -> str:
+    """The market_data_source of a reprice: the one the input result carries (a previous
+    tool result was stamped with it), the one declared, or both when they agree."""
+    raw = (
+        result_or_request.get("market_data_source") if isinstance(result_or_request, dict) else None
+    )
+    carried: str | None = str(raw) if raw in MARKET_DATA_SOURCES else None
+    if declared is None and carried is None:
+        raise LocalValidationError(
+            "market_data_source is required: the given result_or_request carries no "
+            f"market_data_source, so declare one of {list(MARKET_DATA_SOURCES)}; there is no "
+            "value for estimated, recalled or placeholder data: if the numbers were not "
+            "supplied by the user, do not call this tool, ask for them",
+            [{"path": "/market_data_source", "message": "missing"}],
+        )
+    if declared is not None:
+        source = check_source(declared)
+        if carried is not None and carried != source:
+            raise LocalValidationError(
+                f"market_data_source={source!r} differs from the one the given result carries "
+                f"({carried!r}); pass the same value or omit the argument",
+                [{"path": "/market_data_source", "message": "disagrees with the result"}],
+            )
+        return source
+    assert carried is not None
+    return carried
+
+
 async def reprice_with_impl(
     backend: Backend,
     result_or_request: Any,
@@ -454,10 +488,12 @@ async def reprice_with_impl(
     reprice_base: bool = False,
     validate: bool = True,
     request_id: str | None = None,
+    market_data_source: Any = None,
 ) -> dict[str, Any]:
     rid = request_id or new_request_id()
     spec = load_spec()
     try:
+        source = _resolve_source(result_or_request, market_data_source)
         endpoint, base_body, base_result = _source(result_or_request)
         info = spec.endpoint(endpoint)
         if not changes:
@@ -476,7 +512,7 @@ async def reprice_with_impl(
             request_id=rid,
         )
     except LocalValidationError as exc:
-        return local_error_result(
+        rejected = local_error_result(
             str(result_or_request.get("endpoint", ""))
             if isinstance(result_or_request, dict)
             else "",
@@ -485,22 +521,31 @@ async def reprice_with_impl(
             exc.problems,
             request_id=rid,
         )
+        if market_data_source in MARKET_DATA_SOURCES:
+            stamp(rejected, str(market_data_source))
+        return rejected
     if validate:
         problems = validate_request(info.path, changed_body, spec)
         if problems:
-            return {
-                **local_error_result(
-                    info.path,
-                    changed_body,
-                    f"the changed request does not match the {spec.api_version} schema for "
-                    f"{info.path} ({len(problems)} problem{'s' if len(problems) != 1 else ''}); "
-                    "nothing was sent (pass validate=false to send anyway)",
-                    [p.as_dict() for p in problems],
-                    request_id=rid,
-                ),
-                "changes_applied": applied,
-            }
+            return stamp(
+                {
+                    **local_error_result(
+                        info.path,
+                        changed_body,
+                        f"the changed request does not match the {spec.api_version} schema "
+                        f"for {info.path} ({len(problems)} problem"
+                        f"{'s' if len(problems) != 1 else ''}); nothing was sent (pass "
+                        "validate=false to send anyway)",
+                        [p.as_dict() for p in problems],
+                        request_id=rid,
+                    ),
+                    "changes_applied": applied,
+                },
+                source,
+            )
     notes: list[str] = []
+    if market_data_source is None:
+        notes.append(f"market_data_source carried from the given result ({source})")
     if base_result is None or reprice_base:
         base_result = await run_post(backend, info.path, base_body, request_id=f"{rid}-base")
         notes.append("base repriced now" + (" (reprice_base=true)" if reprice_base else ""))
@@ -531,7 +576,7 @@ async def reprice_with_impl(
         bad = changed_result if failed == "changed" else base_result
         out["error"] = f"{failed} request failed: {bad.get('error')}"
         out["status"] = bad.get("status")
-    return out
+    return stamp(out, source)
 
 
 # --------------------------------------------------------------------------
@@ -567,6 +612,7 @@ def register(app: MCPServer, backend: Backend) -> None:
     async def reprice_with(
         result_or_request: dict[str, Any],
         changes: list[FieldChange],
+        market_data_source: MarketDataSource | None = None,
         reprice_base: bool = False,
         validate: bool = True,
         request_id: str | None = None,
@@ -578,6 +624,16 @@ def register(app: MCPServer, backend: Backend) -> None:
                 ``request`` are used; its ``response`` is the base unless
                 ``reprice_base``), or an explicit ``{"endpoint": "/price-swaption",
                 "body": {...}}``.
+            market_data_source: where the market numbers in the request come from. A previous
+                tool result carries its own declaration and it is reused (the argument may be
+                omitted or must agree); for an explicit ``{endpoint, body}`` or a result without
+                one it is required: ``user_pasted`` (the user pasted or typed the numbers in
+                this conversation), ``user_file`` (the user attached a file/screenshot the
+                numbers were read from), ``engine_example`` (an engine example's pricing block,
+                only when the user explicitly asked to run an example), ``session`` (a market
+                previously stored in this session, which itself came from one of the above).
+                There is no value for estimated, recalled or placeholder data. If you would have
+                to invent numbers, do not call this tool: ask the user for the data.
             changes: ``[{path, value}]`` or ``[{path, bump_bp}]``; ``path`` is dotted /
                 indexed into the request body (``swaptions[0].swaption.settlement_method``,
                 ``pricing.rates.curves[0].points[2].point.rate``, ``pricing.as_of_date``,
@@ -594,5 +650,11 @@ def register(app: MCPServer, backend: Backend) -> None:
         base``. Nothing else is computed. The engine's error, if any, is verbatim.
         """
         return await reprice_with_impl(
-            backend, result_or_request, changes, reprice_base, validate, request_id
+            backend,
+            result_or_request,
+            changes,
+            reprice_base,
+            validate,
+            request_id,
+            market_data_source,
         )

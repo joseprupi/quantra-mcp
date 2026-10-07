@@ -22,6 +22,12 @@ def fixture_body(name: str) -> dict[str, Any]:
     return cat.load_body(cat.find(name))
 
 
+#: The engine's swap fixtures generate schedules Forward; the presets' swap trade blocks
+#: default to Backward (short front stub, market standard, M5.4). Fixture reproductions
+#: therefore state the rule explicitly through the leg overrides.
+FORWARD = {"schedule": {"date_generation_rule": "Forward"}}
+
+
 def market_without(pricing: dict[str, Any], *keys: str) -> dict[str, Any]:
     """The pricing block minus the sections the tool is expected to add back."""
     p = copy.deepcopy(pricing)
@@ -63,6 +69,8 @@ def product_cases() -> list[ProductCase]:
         index_id="EUR_6M",
         discounting_curve="EUR_OIS",
         forwarding_curve="EUR_6M_CURVE",
+        fixed_leg_overrides=FORWARD,
+        floating_leg_overrides=FORWARD,
     )
     cases.append(
         ProductCase(
@@ -86,6 +94,8 @@ def product_cases() -> list[ProductCase]:
         payment_lag=0,
         discounting_curve="USD_SOFR_CURVE",
         forwarding_curve="USD_SOFR_CURVE",
+        fixed_leg_overrides=FORWARD,
+        overnight_leg_overrides=FORWARD,
     )
     cases.append(
         ProductCase(
@@ -216,6 +226,8 @@ def product_cases() -> list[ProductCase]:
         "notional": 1_000_000.0,
         "fixed_rate": 0.031,
         "index_id": "EUR_6M",
+        "fixed_leg_overrides": FORWARD,
+        "floating_leg_overrides": FORWARD,
     }
     base = dict(
         market=p,
@@ -373,6 +385,8 @@ def blog_ois_args(built_curve: dict[str, Any]) -> dict[str, Any]:
         tenor="5Y",
         discounting_curve="USD_SOFR_OIS",
         forwarding_curve="USD_SOFR_OIS",
+        fixed_leg_overrides=FORWARD,
+        overnight_leg_overrides=FORWARD,
     )
 
 
@@ -400,6 +414,8 @@ def usd_ois_swaption_args(fixture: str, settlement_method: str) -> dict[str, Any
             "fixed_rate": 0.03367463,
             "effective_date": "spot",
             "tenor": "10Y",
+            "fixed_leg_overrides": FORWARD,
+            "overnight_leg_overrides": FORWARD,
         },
         exercise_date="2024-09-16",
         settlement_type="Cash",

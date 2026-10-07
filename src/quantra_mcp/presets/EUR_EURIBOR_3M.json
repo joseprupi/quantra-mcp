@@ -64,7 +64,8 @@
     "helpers.swap.fwd_start_days": "explicit zero: the engine reads an absent fwd_start_days as 0 (term_structure_point_parser.cpp); stated so nothing is implicit",
     "trades.vanilla_swap": "engine fixture (quantraserver v0.7.0) examples/data/ir_swaps/irs_eur_4y_payer_vs_euribor3m_quarterly.json",
     "trades.fra": "engine fixture (quantraserver v0.7.0) examples/data/fra/fra_eur_3x6_long_at_forward.json",
-    "trades.cap_floor": "engine fixture (quantraserver v0.7.0) examples/data/cap_floor/cap_eur_5y_itm_strike_2pct.json (Quarterly on Euribor 3M; OptionletVolSpec base TARGET/MF/Actual365Fixed)"
+    "trades.cap_floor": "engine fixture (quantraserver v0.7.0) examples/data/cap_floor/cap_eur_5y_itm_strike_2pct.json (Quarterly on Euribor 3M; OptionletVolSpec base TARGET/MF/Actual365Fixed)",
+    "trades.vanilla_swap.schedule.date_generation_rule": "market standard: short front stub (Backward generation); verified against a Bloomberg SWPM screen of a 15-month USD SOFR OIS, 2023-08-17, where Backward matched the screen NPV within 1 USD and Forward was 5,400 USD away. Not from an in-repo fixture (the engine fixtures this block otherwise follows use Forward); override per trade with fixed_leg_overrides / floating_leg_overrides / overnight_leg_overrides .schedule.date_generation_rule"
   },
   "trades": {
     "vanilla_swap": {
@@ -73,7 +74,7 @@
         "calendar": "TARGET",
         "convention": "ModifiedFollowing",
         "termination_date_convention": "ModifiedFollowing",
-        "date_generation_rule": "Forward",
+        "date_generation_rule": "Backward",
         "end_of_month": false
       },
       "fixed_leg": {

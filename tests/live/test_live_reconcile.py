@@ -43,6 +43,7 @@ async def test_reprice_with_changes_one_field_of_an_engine_example() -> None:
             "reprice_with",
             {
                 "result_or_request": base,
+                "market_data_source": "engine_example",
                 "changes": [{"path": "swaps[0].vanilla_swap.swap_type", "value": "Receiver"}],
             },
         )
@@ -72,6 +73,7 @@ async def test_reprice_with_changes_one_field_of_an_engine_example() -> None:
             "reprice_with",
             {
                 "result_or_request": base,
+                "market_data_source": "engine_example",
                 "changes": [
                     {"path": "pricing.rates.curves[0].points[0].point.rate", "bump_bp": 1.0}
                 ],

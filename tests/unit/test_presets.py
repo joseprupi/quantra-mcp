@@ -68,7 +68,30 @@ def test_sofr_preset_matches_the_gold_example_conventions() -> None:
         "bootstrap_trait": "Discount",
     }
     # the curve side is fully sourced; the only field-level entry is the trade block's
-    assert set(p.field_provenance) == {"trades.ois_swap", "trades.swaption"}
+    assert set(p.field_provenance) == {
+        "trades.ois_swap",
+        "trades.ois_swap.schedule.date_generation_rule",
+        "trades.swaption",
+    }
+
+
+def test_swap_trade_blocks_default_to_a_short_front_stub() -> None:
+    """M5.4: OIS / vanilla swap schedules generate Backward (short front stub) by default;
+    the provenance is a market-standard note, not an in-repo fixture (those use Forward)."""
+    for pid, block in [
+        ("USD_SOFR_OIS", "ois_swap"),
+        ("EUR_ESTR_OIS", "ois_swap"),
+        ("EUR_EURIBOR_6M", "vanilla_swap"),
+        ("EUR_EURIBOR_3M", "vanilla_swap"),
+    ]:
+        p = get_preset(pid)
+        conv = p.trade_block(block)
+        assert conv.schedule.date_generation_rule == "Backward", (pid, block)
+        prov = p.provenance_of(f"trades.{block}.schedule.date_generation_rule")
+        assert prov.startswith("market standard: short front stub (Backward generation)"), pid
+        assert "15-month USD SOFR OIS, 2023-08-17" in prov
+        # the rest of the block still cites its fixture
+        assert "engine fixture" in p.provenance_of(f"trades.{block}.schedule.calendar")
 
 
 def test_market_standard_fields_carry_the_exact_provenance_string() -> None:

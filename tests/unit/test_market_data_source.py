@@ -42,7 +42,14 @@ GUARDED_TOOLS = {
     "price_zc_inflation_swap",
     "price_yoy_inflation_swap",
     "price_yoy_inflation_cap_floor",
+    "swap_dv01",
+    "key_rate_ladder",
+    "scenario",
+    "fair_rate",
 }
+
+#: carries the declaration of the result it reprices, so the argument is optional there
+CARRYING_TOOLS = {"reprice_with"}
 
 SOFR = STRIPS["USD_SOFR_OIS"]
 BUILD_ARGS: dict[str, Any] = {
@@ -76,7 +83,7 @@ async def test_every_guarded_tool_requires_the_enum(app: Any) -> None:
     async with Client(app) as c:
         tools = {t.name: t for t in (await c.list_tools()).tools}
     guarded = {n for n, t in tools.items() if "market_data_source" in t.input_schema["properties"]}
-    assert guarded == GUARDED_TOOLS
+    assert guarded == GUARDED_TOOLS | CARRYING_TOOLS
     # every price_* tool that takes a market is guarded
     assert {n for n in tools if n.startswith("price_")} <= GUARDED_TOOLS
     for name in sorted(GUARDED_TOOLS):
@@ -86,6 +93,16 @@ async def test_every_guarded_tool_requires_the_enum(app: Any) -> None:
         assert prop["type"] == "string", name
         assert "market_data_source" in schema["required"], name
         assert "default" not in prop, name
+        desc = " ".join(((tools[name].description or "") + json.dumps(prop)).split())
+        assert "There is no value for estimated, recalled or placeholder data" in desc, name
+        assert "do not call this tool: ask the user for the data" in desc, name
+    for name in sorted(CARRYING_TOOLS):
+        schema = tools[name].input_schema
+        prop = schema["properties"]["market_data_source"]
+        assert "market_data_source" not in schema["required"], name
+        enum = next(a for a in prop["anyOf"] if a.get("type") == "string")
+        assert enum["enum"] == EXPECTED_VALUES, name
+        assert prop["default"] is None, name
         desc = " ".join(((tools[name].description or "") + json.dumps(prop)).split())
         assert "There is no value for estimated, recalled or placeholder data" in desc, name
         assert "do not call this tool: ask the user for the data" in desc, name
@@ -238,3 +255,46 @@ def test_store_and_impl_level_guards() -> None:
         ],
         "market_data_source": "session",
     }
+
+
+async def test_analytics_tools_echo_the_declared_source(app: Any) -> None:
+    """The analytics tools reprice a market: they require and echo the declaration too."""
+    from tests.unit.test_analytics_tools import QuoteSensitiveBackend, _market, _trade
+
+    be = QuoteSensitiveBackend()
+    app2 = build_server(Settings(engine_url="http://fake"), backend=be)
+    async with Client(app2) as c:
+        for name, extra in [
+            ("swap_dv01", {}),
+            ("key_rate_ladder", {}),
+            ("scenario", {"scenarios": [{"name": "up", "bumps": [{"curve": "EUR_OIS", "bp": 1}]}]}),
+            ("fair_rate", {}),
+        ]:
+            missing = await c.call_tool(name, {"market": _market(), "trade": _trade(), **extra})
+            assert missing.is_error and "market_data_source" in missing.content[0].text  # type: ignore[union-attr]
+            r = _s(
+                await c.call_tool(
+                    name,
+                    {
+                        "market": _market(),
+                        "market_data_source": "user_file",
+                        "trade": _trade(),
+                        **extra,
+                    },
+                )
+            )
+            assert r["ok"], (name, r)
+            assert r["market_data_source"] == "user_file", name
+            assert r["notes"][0].startswith("market_data_source=user_file (declared"), name
+            bad = _s(
+                await c.call_tool(
+                    name,
+                    {
+                        "market": _market(),
+                        "market_data_source": "user_file",
+                        "trade": _trade(preset="NOPE"),
+                        **extra,
+                    },
+                )
+            )
+            assert bad["ok"] is False and bad["market_data_source"] == "user_file", name

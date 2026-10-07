@@ -52,12 +52,17 @@ def test_no_vendored_example_carries_a_vendor_reference() -> None:
     assert not (EXAMPLES / "misc" / "swaption_ois_bbg_zerorate_request.json").exists()
 
 
+#: the one neutral vendor phrase a provenance note may use (a screen the operator
+#: verified against; no vendor data, fixture or number of theirs ships)
+NEUTRAL_PROVENANCE_RE = re.compile(r"verified against a Bloomberg SWPM screen")
+
+
 def test_preset_provenance_cites_only_vendored_fixtures() -> None:
     presets = Path(__file__).resolve().parents[2] / "src" / "quantra_mcp" / "presets"
     vendored = {r["name"] for r in cat.rows()}
     for path in presets.glob("*.json"):
         text = path.read_text()
-        assert not VENDOR_RE.search(text), path.name
+        assert not VENDOR_RE.search(NEUTRAL_PROVENANCE_RE.sub("", text)), path.name
         for name in re.findall(r"examples/data/(?:[a-z_]+/)?([a-z0-9_]+)\.json", text):
             assert name in vendored, (path.name, name)
 
