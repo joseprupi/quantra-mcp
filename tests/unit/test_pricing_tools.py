@@ -440,7 +440,7 @@ async def test_yoy_inflation_cap_floor_rebuilds_its_fixture(pricing_app: Any) ->
             await c.call_tool(
                 "price_yoy_inflation_cap_floor",
                 {
-                    "market": market,
+                    "market": fx["pricing"],  # carries YOY_VOL_BLACK
                     "inflation_index_id": "EUHICP_YY",
                     "fixings": fx["pricing"]["inflation"]["inflation_indices"][0]["fixings"],
                     "cap_floor_type": "Floor",
