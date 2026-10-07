@@ -98,9 +98,13 @@ def test_no_illustrative_or_demo_price_loophole_anywhere() -> None:
     for text in (server.INSTRUCTIONS, prompts.VOICE, *ALL_PROMPTS):
         assert not LOOPHOLE_RE.search(text), LOOPHOLE_RE.search(text)
         assert "HARD RULE" not in text  # the old, weaker rule is gone
-    readme = (Path(__file__).resolve().parents[2] / "README.md").read_text()
-    assert not LOOPHOLE_RE.search(readme)
-    assert "never type, estimate, recall or invent market data" in readme
+    # the rule is stated in the README's "Rules" section and, in the business-user
+    # voice, in docs/clients.md (where the former README section moved)
+    root = Path(__file__).resolve().parents[2]
+    for doc in ("README.md", "docs/clients.md"):
+        text = (root / doc).read_text()
+        assert not LOOPHOLE_RE.search(text), doc
+        assert "never type, estimate, recall or invent market data" in text, doc
 
 
 def test_instructions_carry_no_vendor_claim() -> None:

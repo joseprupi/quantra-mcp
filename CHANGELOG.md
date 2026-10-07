@@ -91,7 +91,7 @@ demo price" exception on its own initiative. That exception is gone.
 - Tests: `tests/unit/test_market_data_source.py` (schema enum on every guarded tool,
   missing / invalid value fails validation, echo per tool and per value, session
   storage and carry-forward); the hermetic and live suites pass `market_data_source`
-  on every call. README "For business users" states the rule in one sentence.
+  on every call. README "For business users" (now `docs/clients.md`) states the rule in one sentence.
 
 ## 0.1.2 (2026-10-07)
 
@@ -193,7 +193,7 @@ Business-user voice and the Bloomberg swaption path (M5.1):
   2bd payment lag) gives +1.6e-6; pasting the DFs at the engine's reported
   `pillar_dates` (tenor dates from the reference date, not the helper nodes)
   does not reproduce the curve (+13.78).
-- README: "For business users" section with a claude.ai Project instructions
+- README: "For business users" section (now `docs/clients.md`) with a claude.ai Project instructions
   snippet.
 
 ## 0.1.0 (2026-10-07)
