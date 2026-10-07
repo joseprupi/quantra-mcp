@@ -75,6 +75,8 @@ async def test_lists_tools_and_resources(app: Any) -> None:
             "scenario",
             "fair_rate",
             "explain_method",
+            "compare_results",
+            "reprice_with",
         }
         uris = {str(r.uri) for r in (await c.list_resources()).resources}
         assert {

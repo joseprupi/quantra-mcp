@@ -27,6 +27,7 @@ from quantra_mcp.tools import (
     explain,
     pricing,
     raw,
+    reconcile,
 )
 from quantra_mcp.tools import session as session_tools
 
@@ -213,6 +214,7 @@ def build_server(
     analytics.register(app, the_backend, the_store, settings.max_concurrency)
     examples.register(app)
     explain.register(app)
+    reconcile.register(app, the_backend)
     session_tools.register(app, the_store)
     resources.register(app)
     prompts.register(app)
