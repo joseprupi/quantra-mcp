@@ -1,14 +1,17 @@
 """In-memory session scratch: named curves / indices / market blocks reused across calls.
 
 Per server process, bounded (least-recently-used eviction at
-``QUANTRA_SESSION_MAX_ITEMS``), never persisted, never shared across
-processes. Tools resolve ``{"session": "<name>"}`` references through
-:func:`resolve_refs`, and the echoed request always shows the resolved body.
+``QUANTRA_SESSION_MAX_ITEMS`` items and at ``QUANTRA_SESSION_MAX_TOTAL_BYTES``
+of serialized JSON across all items), never persisted, never shared across
+processes. In HTTP mode one store serves every connected client. Tools
+resolve ``{"session": "<name>"}`` references through :func:`resolve_refs`, and
+the echoed request always shows the resolved body.
 """
 
 from __future__ import annotations
 
 import datetime as dt
+import json
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -33,9 +36,15 @@ class SessionItem:
     kind: str
     value: dict[str, Any]
     stored_at: str
+    size_bytes: int = 0
 
     def summary(self) -> dict[str, Any]:
-        row: dict[str, Any] = {"name": self.name, "kind": self.kind, "stored_at": self.stored_at}
+        row: dict[str, Any] = {
+            "name": self.name,
+            "kind": self.kind,
+            "stored_at": self.stored_at,
+            "size_bytes": self.size_bytes,
+        }
         v = self.value
         if self.kind == "curve":
             row["curve_id"] = v.get("id")
@@ -52,17 +61,25 @@ class SessionItem:
 
 
 class SessionStore:
-    def __init__(self, max_items: int = 64) -> None:
+    def __init__(self, max_items: int = 64, max_total_bytes: int = 32 * 1024 * 1024) -> None:
         if max_items < 1:
             raise ValueError("max_items must be >= 1")
+        if max_total_bytes < 1:
+            raise ValueError("max_total_bytes must be >= 1")
         self.max_items = max_items
+        self.max_total_bytes = max_total_bytes
         self._items: OrderedDict[str, SessionItem] = OrderedDict()
         self._attached_indices: dict[str, list[dict[str, Any]]] = {}
+
+    @property
+    def total_bytes(self) -> int:
+        return sum(item.size_bytes for item in self._items.values())
 
     # --- mutation ---------------------------------------------------------
 
     def put(self, name: str, kind: str, value: Any) -> tuple[SessionItem, str | None]:
-        """Store (or replace) ``name``. Returns the item and the evicted name, if any."""
+        """Store (or replace) ``name``. Returns the item and the evicted names (comma-joined)
+        if the item cap or the byte cap pushed older items out, else ``None``."""
         if not isinstance(name, str) or not name.strip():
             raise LocalValidationError(
                 "name: a non-empty string is required", [{"path": "/name", "message": "empty"}]
@@ -83,17 +100,27 @@ class SessionStore:
             attached = [i for i in value.get("indices") or [] if isinstance(i, dict)]
             value = value["curve"]
         self._check_shape(kind, value)
+        size = len(json.dumps(value, separators=(",", ":"))) + sum(
+            len(json.dumps(i, separators=(",", ":"))) for i in attached
+        )
+        if size > self.max_total_bytes:
+            raise LocalValidationError(
+                f"value is {size} bytes serialized; the session store holds at most "
+                f"{self.max_total_bytes} bytes in total",
+                [{"path": "/value", "message": "too large"}],
+            )
         now = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat()
-        item = SessionItem(name=name, kind=kind, value=value, stored_at=now)
+        item = SessionItem(name=name, kind=kind, value=value, stored_at=now, size_bytes=size)
         if name in self._items:
             del self._items[name]
         self._items[name] = item
         self._attached_indices[name] = attached
-        evicted: str | None = None
-        if len(self._items) > self.max_items:
-            evicted, _ = self._items.popitem(last=False)
-            self._attached_indices.pop(evicted, None)
-        return item, evicted
+        evicted: list[str] = []
+        while len(self._items) > self.max_items or self.total_bytes > self.max_total_bytes:
+            gone, _ = self._items.popitem(last=False)
+            self._attached_indices.pop(gone, None)
+            evicted.append(gone)
+        return item, (", ".join(evicted) if evicted else None)
 
     def delete(self, name: str) -> bool:
         self._attached_indices.pop(name, None)

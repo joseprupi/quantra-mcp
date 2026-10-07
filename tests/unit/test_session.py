@@ -78,3 +78,20 @@ def test_resolve_refs_kind_mismatch_and_unknown() -> None:
         resolve_refs(s, [{"session": "nope"}], None)
     with pytest.raises(LocalValidationError, match="expected a TermStructure"):
         resolve_refs(s, ["c"], None)
+
+
+def test_total_bytes_bound_evicts_lru_and_refuses_oversize() -> None:
+    small = {"id": "s", "reference_date": "2025-01-15", "points": []}
+    size = len(__import__("json").dumps(small, separators=(",", ":")))
+    s = SessionStore(max_items=10, max_total_bytes=size * 2 + 1)
+    s.put("a", "curve", small)
+    s.put("b", "curve", small)
+    assert s.total_bytes == 2 * size and s.items()[0].size_bytes == size
+    _, evicted = s.put("c", "curve", small)  # third pushes total over the byte cap
+    assert evicted == "a" and [i.name for i in s.items()] == ["b", "c"]
+    assert s.items()[0].summary()["size_bytes"] == size
+    big = {"id": "big", "reference_date": "2025-01-15", "points": [{"x": "y" * 400}]}
+    with pytest.raises(LocalValidationError, match="holds at most"):
+        s.put("big", "curve", big)
+    with pytest.raises(ValueError, match="max_total_bytes"):
+        SessionStore(max_total_bytes=0)
