@@ -2,7 +2,28 @@
 
 ## 0.1.0.dev0 (unreleased)
 
-First usable server (phases M1 + M2 + M3).
+First usable server (phases M1 + M2 + M3 + M4).
+
+Phase M4 (analytics by composition):
+
+- `swap_dv01`, `key_rate_ladder`, `scenario`, `fair_rate` (`tools/analytics.py`):
+  reprice a vanilla or OIS swap through the existing pricing tools under
+  bumped markets; results report engine NPVs plus `bumped - base` differences
+  and bucket sums only, with every reprice's complete uniform pricing result
+  (echoed request included) in `calls`. `fair_rate` reads the engine's field
+  and says so when the response has none.
+- `builders/bumps.py`: pillars of a `TermStructure` in wire order with labels
+  (`5Y`, `3x6`, `FUT <date>`, `<start>/<end>`, `BOND <maturity>`, value-point
+  dates; duplicates suffixed `#i`); per-point quote field (`rate`, `spread`,
+  `futures_price`, `zero_rate`, `forward_rate`); discount factors, bond clean
+  prices, FX points and `quote_id` pillars refused by name.
+- Spot / tenor dates are resolved once (base call) and pinned for reprices;
+  fan-out bounded by new `QUANTRA_MAX_CONCURRENCY` (default 4).
+- Tests: bump builder unit tests, analytics tools against a quote-sensitive
+  fake engine (differences / sums checked against the fake's per-call
+  outputs, concurrency bound observed), live M4 suite on the EUR 5Y payer
+  fixture (DV01 sign and magnitude, ladder sum vs parallel within 2%,
+  receiver concentration at 5Y, zero-bump scenario == base, replay equality).
 
 Phase M3 (pricing convenience tools, examples catalog, prompts):
 

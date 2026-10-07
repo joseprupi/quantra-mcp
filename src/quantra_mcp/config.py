@@ -6,6 +6,7 @@
 | ``QUANTRA_TIMEOUT_S`` | ``60`` | Per-request timeout in seconds. |
 | ``QUANTRA_MCP_LOG`` | ``info`` | stderr log level (stdout is the MCP channel). |
 | ``QUANTRA_SESSION_MAX_ITEMS`` | ``64`` | Cap on in-memory session scratch items (LRU). |
+| ``QUANTRA_MAX_CONCURRENCY`` | ``4`` | Max simultaneous engine calls in the analytics fan-outs. |
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ DEFAULT_ENGINE_URL = "http://localhost:8080"
 DEFAULT_TIMEOUT_S = 60.0
 DEFAULT_LOG_LEVEL = "info"
 DEFAULT_SESSION_MAX_ITEMS = 64
+DEFAULT_MAX_CONCURRENCY = 4
 
 _LOG_LEVELS = ("debug", "info", "warning", "error", "critical")
 
@@ -32,6 +34,7 @@ class Settings:
     timeout_s: float = DEFAULT_TIMEOUT_S
     log_level: str = DEFAULT_LOG_LEVEL
     session_max_items: int = DEFAULT_SESSION_MAX_ITEMS
+    max_concurrency: int = DEFAULT_MAX_CONCURRENCY
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
@@ -73,4 +76,22 @@ class Settings:
             if cap < 1:
                 raise SettingsError(f"QUANTRA_SESSION_MAX_ITEMS must be >= 1, got {raw_cap!r}")
 
-        return cls(engine_url=url, timeout_s=timeout, log_level=level, session_max_items=cap)
+        raw_conc = source.get("QUANTRA_MAX_CONCURRENCY", "").strip()
+        conc = DEFAULT_MAX_CONCURRENCY
+        if raw_conc:
+            try:
+                conc = int(raw_conc)
+            except ValueError as exc:
+                raise SettingsError(
+                    f"QUANTRA_MAX_CONCURRENCY must be an integer, got {raw_conc!r}"
+                ) from exc
+            if conc < 1:
+                raise SettingsError(f"QUANTRA_MAX_CONCURRENCY must be >= 1, got {raw_conc!r}")
+
+        return cls(
+            engine_url=url,
+            timeout_s=timeout,
+            log_level=level,
+            session_max_items=cap,
+            max_concurrency=conc,
+        )

@@ -69,6 +69,10 @@ async def test_lists_tools_and_resources(app: Any) -> None:
             "sample_vol_surface",
             "list_examples",
             "get_example",
+            "swap_dv01",
+            "key_rate_ladder",
+            "scenario",
+            "fair_rate",
         }
         uris = {str(r.uri) for r in (await c.list_resources()).resources}
         assert {

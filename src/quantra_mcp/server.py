@@ -17,7 +17,7 @@ from quantra_mcp.config import Settings
 from quantra_mcp.errors import EngineError, TransportError
 from quantra_mcp.schema.loader import load_spec, pin
 from quantra_mcp.session import SessionStore
-from quantra_mcp.tools import calendar, curves, discovery, examples, pricing, raw
+from quantra_mcp.tools import analytics, calendar, curves, discovery, examples, pricing, raw
 from quantra_mcp.tools import session as session_tools
 
 log = logging.getLogger("quantra_mcp")
@@ -43,6 +43,12 @@ price_yoy_inflation_swap / price_yoy_inflation_cap_floor take a `market`
 `preset` whose trade block supplies every convention, and the trade
 economics; dates like effective_date "spot" or a tenor are resolved by the
 engine's /calendar-advance and reported in `date_resolution`.
+Analytics by composition: swap_dv01 (bump every quote of the trade's curves,
+reprice, dv01 = bumped - base), key_rate_ladder (one reprice per actual
+pillar of a curve + a parallel bump; sum_of_buckets vs parallel.dv01),
+scenario (named bump / replace-quote variants, NPV table) and fair_rate (the
+engine's fair_rate field); every result's `calls` holds the complete
+pricing result of each reprice, so each is replayable by curl.
 list_examples / get_example give 223 complete, verified engine requests (the
 engine's own fixtures with their QuantLib reference values); an example's
 `pricing` block is a valid `market`. Every result echoes the exact request sent (`request`,
@@ -148,6 +154,7 @@ def build_server(
     raw.register(app, the_backend)
     curves.register(app, the_backend, the_store)
     pricing.register(app, the_backend, the_store)
+    analytics.register(app, the_backend, the_store, settings.max_concurrency)
     examples.register(app)
     session_tools.register(app, the_store)
     resources.register(app)

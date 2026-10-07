@@ -9,6 +9,7 @@ def test_defaults() -> None:
     assert s.timeout_s == 60.0
     assert s.log_level == "info"
     assert s.session_max_items == 64
+    assert s.max_concurrency == 4
 
 
 def test_env_overrides_and_trailing_slash() -> None:
@@ -18,8 +19,10 @@ def test_env_overrides_and_trailing_slash() -> None:
             "QUANTRA_TIMEOUT_S": "5.5",
             "QUANTRA_MCP_LOG": "DEBUG",
             "QUANTRA_SESSION_MAX_ITEMS": "8",
+            "QUANTRA_MAX_CONCURRENCY": "2",
         }
     )
+    assert s.max_concurrency == 2
     assert s.engine_url == "https://api.quantra.io"
     assert s.timeout_s == 5.5
     assert s.log_level == "debug"
@@ -35,6 +38,8 @@ def test_env_overrides_and_trailing_slash() -> None:
         {"QUANTRA_MCP_LOG": "loud"},
         {"QUANTRA_SESSION_MAX_ITEMS": "0"},
         {"QUANTRA_SESSION_MAX_ITEMS": "many"},
+        {"QUANTRA_MAX_CONCURRENCY": "0"},
+        {"QUANTRA_MAX_CONCURRENCY": "lots"},
     ],
 )
 def test_bad_values_raise(env: dict[str, str]) -> None:

@@ -114,6 +114,7 @@ QUANTRA_ENGINE_URL=http://localhost:8080 uv run quantra-mcp --http --port 8765
 | `QUANTRA_TIMEOUT_S` | `60` | Per-request timeout in seconds. |
 | `QUANTRA_MCP_LOG` | `info` | stderr log level (`debug`, `info`, `warning`, `error`). stdout is the MCP channel. |
 | `QUANTRA_SESSION_MAX_ITEMS` | `64` | Cap on in-memory session scratch items (least-recently-used eviction). |
+| `QUANTRA_MAX_CONCURRENCY` | `4` | Maximum simultaneous engine calls in the analytics fan-outs (`key_rate_ladder`, `scenario`). |
 
 ## Price a swap in three calls
 
@@ -292,6 +293,40 @@ unpriceable); `request` is still echoed so the agent can fix and retry. A
 request rejected locally (bad date, schema mismatch) has `status: null` and a
 `problems` list of `{path, message}`.
 
+## Analytics by composition
+
+`swap_dv01`, `key_rate_ladder`, `scenario` and `fair_rate` reprice a swap
+through the same `price_vanilla_swap` / `price_ois_swap` path under bumped
+markets and report engine outputs plus their differences, never a locally
+computed sensitivity. A bump adds `bp / 10 000` to a pillar's quoted rate or
+spread (a futures price moves by `-bp / 100`); discount-factor points, bond
+clean prices, FX points and `quote_id` pillars are refused by name. Every
+result carries `calls`, the complete uniform pricing result of each reprice
+(base, bumped, one per pillar, one per scenario) with its echoed `request`, so
+each number can be replayed with curl and each difference redone by hand.
+`spot` / tenor dates are resolved by the engine once in the base call and
+pinned for the reprices, so bumped requests differ from the base only in the
+quotes that moved. Reprices fan out concurrently, bounded by
+`QUANTRA_MAX_CONCURRENCY` (default 4).
+
+`trade` is the swap to reprice: `product` (`vanilla_swap` | `ois_swap`),
+`preset`, `discounting_curve`, `forwarding_curve` and the pricing tool's own
+economics (`swap_type`, `notional`, `fixed_rate`, `effective_date`, `tenor` |
+`termination_date`, `spread`, `index_id`, overrides, OIS overnight parameters).
+
+| Tool | Does |
+|---|---|
+| `swap_dv01(market, trade, bump_bp=1.0, scope=all\|discounting\|forwarding)` | Reprices with every pillar of the selected curve(s) bumped. `base_npv`, `bumped_npv`, `dv01 = bumped_npv - base_npv`, `bumped_quotes` (from/to per pillar), `calls` = the two pricing results. |
+| `key_rate_ladder(market, trade, bump_bp=1.0, curve?)` | Buckets = the curve's actual pillars in wire order (default: the discounting curve). `ladder` = `[{pillar, quote_from, quote_to, bumped_npv, dv01}]`, `parallel` (all pillars together), `sum_of_buckets`; `calls` = base + parallel + one per pillar. |
+| `scenario(market, trade, scenarios)` | `[{name, bumps: [{curve, bp, pillar?}], replace_quotes: [{curve, pillar, value}]}]`; `pillar` is a label (`5Y`, `3x6`, `FUT 2025-03-19`, a value-point date) or a 0-based index, omitted = the whole curve. `table` = `[{name, npv, change = npv - base_npv, edits}]` starting with `base`. |
+| `fair_rate(market, trade)` | The engine's `fair_rate` / `fair_spread` from the pricing response; `provided_by_engine` false + a message when the product's response has neither (nothing is solved locally). |
+
+Live on the engine fixture `irs_eur_5y_payer_ois_discounted_multicurve` (10m
+5Y EUR payer, OIS-discounted): `swap_dv01` with both curves bumped +1bp, the
+`EUR_6M_CURVE` ladder summing to its parallel bump within 2%, a receiver
+ladder negative and concentrated at the 5Y pillar, and a zero-bump scenario
+reproducing the base NPV (`tests/live/test_live_analytics.py`).
+
 ## Resources
 
 | URI | Content |
@@ -386,9 +421,9 @@ src/quantra_mcp/
   backend/           Backend protocol + the engine HTTP client
   schema/            vendored openapi3.json, PIN, generated enums, loader, validator
   presets/           market-convention presets (JSON data + registry; curve + trade blocks)
-  builders/          pure builders: tenor parser, curves, schedule, market, products/<product>
+  builders/          pure builders: tenor parser, curves, schedule, market, bumps, products/<product>
   session.py         in-memory session scratch (LRU, per process)
-  tools/             discovery, calendar, raw passthrough, curves, pricing, examples, session
+  tools/             discovery, calendar, raw passthrough, curves, pricing, analytics, examples, session
   resources.py       docs / schema / enums / examples / pin / presets
   prompts.py         price-a-swap, bootstrap-from-strip, holiday-check, explore-examples
   examples_catalog.py  INDEX.json access + oracle checks
