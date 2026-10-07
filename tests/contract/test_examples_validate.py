@@ -48,7 +48,7 @@ def test_every_vendored_example_validates_against_its_endpoint(name: str) -> Non
 
 def test_product_goldens_validate() -> None:
     goldens = sorted(PRODUCT_GOLDENS.glob("*.json"))
-    assert len(goldens) >= 13, [g.name for g in goldens]
+    assert len(goldens) >= 14, [g.name for g in goldens]
     endpoint_of = {
         "price_vanilla_swap": "/price-vanilla-swap",
         "price_ois_swap": "/price-ois-swap",
@@ -63,6 +63,7 @@ def test_product_goldens_validate() -> None:
         "price_equity_option": "/price-equity-option",
         "price_zc_inflation_swap": "/price-zero-coupon-inflation-swap",
         "price_yoy_inflation_swap": "/price-year-on-year-inflation-swap",
+        "price_yoy_inflation_cap_floor": "/price-year-on-year-inflation-cap-floor",
     }
     for path in goldens:
         body = json.loads(path.read_text())

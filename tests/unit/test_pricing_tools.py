@@ -413,3 +413,48 @@ def test_every_mapped_fixture_is_cataloged_with_an_npv_oracle() -> None:
     for name in FIXTURES:
         row = cat.find(name)
         assert row["oracle"] and row["oracle"]["kind"] == "npv", name
+
+
+async def test_yoy_inflation_cap_floor_rebuilds_its_fixture(pricing_app: Any) -> None:
+    fx = fixture_body("yoy_cf_eur_5y_cap_150bp_black_bites")
+    market = market_without(fx["pricing"], "volatility")
+    async with Client(pricing_app) as c:
+        r = _s(
+            await c.call_tool(
+                "price_yoy_inflation_cap_floor",
+                {
+                    "market": market,
+                    "inflation_index_id": "EUHICP_YY",
+                    "fixings": fx["pricing"]["inflation"]["inflation_indices"][0]["fixings"],
+                    "cap_floor_type": "Cap",
+                    "notional": 1_000_000.0,
+                    "cap_rate": 0.015,
+                    "termination_date": "2030-01-15",
+                    "discounting_curve": "DISC",
+                    "inflation_curve": "HICP_YY",
+                    "vol": {"constant": 0.01, "type": "Black", "id": "YOY_VOL_BLACK"},
+                },
+            )
+        )
+        wrong = _s(
+            await c.call_tool(
+                "price_yoy_inflation_cap_floor",
+                {
+                    "market": market,
+                    "inflation_index_id": "EUHICP_YY",
+                    "fixings": fx["pricing"]["inflation"]["inflation_indices"][0]["fixings"],
+                    "cap_floor_type": "Floor",
+                    "notional": 1_000_000.0,
+                    "cap_rate": 0.015,
+                    "termination_date": "2030-01-15",
+                    "discounting_curve": "DISC",
+                    "inflation_curve": "HICP_YY",
+                    "vol": "YOY_VOL_BLACK",
+                },
+            )
+        )
+    assert r["ok"], r
+    assert r["request"] == fx
+    assert any("YoYOptionletVolSpec constant 0.01 Black" in n for n in r["notes"])
+    assert wrong["ok"] is False and "Floor needs floor_rate" in wrong["error"]
+    _golden("price_yoy_inflation_cap_floor", r["request"])
