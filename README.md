@@ -16,11 +16,15 @@ agent ──(MCP: stdio / streamable HTTP)──▶ quantra-mcp ──(HTTP/JSON
                                                                         or api.quantra.io)
 ```
 
-Status: **0.1.0.dev0**, phase M3 (discovery, calendars, raw passthrough,
-market construction, one pricing tool per product, the engine's 221 example
-requests as a catalog, prompts).
-Engine contract pinned to **v0.7.0** (`src/quantra_mcp/schema/PIN`); any
-engine `>= 0.7.0` that keeps the contract works.
+Status: **0.1.0** (discovery, calendars, raw passthrough, market construction,
+one pricing tool per product, analytics by composition, the engine's 223
+example requests as a catalog, prompts; stdio and a hardened streamable-HTTP
+mode). Engine contract pinned to **v0.7.0** (`src/quantra_mcp/schema/PIN`);
+any engine **>= 0.7.0** that keeps the contract works (older engines reject
+`calendar_overrides` and are warned about at startup).
+
+Public hosted instance, no account: **`https://mcp.quantra.io/mcp`** (prices on
+the same engine as `api.quantra.io`; see [Security](#security-and-limits)).
 
 ## Run an engine
 
@@ -35,22 +39,40 @@ Or point the server at the public demo with `QUANTRA_ENGINE_URL=https://api.quan
 
 ## Install
 
-Until the first PyPI release, run from a checkout:
-
 ```bash
-git clone https://github.com/joseprupi/quantra-mcp && cd quantra-mcp
-uv sync
-uv run quantra-mcp --help
+uvx quantra-mcp --version        # from PyPI, nothing else to install (needs uv)
+pipx install quantra-mcp         # or pip install quantra-mcp
+docker run --rm -p 8765:8765 -e QUANTRA_ENGINE_URL=http://host.docker.internal:8080 ghcr.io/joseprupi/quantra-mcp:0.1.0
 ```
 
-(After release: `uvx quantra-mcp`.)
+From a checkout: `git clone https://github.com/joseprupi/quantra-mcp && cd quantra-mcp && uv sync && uv run quantra-mcp --help`.
 
 ## Configure your agent
 
+### claude.ai (custom connector, nothing to install)
+
+Settings → Connectors → **Add custom connector** → URL:
+
+```
+https://mcp.quantra.io/mcp
+```
+
+Then ask Claude to call `quantra_meta`, or "price a 5Y EUR payer swap with the
+EUR_EURIBOR_6M preset". The hosted instance has no authentication and the
+limits described under [Security](#security-and-limits).
+
 ### Claude Code
 
+Local engine (stdio):
+
 ```bash
-claude mcp add quantra -e QUANTRA_ENGINE_URL=http://localhost:8080 -- uv --directory /path/to/quantra-mcp run quantra-mcp
+claude mcp add quantra -e QUANTRA_ENGINE_URL=http://localhost:8080 -- uvx quantra-mcp
+```
+
+Hosted instance (streamable HTTP):
+
+```bash
+claude mcp add --transport http quantra-public https://mcp.quantra.io/mcp
 ```
 
 Project form (`.mcp.json` in the repo root, shared with the team):
@@ -59,8 +81,8 @@ Project form (`.mcp.json` in the repo root, shared with the team):
 {
   "mcpServers": {
     "quantra": {
-      "command": "uv",
-      "args": ["--directory", "/path/to/quantra-mcp", "run", "quantra-mcp"],
+      "command": "uvx",
+      "args": ["quantra-mcp"],
       "env": { "QUANTRA_ENGINE_URL": "http://localhost:8080" }
     }
   }
@@ -75,8 +97,8 @@ Project form (`.mcp.json` in the repo root, shared with the team):
 {
   "mcpServers": {
     "quantra": {
-      "command": "uv",
-      "args": ["--directory", "/path/to/quantra-mcp", "run", "quantra-mcp"],
+      "command": "uvx",
+      "args": ["quantra-mcp"],
       "env": { "QUANTRA_ENGINE_URL": "http://localhost:8080" }
     }
   }
@@ -91,30 +113,64 @@ Project form (`.mcp.json` in the repo root, shared with the team):
 {
   "mcpServers": {
     "quantra": {
-      "command": "uv",
-      "args": ["--directory", "/path/to/quantra-mcp", "run", "quantra-mcp"],
+      "command": "uvx",
+      "args": ["quantra-mcp"],
       "env": { "QUANTRA_ENGINE_URL": "http://localhost:8080" }
     }
   }
 }
 ```
 
-### Streamable HTTP (remote agents)
+Or point Cursor at the hosted instance: `{"mcpServers": {"quantra": {"url": "https://mcp.quantra.io/mcp"}}}`.
+
+### Streamable HTTP (serve it yourself)
 
 ```bash
-QUANTRA_ENGINE_URL=http://localhost:8080 uv run quantra-mcp --http --port 8765
-# MCP endpoint: http://127.0.0.1:8765/mcp
+QUANTRA_ENGINE_URL=http://localhost:8080 uvx quantra-mcp --http --port 8765
+# MCP endpoint: http://127.0.0.1:8765/mcp   pointer: GET /   health: GET /healthz, GET /readyz
 ```
+
+### Self-host with Docker Compose
+
+`docker-compose.example.yml` runs the pinned engine and the MCP server
+together; only port 8765 is published:
+
+```bash
+curl -O https://raw.githubusercontent.com/joseprupi/quantra-mcp/main/docker-compose.example.yml
+docker compose -f docker-compose.example.yml up -d
+curl http://localhost:8765/readyz      # {"status":"ok","engine":{"status":"healthy"}}
+claude mcp add --transport http quantra http://localhost:8765/mcp
+```
+
+To expose it publicly put a TLS-terminating reverse proxy in front and set
+`QUANTRA_TRUST_PROXY=1`, `QUANTRA_ALLOWED_HOSTS=<your hostname>` and
+`QUANTRA_PUBLIC_URL=https://<your hostname>` on the `mcp` service.
 
 ## Environment
 
 | Env | Default | Meaning |
 |---|---|---|
 | `QUANTRA_ENGINE_URL` | `http://localhost:8080` | Engine JSON gateway (self-hosted or `https://api.quantra.io`). |
-| `QUANTRA_TIMEOUT_S` | `60` | Per-request timeout in seconds. |
+| `QUANTRA_TIMEOUT_S` | `60` | Per-request engine timeout in seconds. |
 | `QUANTRA_MCP_LOG` | `info` | stderr log level (`debug`, `info`, `warning`, `error`). stdout is the MCP channel. |
 | `QUANTRA_SESSION_MAX_ITEMS` | `64` | Cap on in-memory session scratch items (least-recently-used eviction). |
-| `QUANTRA_MAX_CONCURRENCY` | `4` | Maximum simultaneous engine calls in the analytics fan-outs (`key_rate_ladder`, `scenario`). |
+| `QUANTRA_SESSION_MAX_TOTAL_BYTES` | `33554432` | Cap on the serialized size of all session items together (32 MiB, LRU). |
+| `QUANTRA_MAX_CONCURRENCY` | `4` | Maximum simultaneous engine calls: the analytics fan-outs, and in `--http` mode the number of `tools/call` requests served at once. |
+| `QUANTRA_REQUIRE_ENGINE` | `0` | `1`: refuse to start when the engine's `/meta` is unreachable (default: warn and serve). |
+
+`--http` mode only:
+
+| Env | Default | Meaning |
+|---|---|---|
+| `QUANTRA_MAX_QUEUE` | `8` | `tools/call` requests allowed to wait for a concurrency slot; beyond that the request gets 503 with `Retry-After`. |
+| `QUANTRA_RATE_LIMIT_RPM` | `60` | Per-client requests per minute (token bucket; `0` disables). Exceeding it gets 429 with `Retry-After`. |
+| `QUANTRA_RATE_LIMIT_BURST` | `20` | Token-bucket burst size. |
+| `QUANTRA_MAX_BODY_BYTES` | `2097152` | Request body cap (2 MiB); larger bodies get 413. |
+| `QUANTRA_TRUST_PROXY` | `0` | `1`: take the client address from the first `X-Forwarded-For` hop. Set only behind your own reverse proxy. |
+| `QUANTRA_ALLOWED_HOSTS` | *(empty)* | Comma-separated `Host` header allow-list for `/mcp` (DNS-rebinding protection; a listed host matches with or without a port). Empty on a loopback bind keeps the SDK's localhost defaults; empty on a public bind disables the check and logs a warning. |
+| `QUANTRA_ALLOWED_ORIGINS` | *(empty = any)* | Comma-separated `Origin` allow-list for `/mcp`. Unset accepts any origin (the server has no credentials to protect). |
+| `QUANTRA_LOG_RAW_IP` | `0` | `1`: log client addresses verbatim instead of a 12-hex sha256 prefix. |
+| `QUANTRA_PUBLIC_URL` | *(empty)* | The externally reachable base URL, advertised by `GET /` (e.g. `https://mcp.quantra.io`). |
 
 ## Price a swap in three calls
 
@@ -362,12 +418,50 @@ them and checks the reference values; the convenience tools are proven by
 rebuilding twelve of them JSON-equal from a preset and the example's own
 `pricing` block.
 
+## Security and limits
+
+- **No authentication.** `--http` mode and the hosted `mcp.quantra.io` are
+  open by design: the engine is stateless, prices public-domain-style
+  requests and stores nothing. Do not front a private engine with it without
+  a proxy that authenticates.
+- **Limits** (all configurable, see the table above): 60 requests/minute per
+  client with a burst of 20 (429 + `Retry-After`), 4 concurrent `tools/call`
+  plus 8 queued (503 + `Retry-After`), 2 MiB request bodies (413), 60 s per
+  engine call. The hosted instance runs these defaults.
+- **Host validation.** With `QUANTRA_ALLOWED_HOSTS` set, `/mcp` rejects any
+  other `Host` header with 421 (the SDK's DNS-rebinding protection); `Origin`
+  is unrestricted unless `QUANTRA_ALLOWED_ORIGINS` is set. `GET /`, `/healthz`
+  and `/readyz` are not host-checked and answer with CORS `*`.
+- **Session scratch is per process and shared** by every client of an HTTP
+  server (bounded by item count and total bytes, LRU). Do not store anything
+  you would not show to another user of the same server; the hosted instance
+  is public.
+- **What is logged.** One stderr line per tool call: timestamp, client address
+  as a sha256 prefix (raw only with `QUANTRA_LOG_RAW_IP=1`), tool name, engine
+  endpoint, status, duration. Never tool arguments, requests or responses. The
+  startup line records the active limits. Nothing is persisted.
+- **Numbers come from the engine.** Every result carries the exact request
+  sent and the engine's body verbatim; replay it with `curl` against the same
+  engine and you get the same bytes. Supported engines: `>= 0.7.0`.
+
 ## Development
 
 ```bash
 uv sync
 uv run pytest && uv run ruff check . && uv run ruff format --check . && uv run mypy src   # the gate
 ```
+
+Container (what the release workflow publishes):
+
+```bash
+docker build -t quantra-mcp:dev .
+docker run --rm -p 8765:8765 --add-host=host.docker.internal:host-gateway \
+  -e QUANTRA_ENGINE_URL=http://host.docker.internal:18087 quantra-mcp:dev
+curl http://localhost:8765/readyz
+```
+
+Releases: tag `v<version>` on `main`; `.github/workflows/release.yml` publishes
+the image, the PyPI package and the GitHub Release. See `docs/RELEASING.md`.
 
 Live acceptance (needs a real engine; the CI `live` job does the same):
 
@@ -416,7 +510,8 @@ uv run python scripts/pin_engine.py --engine-repo /path/to/quantraserver --tag v
 
 ```
 src/quantra_mcp/
-  server.py          MCPServer app, transport selection
+  server.py          MCPServer app, transport selection, startup engine check
+  hosted.py          --http hardening: guard middleware (429/413/503), / /healthz /readyz, host validation, access log
   config.py          env -> Settings
   backend/           Backend protocol + the engine HTTP client
   schema/            vendored openapi3.json, PIN, generated enums, loader, validator
@@ -430,6 +525,7 @@ src/quantra_mcp/
   docs/, examples/   vendored engine docs, catalog and the 223 example requests
 scripts/             pin_engine.py, live_check.py, parity_ql.py
 tests/               unit, contract (vendored spec), live (real engine), golden/ requests
+Dockerfile, docker-compose.example.yml, docs/RELEASING.md, .github/workflows/{ci,release}.yml
 ```
 
 ## License

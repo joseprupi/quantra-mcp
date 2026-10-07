@@ -1,8 +1,45 @@
 # Changelog
 
-## 0.1.0.dev0 (unreleased)
+## 0.1.0 (2026-10-07)
 
-First usable server (phases M1 + M2 + M3 + M4).
+First release (phases M1 to M5): discovery, calendars, raw passthrough,
+market construction with presets, one pricing tool per product, analytics by
+composition, the engine's example catalog, and a hardened streamable-HTTP
+mode packaged as a container and published to PyPI and GHCR.
+
+Phase M5 (packaging, hosted hardening, CI publish):
+
+- `--http` now serves the SDK's streamable-HTTP app wrapped in
+  `hosted.HostedGuard`: per-client token bucket (`QUANTRA_RATE_LIMIT_RPM`
+  60, `QUANTRA_RATE_LIMIT_BURST` 20; 429 with `Retry-After`;
+  `X-Forwarded-For` honoured only with `QUANTRA_TRUST_PROXY=1`), request body
+  cap (`QUANTRA_MAX_BODY_BYTES` 2 MiB; 413), global concurrency gate on
+  `tools/call` with a bounded wait queue (`QUANTRA_MAX_CONCURRENCY` 4 +
+  `QUANTRA_MAX_QUEUE` 8; 503 with `Retry-After`).
+- `GET /` (JSON pointer with the MCP URL, `QUANTRA_PUBLIC_URL`), `GET /healthz`
+  (no engine call), `GET /readyz` (engine `/health`, 2 s timeout) beside `/mcp`;
+  CORS `*` on the GET routes.
+- `QUANTRA_ALLOWED_HOSTS` wires the SDK's DNS-rebinding protection (wrong
+  `Host` -> 421); `QUANTRA_ALLOWED_ORIGINS` restricts `Origin` (default: any,
+  the server holds no credentials). Loopback binds keep the SDK's localhost
+  defaults; a public bind without the variable logs a warning.
+- Access log: one stderr line per `tools/call` (`client=` sha256 prefix of the
+  address unless `QUANTRA_LOG_RAW_IP=1`, `tool=`, `endpoint=`, `status=`,
+  `ms=`). Arguments and bodies are never logged.
+- `QUANTRA_REQUIRE_ENGINE=1` refuses to start when the engine's `/meta` is
+  unreachable (default: warn and serve). Session store bounded by
+  `QUANTRA_SESSION_MAX_TOTAL_BYTES` (32 MiB, LRU) in addition to the item cap;
+  `session_list` reports `size_bytes`.
+- `Dockerfile` (python:3.12-slim, uv, non-root, `EXPOSE 8765`, healthcheck,
+  `CMD quantra-mcp --http --host 0.0.0.0`), `.dockerignore`,
+  `docker-compose.example.yml` (engine 0.7.0 + mcp).
+- `.github/workflows/release.yml` on tag `v*`: version guard, gate, image to
+  `ghcr.io/joseprupi/quantra-mcp:{version},latest` (linux/amd64), PyPI via
+  trusted publishing (environment `pypi`), GitHub Release with this
+  CHANGELOG section as body. Operator steps in `docs/RELEASING.md`.
+- Tests: guard primitives, raw-ASGI saturation, Starlette TestClient
+  coverage of every route and limit, MCP-over-HTTP tool call with access-log
+  assertions, SDK host/origin validation with our settings.
 
 Phase M4 (analytics by composition):
 
