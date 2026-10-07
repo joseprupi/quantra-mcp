@@ -487,8 +487,8 @@ async def test_usd_ois_swaption_rebuilds_the_engine_ois_fixtures(
 async def test_ois_underlying_keeps_ois_only_fields_and_rejects_vanilla_ones(
     pricing_app: Any,
 ) -> None:
-    fixture = "swaption_ois_bbg_zerorate_request"
-    args = usd_ois_swaption_args_explicit(fixture, "CollateralizedCashPrice")
+    fixture = "swaption_ois_request"
+    args = usd_ois_swaption_args_explicit(fixture, "ParYieldCurve")
     args["underlying"] = {**args["underlying"], "payment_lag": 0}
     async with Client(pricing_app) as c:
         r = _s(await c.call_tool("price_swaption", args))

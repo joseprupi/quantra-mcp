@@ -43,6 +43,19 @@ specific to an example, a vendor or a screenshot.
   cause with `reprice_with` -> report demonstrated vs. unexplained. Instructions:
   never claim access to vendor data; never assert a cause without a citation or a
   reprice.
+- Shipped examples: `scripts/pin_engine.py` now EXCLUDES any engine fixture whose
+  file name, title or catalog description carries a vendor reference (case-insensitive
+  `bbg`, `bloomberg`, `swpm`, `refinitiv`, `markit`, `icvs`); at `v0.7.0` that is
+  `examples/data/swaption_ois_bbg_zerorate_request.json`, recorded under
+  `excluded_vendor_specific` in `examples/INDEX.json`. 223 -> 222 examples. The USD
+  OIS swaption path stays live-proven on the generic `swaption_ois_request` fixture
+  (ParYieldCurve); the `USD_SOFR_OIS` swaption provenance cites only that fixture.
+- HARD RULE in the instructions and every prompt: the shipped examples are
+  request-SHAPE references only; the market data for a trade the user brought
+  (curves, vols, fixings) MUST come from the user; never reuse an example's market
+  data for the user's trade, never say "the engine already ships this trade"; without
+  the user's market data, ask for it in paste-able form and stop; an explicitly
+  requested demo price is labelled illustrative and names the example used.
 - Live (engine 0.7.0): `reprice_with` on the EUR 5Y payer example flips the side in
   exactly one request leaf and reprices 200 (NPV -47408.48798885872 ->
   +47408.48798885872 within 1e-12 relative; both results replay byte-equal); a 1bp

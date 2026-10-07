@@ -109,9 +109,9 @@ async def test_engine_error_during_date_resolution_is_reported() -> None:
 @pytest.mark.parametrize("fixture", sorted(USD_OIS_SWAPTION_FIXTURES))
 async def test_usd_ois_swaption_reproduces_the_engine_fixture(fixture: str) -> None:
     """price_swaption on the USD_SOFR_OIS preset rebuilds the engine's USD SOFR OIS
-    swaption fixtures (the Bloomberg SWPM-OV comparison request among them) JSON-equal,
-    with spot / 10Y resolved by the engine; the engine's NPV equals a direct POST of the
-    fixture (no QuantLib oracle exists for these two)."""
+    swaption fixture (``swaption_ois_request``, ParYieldCurve) JSON-equal, with spot / 10Y
+    resolved by the engine; the engine's NPV equals a direct POST of the fixture (no
+    QuantLib oracle exists for it)."""
     method = USD_OIS_SWAPTION_FIXTURES[fixture]
     body = fixture_body(fixture)
     async with live_client() as client:

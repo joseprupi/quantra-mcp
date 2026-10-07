@@ -69,6 +69,10 @@ MANIFEST_PATH = "tests/functional/manifest.py"
 CATALOG_PATH = "tests/functional/CATALOG.md"
 ROOT_CATEGORY = "misc"  # fixtures that sit directly under examples/data/
 
+#: Operator rule: nothing vendor-specific is shipped. An engine fixture whose file
+#: name, title or catalog description carries a vendor reference is NOT vendored.
+VENDOR_RE = re.compile(r"bbg|bloomberg|swpm|refinitiv|markit|icvs", re.IGNORECASE)
+
 #: The two blog examples (not from the engine repo) and their published oracles.
 BLOG_EXAMPLES: list[dict[str, Any]] = [
     {
@@ -345,6 +349,7 @@ def vendor_examples(repo: Path, tag: str, sha: str) -> list[dict[str, Any]]:
 
     rows: list[dict[str, Any]] = [{**b, "expected_status": 200} for b in BLOG_EXAMPLES]
     seen: dict[str, str] = {b["name"]: b["file"] for b in BLOG_EXAMPLES}
+    excluded: list[dict[str, str]] = []
     for path in sorted(paths):
         rel = path.removeprefix(FIXTURE_PREFIX)
         parts = rel.split("/")
@@ -353,6 +358,23 @@ def vendor_examples(repo: Path, tag: str, sha: str) -> list[dict[str, Any]]:
         if name in seen:
             raise SystemExit(f"duplicate example name {name!r}: {rel} vs {seen[name]}")
         seen[name] = rel
+        pre = by_request.get(rel) or {}
+        pre_cat = catalog.get(Path(rel).name, {})
+        vendor_text = " ".join(
+            str(x)
+            for x in (
+                rel,
+                pre.get("title", ""),
+                pre.get("description", ""),
+                pre_cat.get("title", ""),
+                pre_cat.get("description", ""),
+            )
+        )
+        hit = VENDOR_RE.search(vendor_text)
+        if hit:
+            excluded.append({"path": path, "matched": hit.group(0)})
+            print(f"excluded (vendor reference {hit.group(0)!r}): {path}", file=sys.stderr)
+            continue
         data = git_show(repo, tag, path)
         dest = EXAMPLES_DIR / category / f"{name}.json"
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -418,7 +440,12 @@ def vendor_examples(repo: Path, tag: str, sha: str) -> list[dict[str, Any]]:
                 }
             )
         rows.append(row)
+    EXCLUDED[:] = excluded
     return rows
+
+
+#: Filled by vendor_examples(): fixtures left out under VENDOR_RE (recorded in INDEX.json).
+EXCLUDED: list[dict[str, str]] = []
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -448,6 +475,7 @@ def main(argv: list[str] | None = None) -> int:
         "engine_sha": sha,
         "api_version": spec["info"]["version"],
         "count": len(rows),
+        "excluded_vendor_specific": EXCLUDED,
         "examples": rows,
     }
     (EXAMPLES_DIR / "INDEX.json").write_text(json.dumps(index, indent=2) + "\n")

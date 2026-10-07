@@ -17,7 +17,7 @@ agent ──(MCP: stdio / streamable HTTP)──▶ quantra-mcp ──(HTTP/JSON
 ```
 
 Status: **0.1.1** (discovery, calendars, raw passthrough, market construction,
-one pricing tool per product, analytics by composition, the engine's 223
+one pricing tool per product, analytics by composition, the engine's 222
 example requests as a catalog, prompts; stdio and a hardened streamable-HTTP
 mode). Engine contract pinned to **v0.7.0** (`src/quantra_mcp/schema/PIN`);
 any engine **>= 0.7.0** that keeps the contract works (older engines reject
@@ -97,6 +97,13 @@ repricing with that one thing changed (settlement method, interpolation, vol typ
 a bumped quote, a rolled date). A cause it can neither cite nor demonstrate is
 reported as a possibility, not a conclusion. Ask "how is this computed?" at any
 point and you get the cited methodology page for that number.
+
+The shipped examples are request-shape references only: the market data for YOUR
+trade (curves, vols, fixings) always comes from you, pasted or quoted. The assistant
+never reuses an example's market data for your trade; if you have not supplied it, it
+asks for it in paste-able form and stops. An explicitly requested demo price is
+labelled illustrative and names the example used. Engine fixtures whose name or
+description refers to a vendor are not shipped at all.
 
 Project instructions you can paste into a claude.ai Project that has the
 connector enabled:
@@ -342,7 +349,7 @@ sourced from a named engine fixture at the pin (`field_provenance`):
 | `bootstrap_curve(curves, as_of, queries, indices?, calendar_overrides?, request_id?)` | `POST /bootstrap-curves`. `curves` items: `TermStructure`, `build_curve` result or `{"session": name}`; echoed `request` is the resolved body; `summary` = per curve `{id, pillars, first_grid_date, last_grid_date, measures}`. |
 | `bootstrap_inflation_curve(body, request_id?)` | `POST /bootstrap-inflation-curves` with a raw body (validated first). |
 | `session_put(name, kind, value)` / `session_get(name)` / `session_list()` / `session_delete(name)` | In-memory scratch (`curve`, `index`, `market`), per process, never persisted, LRU-capped. |
-| `list_examples(category?, product?)` / `get_example(name)` | The 223 vendored example requests (engine fixtures + the two blog examples) with endpoint, catalog description and QuantLib reference value; `body` is ready for `engine_request`, `body.pricing` is a valid `market`. No engine call. |
+| `list_examples(category?, product?)` / `get_example(name)` | The 222 vendored example requests (engine fixtures + the two blog examples) with endpoint, catalog description and QuantLib reference value; `body` is ready for `engine_request`, `body.pricing` is a valid `market`. No engine call. |
 
 ### Pricing tools (one per product)
 
@@ -457,7 +464,7 @@ reproducing the base NPV (`tests/live/test_live_analytics.py`).
 | `quantra://schema/{endpoint}` | Full request/response schema, e.g. `quantra://schema/price-ois-swap`. |
 | `quantra://enums/{name}` | Enum values, e.g. `quantra://enums/Calendar` (`quantra://enums` lists names). |
 | `quantra://docs/engine-catalog` | The engine's functional parity catalog at the pin (every cataloged example with its description and QuantLib reference value). |
-| `quantra://examples` | Index of the 223 vendored examples (name, category, endpoint, title, reference value). |
+| `quantra://examples` | Index of the 222 vendored examples (name, category, endpoint, title, reference value). |
 | `quantra://examples/{category}/{name}` | One example with its metadata and `body`, e.g. `quantra://examples/ir_swaps/irs_eur_5y_payer_ois_discounted_multicurve`. |
 | `quantra://examples/{name}` | An example body by name (any category), e.g. `quantra://examples/sofr-ois-swap-request`; a category name lists that category. |
 | `quantra://pin` | The engine tag, commit and image this server is pinned to. |
@@ -545,7 +552,7 @@ byte-equal to a direct HTTP replay of its echoed `request`; its M2 section
 builds the SOFR strip through `build_curve` and asserts the request is
 JSON-equal to the gold example and the 50Y DF matches the oracle, round-trips
 a discount value curve, bootstraps every preset (monotone DFs) and resolves a
-session reference; its M3 section sweeps all 223 vendored examples through
+session reference; its M3 section sweeps all 222 vendored examples through
 `engine_request` (status as indexed, reference values matched) and runs every
 pricing tool against its mapped fixture (built request JSON-equal, engine
 number equal to the oracle). `--sweep-table` prints one row per example.
@@ -594,7 +601,7 @@ src/quantra_mcp/
   prompts.py         price-a-swap, bootstrap-from-strip, holiday-check, explore-examples,
                      price-from-screen, reconcile-external-price
   examples_catalog.py  INDEX.json access + oracle checks
-  docs/, examples/   vendored engine docs, catalog and the 223 example requests;
+  docs/, examples/   vendored engine docs, catalog and the 222 example requests;
                      docs/methodology/ = the generated cited pages + INDEX.json
 scripts/             pin_engine.py (+ methodology_gen.py, methodology_rules.py), live_check.py, parity_ql.py
 tests/               unit, contract (vendored spec), live (real engine), golden/ requests

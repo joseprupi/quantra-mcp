@@ -18,7 +18,7 @@ to the fixture, engine number equal to the oracle, response byte-equal to a
 replay) plus the SOFR blog OIS example from a build_curve market.
 
     QUANTRA_ENGINE_URL=http://localhost:18087 uv run python scripts/live_check.py
-    ... --sweep-table   # also print one row per example (223 rows)
+    ... --sweep-table   # also print one row per example (222 rows)
 """
 
 from __future__ import annotations

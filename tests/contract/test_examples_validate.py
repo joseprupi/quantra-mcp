@@ -59,7 +59,6 @@ def test_product_goldens_validate() -> None:
         "price_fra": "/price-fra",
         "price_cap_floor": "/price-cap-floor",
         "price_swaption": "/price-swaption",
-        "price_swaption.swaption_ois_bbg_zerorate_request": "/price-swaption",
         "price_swaption.swaption_ois_request": "/price-swaption",
         "price_cds": "/price-cds",
         "price_equity_option": "/price-equity-option",

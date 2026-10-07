@@ -372,12 +372,10 @@ def blog_ois_args_explicit(built_curve: dict[str, Any]) -> dict[str, Any]:
 
 def usd_ois_swaption_args(fixture: str, settlement_method: str) -> dict[str, Any]:
     """price_swaption arguments that must reproduce the engine's USD SOFR OIS swaption
-    fixtures (``swaption_ois_bbg_zerorate_request`` with CollateralizedCashPrice, the
-    Bloomberg SWPM-OV comparison; ``swaption_ois_request`` with ParYieldCurve): 1M x 10Y
-    payer, strike 3.367463%, Bachelier normal vol 102.67bp, cash settled, as-of 2024-08-14.
-    The market is the fixture's own pricing block minus the vol surface and model the
-    tool builds back. Neither fixture carries a QuantLib reference value, so they stay
-    out of ``FIXTURES``."""
+    fixture ``swaption_ois_request`` (cash settled, ParYieldCurve): 1M x 10Y payer,
+    strike 3.367463%, Bachelier normal vol 102.67bp, as-of 2024-08-14. The market is the
+    fixture's own pricing block minus the vol surface and model the tool builds back. The
+    fixture carries no QuantLib reference value, so it stays out of ``FIXTURES``."""
     return dict(
         market=market_without(fixture_body(fixture)["pricing"], "volatility"),
         preset="USD_SOFR_OIS",
@@ -411,6 +409,5 @@ def usd_ois_swaption_args_explicit(fixture: str, settlement_method: str) -> dict
 
 
 USD_OIS_SWAPTION_FIXTURES = {
-    "swaption_ois_bbg_zerorate_request": "CollateralizedCashPrice",
     "swaption_ois_request": "ParYieldCurve",
 }

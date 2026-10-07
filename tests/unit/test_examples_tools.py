@@ -20,7 +20,9 @@ def _s(result: Any) -> dict[str, Any]:
 def test_index_covers_every_vendored_file_once() -> None:
     index = cat.load_index()
     rows = index["examples"]
-    assert index["count"] == len(rows) == 223  # 221 engine fixtures + 2 blog examples
+    assert (
+        index["count"] == len(rows) == 222
+    )  # 220 engine fixtures + 2 blog (1 vendor-named excluded)
     assert index["engine_tag"] == pin().tag and index["engine_sha"] == pin().sha
     names = [r["name"] for r in rows]
     assert len(set(names)) == len(names)
@@ -94,9 +96,9 @@ async def test_list_and_get_example_tools(app: Any) -> None:
         bad = _s(await c.call_tool("list_examples", {"category": "nope"}))
         one = _s(await c.call_tool("get_example", {"name": "frb_eur_5y_at_par_annual_30360"}))
         missing = _s(await c.call_tool("get_example", {"name": "nope"}))
-    assert all_["ok"] and all_["count"] == 223 and "ir_swaps" in all_["categories"]
+    assert all_["ok"] and all_["count"] == 222 and "ir_swaps" in all_["categories"]
     assert bonds["count"] == 24 and all(r["category"] == "bonds" for r in bonds["examples"])
-    assert swaptions["count"] == 13 + 7  # swaption/ folder + 7 misc swaption requests
+    assert swaptions["count"] == 13 + 6  # swaption/ folder + 6 misc swaption requests
     assert all(r["endpoint"] == "/price-swaption" for r in swaptions["examples"])
     assert bad["ok"] is False and "categories" in bad["error"]
     assert one["ok"] and one["endpoint"] == "/price-fixed-rate-bond"
@@ -126,7 +128,7 @@ async def test_example_resources(app: Any) -> None:
         catalog = (await c.read_resource("quantra://docs/engine-catalog")).contents[0].text  # type: ignore[union-attr]
         with pytest.raises(Exception, match="not 'bonds'"):
             await c.read_resource("quantra://examples/bonds/cds_eur_5y_buyer_100bp_spread_curve")
-    assert idx["count"] == 223 and idx["examples"][0]["uri"].startswith("quantra://examples/blog/")
+    assert idx["count"] == 222 and idx["examples"][0]["uri"].startswith("quantra://examples/blog/")
     assert by_cat["endpoint"] == "/price-cds" and by_cat["body"] == by_name
     assert by_name["cds_list"][0]["cds"]["side"] == "Buyer"
     assert blog["swaps"][0]["ois_swap"]["overnight_leg"]["payment_lag"] == 2

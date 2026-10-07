@@ -2,7 +2,13 @@
   "engine_tag": "v0.7.0",
   "engine_sha": "ab4dd9b50fcaae15eb11abe034ee80f972a8590c",
   "api_version": "0.7.0",
-  "count": 223,
+  "count": 222,
+  "excluded_vendor_specific": [
+    {
+      "path": "examples/data/swaption_ois_bbg_zerorate_request.json",
+      "matched": "bbg"
+    }
+  ],
   "examples": [
     {
       "name": "sofr-bootstrap-request",
@@ -5738,26 +5744,6 @@
       "catalog_id": null,
       "family": null,
       "title": "swaption bermudan hw calibrated",
-      "description": "Uncataloged engine example (no QuantLib reference value).",
-      "exercises": [],
-      "compare": null,
-      "list_key": null,
-      "tolerance": null,
-      "reference_text": "",
-      "reference_value": null,
-      "oracle": null
-    },
-    {
-      "name": "swaption_ois_bbg_zerorate_request",
-      "category": "misc",
-      "file": "misc/swaption_ois_bbg_zerorate_request.json",
-      "source": "quantraserver v0.7.0 (ab4dd9b50fca) examples/data/swaption_ois_bbg_zerorate_request.json",
-      "expected_status": 200,
-      "endpoint": "/price-swaption",
-      "endpoint_source": "schema-match",
-      "catalog_id": null,
-      "family": null,
-      "title": "swaption ois bbg zerorate request",
       "description": "Uncataloged engine example (no QuantLib reference value).",
       "exercises": [],
       "compare": null,
