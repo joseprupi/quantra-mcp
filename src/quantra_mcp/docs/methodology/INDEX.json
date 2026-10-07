@@ -1,0 +1,915 @@
+{
+  "engine_tag": "v0.7.0",
+  "engine_sha": "ab4dd9b50fcaae15eb11abe034ee80f972a8590c",
+  "generated_by": "scripts/pin_engine.py (methodology_gen.py + methodology_rules.py)",
+  "metric_topics": {
+    "npv": "npv",
+    "fixed_leg_npv": "npv",
+    "floating_leg_npv": "npv",
+    "overnight_leg_npv": "npv",
+    "default_leg_npv": "npv",
+    "premium_leg_npv": "npv",
+    "clean_price": "npv",
+    "dirty_price": "npv",
+    "spot_value": "npv",
+    "fair_rate": "fair-rate",
+    "fair_spread": "fair-rate",
+    "fair_upfront": "fair-rate",
+    "atm_forward": "fair-rate",
+    "used_atm_forward": "fair-rate",
+    "forward_rate": "fair-rate",
+    "annuity": "fair-rate",
+    "fixed_leg_bps": "fair-rate",
+    "floating_leg_bps": "fair-rate",
+    "overnight_leg_bps": "fair-rate",
+    "bps": "fair-rate",
+    "dv01": "greeks-bump-and-reprice",
+    "delta": "greeks-bump-and-reprice",
+    "gamma": "greeks-bump-and-reprice",
+    "vega": "greeks-bump-and-reprice",
+    "rho": "greeks-bump-and-reprice",
+    "macaulay_duration": "greeks-bump-and-reprice",
+    "modified_duration": "greeks-bump-and-reprice",
+    "convexity": "greeks-bump-and-reprice",
+    "theta": "theta",
+    "implied_volatility": "volatility-types",
+    "used_volatility": "volatility-types",
+    "yield": "day-counters-and-compounding",
+    "accrued_amount": "day-counters-and-compounding",
+    "accrued_days": "day-counters-and-compounding"
+  },
+  "files": {
+    "docs/http-api.md": 219,
+    "docs/versioning.md": 373,
+    "flatbuffers/fbs/cds_response.fbs": 25,
+    "flatbuffers/fbs/common.fbs": 60,
+    "flatbuffers/fbs/curve_query.fbs": 53,
+    "flatbuffers/fbs/enums.fbs": 379,
+    "flatbuffers/fbs/fra_response.fbs": 19,
+    "flatbuffers/fbs/price_swaption_request.fbs": 29,
+    "flatbuffers/fbs/pricing.fbs": 87,
+    "flatbuffers/fbs/schedule.fbs": 30,
+    "flatbuffers/fbs/swaption.fbs": 29,
+    "flatbuffers/fbs/swaption_response.fbs": 71,
+    "flatbuffers/fbs/term_structure.fbs": 330,
+    "flatbuffers/fbs/vanilla_swap_response.fbs": 69,
+    "flatbuffers/fbs/volatility.fbs": 231,
+    "src/common/calendar_overrides.h": 74,
+    "src/common/enum_convert.cpp": 565,
+    "src/domain/swaption_rebump.h": 37,
+    "src/evaluators/equity_option_evaluator.cpp": 287,
+    "src/evaluators/fixed_rate_bond_evaluator.cpp": 118,
+    "src/evaluators/ois_swap_evaluator.cpp": 153,
+    "src/evaluators/swaption_evaluator.cpp": 727,
+    "src/evaluators/swaption_evaluator.h": 215,
+    "src/evaluators/vanilla_swap_evaluator.cpp": 488,
+    "tests/functional/CATALOG.md": 265
+  },
+  "topics": [
+    {
+      "slug": "npv",
+      "title": "NPV: what the engine's `npv` is",
+      "summary": "Every `npv` the engine returns is QuantLib's `NPV()` of the instrument it built from the request, discounted on the curve the request names. The engine adds no adjustment of its own; the sign is QuantLib's for the side the request states.",
+      "file": "npv.md",
+      "citations": [
+        {
+          "path": "src/evaluators/vanilla_swap_evaluator.cpp",
+          "start": 224,
+          "end": 245,
+          "sha256": "1c31e1867d73293806bd0af374f7210809f831ac7ef9a2218cd65ec6f4525eaa",
+          "kind": "statement",
+          "ref": "src/evaluators/vanilla_swap_evaluator.cpp@v0.7.0:L224-L245"
+        },
+        {
+          "path": "src/evaluators/vanilla_swap_evaluator.cpp",
+          "start": 218,
+          "end": 222,
+          "sha256": "573136dd04a487e4fb3ed474be398cfdc9431c7baef8a174f80f6356d881e889",
+          "kind": "statement",
+          "ref": "src/evaluators/vanilla_swap_evaluator.cpp@v0.7.0:L218-L222"
+        },
+        {
+          "path": "src/evaluators/ois_swap_evaluator.cpp",
+          "start": 120,
+          "end": 129,
+          "sha256": "3a39733011e32076349fa9ec01a29f461bc21707812af53151dda6b4b32fade7",
+          "kind": "statement",
+          "ref": "src/evaluators/ois_swap_evaluator.cpp@v0.7.0:L120-L129"
+        },
+        {
+          "path": "flatbuffers/fbs/vanilla_swap_response.fbs",
+          "start": 37,
+          "end": 47,
+          "sha256": "6cd82dc2afbb91fced74d8cfa02b7ee098fad7dcc459c45b9cc5ca7b8b1cb7fc",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/vanilla_swap_response.fbs@v0.7.0:L37-L47"
+        },
+        {
+          "path": "flatbuffers/fbs/swaption_response.fbs",
+          "start": 8,
+          "end": 9,
+          "sha256": "d084a9b4fea5dc0a6b922c777ed5d197e9505d89dfe5866a6fb4f91e8e432178",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/swaption_response.fbs@v0.7.0:L8-L9"
+        },
+        {
+          "path": "src/evaluators/equity_option_evaluator.cpp",
+          "start": 248,
+          "end": 258,
+          "sha256": "4eb74d0096774887fbd846e4a76fabe3dc26f6c9bca887f6c65de259d97629a9",
+          "kind": "statement",
+          "ref": "src/evaluators/equity_option_evaluator.cpp@v0.7.0:L248-L258"
+        },
+        {
+          "path": "src/evaluators/fixed_rate_bond_evaluator.cpp",
+          "start": 85,
+          "end": 92,
+          "sha256": "77ccfa7c77723f3350669098c0afef841535f6895a72c954f3d4fdd9aa3105e0",
+          "kind": "statement",
+          "ref": "src/evaluators/fixed_rate_bond_evaluator.cpp@v0.7.0:L85-L92"
+        },
+        {
+          "path": "flatbuffers/fbs/cds_response.fbs",
+          "start": 6,
+          "end": 16,
+          "sha256": "dab14f53c4bc730114e29f5b7a2e43f375d81108a2575225882705f047934f32",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/cds_response.fbs@v0.7.0:L6-L16"
+        },
+        {
+          "path": "flatbuffers/fbs/fra_response.fbs",
+          "start": 4,
+          "end": 11,
+          "sha256": "3878ebc395c8d896a53ab0ebf91f1e38bda48a1386b95bd3703843dfe370c653",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/fra_response.fbs@v0.7.0:L4-L11"
+        },
+        {
+          "path": "flatbuffers/fbs/pricing.fbs",
+          "start": 68,
+          "end": 69,
+          "sha256": "0dcaa5de50710757a8baa21dfc9c85a0feb48597743a835d8921b90f6bd961bc",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.7.0:L68-L69"
+        },
+        {
+          "path": "flatbuffers/fbs/pricing.fbs",
+          "start": 71,
+          "end": 72,
+          "sha256": "9d6e78792aeac5f75baf7959260a8d4602ded332e503e4f567aa9f8150cf4e00",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.7.0:L71-L72"
+        },
+        {
+          "path": "flatbuffers/fbs/price_swaption_request.fbs",
+          "start": 10,
+          "end": 13,
+          "sha256": "a555d285cf927ab8ddde41df9ac608d2e85c6283c3f5e4f333c258a7c2db3268",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/price_swaption_request.fbs@v0.7.0:L10-L13"
+        }
+      ],
+      "gaps": [
+        "Sign convention: not documented in engine prose. From source, the value is QuantLib's `NPV()` for the instrument built with the request's `swap_type` / `side` / option type, so the sign is QuantLib's for that side (a payer swap's NPV rises when rates rise). Test it with `reprice_with` flipping the side.",
+        "Premium vs forward premium: the engine returns one present value as of `as_of_date`; it does not document a forward (deferred) premium field."
+      ]
+    },
+    {
+      "slug": "fair-rate",
+      "title": "Fair rate, fair spread, ATM forward",
+      "summary": "The engine reports QuantLib's `fairRate()` / `fairSpread()` for swaps, the curve-implied forward for FRAs, the par spread for CDS, and the ATM forward swap rate and annuity for swaptions (only when `swaption_pricing_details` is on).",
+      "file": "fair-rate.md",
+      "citations": [
+        {
+          "path": "src/evaluators/vanilla_swap_evaluator.cpp",
+          "start": 239,
+          "end": 240,
+          "sha256": "52e79af0090ec6b0d987c9056dbb26d583960f7729f041e983081816f8f119ff",
+          "kind": "statement",
+          "ref": "src/evaluators/vanilla_swap_evaluator.cpp@v0.7.0:L239-L240"
+        },
+        {
+          "path": "src/evaluators/vanilla_swap_evaluator.cpp",
+          "start": 330,
+          "end": 340,
+          "sha256": "ee79a5f212cd7382a3af44db50f5f86a223ae397005803e9667332bf1f4fcee4",
+          "kind": "statement",
+          "ref": "src/evaluators/vanilla_swap_evaluator.cpp@v0.7.0:L330-L340"
+        },
+        {
+          "path": "src/evaluators/vanilla_swap_evaluator.cpp",
+          "start": 452,
+          "end": 455,
+          "sha256": "6e137e238404a1806b6d8906227af73bf1cfd5bb15bc216696dbd92171d67b5c",
+          "kind": "statement",
+          "ref": "src/evaluators/vanilla_swap_evaluator.cpp@v0.7.0:L452-L455"
+        },
+        {
+          "path": "src/evaluators/ois_swap_evaluator.cpp",
+          "start": 124,
+          "end": 125,
+          "sha256": "52e79af0090ec6b0d987c9056dbb26d583960f7729f041e983081816f8f119ff",
+          "kind": "statement",
+          "ref": "src/evaluators/ois_swap_evaluator.cpp@v0.7.0:L124-L125"
+        },
+        {
+          "path": "flatbuffers/fbs/cds_response.fbs",
+          "start": 8,
+          "end": 12,
+          "sha256": "9d571d436d5515e8fcb78e5b5eb4ab24304af0b9e6b9c8ce20f2fcae79b79282",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/cds_response.fbs@v0.7.0:L8-L12"
+        },
+        {
+          "path": "flatbuffers/fbs/fra_response.fbs",
+          "start": 6,
+          "end": 7,
+          "sha256": "d79f4b61ad63ebd1ae58c15a18914c4f354e3ff819b5096edd66d216e1434366",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/fra_response.fbs@v0.7.0:L6-L7"
+        },
+        {
+          "path": "flatbuffers/fbs/swaption_response.fbs",
+          "start": 12,
+          "end": 15,
+          "sha256": "91bfc52920d58540a503e5f27182c4897dd3b8ad391b5dca1337b23bd2cf1bfa",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/swaption_response.fbs@v0.7.0:L12-L15"
+        },
+        {
+          "path": "src/evaluators/swaption_evaluator.cpp",
+          "start": 621,
+          "end": 624,
+          "sha256": "2a82533b299483a9196cc93e02b1027a4a3e00b43823a200bc88203d45cee0a3",
+          "kind": "statement",
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.7.0:L621-L624"
+        },
+        {
+          "path": "flatbuffers/fbs/pricing.fbs",
+          "start": 60,
+          "end": 61,
+          "sha256": "90795487210caac1baa26c46a6d288325048e37d7ec17c3422d4503513a07c07",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.7.0:L60-L61"
+        }
+      ],
+      "gaps": [
+        "A fair rate for bonds is not a concept the engine exposes; bonds report `yield` (see day-counters-and-compounding).",
+        "Which curve projects the fair rate is not stated in prose: from source the swap is built on the index whose curve is `forwarding_curve` and discounted on `discounting_curve`, so the fair rate is the par rate under exactly those two curves."
+      ]
+    },
+    {
+      "slug": "greeks-bump-and-reprice",
+      "title": "DV01, gamma, vega: bump-and-reprice vs analytic",
+      "summary": "Swaption sensitivities exist in two forms selected by request flags: analytic (`swaption_pricing_details`, QuantLib's Black / Bachelier calculator) and bump-and-reprice (`swaption_pricing_rebump`: 1bp parallel curve bump, 1bp vol bump, 1-day roll). Equity greeks are analytic. Bonds report duration and convexity under `bond_pricing_details`. Swaps, FRAs, caps and CDS carry no sensitivities in the response.",
+      "file": "greeks-bump-and-reprice.md",
+      "citations": [
+        {
+          "path": "src/domain/swaption_rebump.h",
+          "start": 16,
+          "end": 27,
+          "sha256": "eb81c4d1de44e40f8fd641d8b49b9b6bd21054c64192729d1ce80aab930a5ff2",
+          "kind": "statement",
+          "ref": "src/domain/swaption_rebump.h@v0.7.0:L16-L27"
+        },
+        {
+          "path": "src/evaluators/swaption_evaluator.h",
+          "start": 95,
+          "end": 108,
+          "sha256": "26d5bc2f7ab40541205706ab00ea7b01f58b262f455e569b73620142bfa55cdb",
+          "kind": "statement",
+          "ref": "src/evaluators/swaption_evaluator.h@v0.7.0:L95-L108"
+        },
+        {
+          "path": "src/evaluators/swaption_evaluator.cpp",
+          "start": 656,
+          "end": 668,
+          "sha256": "7688d4d8eb05dbc087cce93d8322636af3205a61486e0e966cad7d0913d960b1",
+          "kind": "statement",
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.7.0:L656-L668"
+        },
+        {
+          "path": "src/evaluators/swaption_evaluator.cpp",
+          "start": 630,
+          "end": 653,
+          "sha256": "22d75af76d0cc86f270ebebb024c980bfe002e291d101d54de96283113132aca",
+          "kind": "statement",
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.7.0:L630-L653"
+        },
+        {
+          "path": "flatbuffers/fbs/swaption_response.fbs",
+          "start": 16,
+          "end": 25,
+          "sha256": "b5f1fbc0bc363626c9cebf4ce6d18090088a04eba944a1361b8a7697a4aaa4da",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/swaption_response.fbs@v0.7.0:L16-L25"
+        },
+        {
+          "path": "src/evaluators/equity_option_evaluator.cpp",
+          "start": 254,
+          "end": 258,
+          "sha256": "c6f5d4b39c5b14f1431654c962b388d04e5c59b34facf00bbe8509d9e81204e4",
+          "kind": "statement",
+          "ref": "src/evaluators/equity_option_evaluator.cpp@v0.7.0:L254-L258"
+        },
+        {
+          "path": "src/evaluators/fixed_rate_bond_evaluator.cpp",
+          "start": 88,
+          "end": 105,
+          "sha256": "67cf59aa941231a515180ab58c006528d2244ab85416d6417e03275daaf6c017",
+          "kind": "statement",
+          "ref": "src/evaluators/fixed_rate_bond_evaluator.cpp@v0.7.0:L88-L105"
+        },
+        {
+          "path": "flatbuffers/fbs/pricing.fbs",
+          "start": 55,
+          "end": 64,
+          "sha256": "bd899dd877d6f1b4c4668923226287c63e09836b89ffdf2c2a7ba43fd41d9a3f",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.7.0:L55-L64"
+        }
+      ],
+      "gaps": [
+        "Swaps, FRAs, caps / floors, CDS and inflation products carry no sensitivity fields in the response. This server's `swap_dv01`, `key_rate_ladder`, `scenario` and `reprice_with` tools obtain them by repricing under bumped quotes (differences of engine NPVs, inputs shown).",
+        "When both swaption flags are set the rebump block runs after the analytic one and overwrites dv01 / gamma / vega / theta (source order above).",
+        "Units: the rebump dv01 is per 1bp parallel move of the curves the request names (not a key-rate or a 100bp number); the vega bump is 1e-4 absolute in the vol's own quotation units."
+      ]
+    },
+    {
+      "slug": "theta",
+      "title": "Theta: exact definition",
+      "summary": "Two definitions exist, selected by request flags. Rebump theta (`swaption_pricing_rebump`) is NPV(as-of + 1 day) - NPV(as-of) with the same market, in currency. Analytic theta (`swaption_pricing_details`, equity options) is QuantLib's calculator theta.",
+      "file": "theta.md",
+      "citations": [
+        {
+          "path": "src/evaluators/swaption_evaluator.cpp",
+          "start": 667,
+          "end": 668,
+          "sha256": "cf9feecb0678ccb876c54da3cb4d4c3f91fe1f54e0271a9b6c6b399ab3c75a18",
+          "kind": "statement",
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.7.0:L667-L668"
+        },
+        {
+          "path": "src/domain/swaption_rebump.h",
+          "start": 25,
+          "end": 26,
+          "sha256": "0f37581ee00343b818baf2c7676c85b9cef610e2b70e0435480b19f0b7b14d04",
+          "kind": "statement",
+          "ref": "src/domain/swaption_rebump.h@v0.7.0:L25-L26"
+        },
+        {
+          "path": "src/evaluators/swaption_evaluator.h",
+          "start": 103,
+          "end": 103,
+          "sha256": "94205b283bed18d000eebbafd04b27c8c57327aba298a0883059d2d51d1e963a",
+          "kind": "statement",
+          "ref": "src/evaluators/swaption_evaluator.h@v0.7.0:L103-L103"
+        },
+        {
+          "path": "src/evaluators/swaption_evaluator.h",
+          "start": 58,
+          "end": 60,
+          "sha256": "efe5ffb04ac38e0c5589ce0b636a15e3cafafce0de61dee0a6d13a03ebdb0950",
+          "kind": "statement",
+          "ref": "src/evaluators/swaption_evaluator.h@v0.7.0:L58-L60"
+        },
+        {
+          "path": "src/evaluators/swaption_evaluator.cpp",
+          "start": 641,
+          "end": 641,
+          "sha256": "adcce2536d7f299f16c8059fbee07babc4b4b4236d72283aa36fc9d1423ca78c",
+          "kind": "statement",
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.7.0:L641-L641"
+        },
+        {
+          "path": "src/evaluators/equity_option_evaluator.cpp",
+          "start": 257,
+          "end": 257,
+          "sha256": "53001a9413ff33dd06d15c28dbdf19831ef99130edbe8a8d9a6dea547e747bd3",
+          "kind": "statement",
+          "ref": "src/evaluators/equity_option_evaluator.cpp@v0.7.0:L257-L257"
+        },
+        {
+          "path": "docs/versioning.md",
+          "start": 176,
+          "end": 178,
+          "sha256": "f8d6807b9e7346ab01a4b474ea30a3d038749f9974c62120ddcff46ebee652e8",
+          "kind": "statement",
+          "ref": "docs/versioning.md@v0.7.0:L176-L178"
+        },
+        {
+          "path": "flatbuffers/fbs/pricing.fbs",
+          "start": 60,
+          "end": 63,
+          "sha256": "b92fe5dd0c2b9e32c3820f727ee8c0c29d65e5b75ce611a07d429df0f9907ec1",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.7.0:L60-L63"
+        }
+      ],
+      "gaps": [
+        "Units are not stated in engine prose. From source: rebump theta is a currency amount over one calendar day of evaluation-date roll (the curves are rebuilt at the new date from the same quotes); analytic theta is QuantLib's calculator value (a rate of change per year in QuantLib's convention). Divide / multiply accordingly before comparing with a vendor's daily theta.",
+        "Whether the roll re-fixes any coupon or moves across a payment is not documented; test with `reprice_with` on `pricing.as_of_date` to see the one-day change directly."
+      ]
+    },
+    {
+      "slug": "curve-bootstrap",
+      "title": "Curve construction: traits, interpolators, helpers",
+      "summary": "A curve is a `TermStructure` whose required `bootstrap_trait` selects the family: `Discount` / `ZeroRate` / `FwdRate` bootstrap a QuantLib `PiecewiseYieldCurve` from rate helpers; `InterpolatedZero` / `InterpolatedDiscount` / `InterpolatedFwd` interpolate explicit values (see value-curves). Nothing is inferred from the point types.",
+      "file": "curve-bootstrap.md",
+      "citations": [
+        {
+          "path": "flatbuffers/fbs/term_structure.fbs",
+          "start": 316,
+          "end": 328,
+          "sha256": "3a4e8190d2b44bdb5c2d6240b83f3496c448ede9a9a6af28b96b36ddc5209468",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.7.0:L316-L328"
+        },
+        {
+          "path": "docs/versioning.md",
+          "start": 137,
+          "end": 157,
+          "sha256": "14c85acaea4f89461c71ebe671e4c390e0811cb2273aa708e393de8675ace5c4",
+          "kind": "statement",
+          "ref": "docs/versioning.md@v0.7.0:L137-L157"
+        },
+        {
+          "path": "flatbuffers/fbs/enums.fbs",
+          "start": 22,
+          "end": 29,
+          "sha256": "77d716ad023167e734e1d373b6a1bf312bd7872947a923322a18a19c1f77eeab",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/enums.fbs@v0.7.0:L22-L29"
+        },
+        {
+          "path": "flatbuffers/fbs/term_structure.fbs",
+          "start": 294,
+          "end": 309,
+          "sha256": "64d249707995d484780dc29059c4148b52df272198410cc90f5e675a1f734ee9",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.7.0:L294-L309"
+        },
+        {
+          "path": "docs/http-api.md",
+          "start": 22,
+          "end": 24,
+          "sha256": "9268011dfb74cc45fb6201e6e71cd1121c2afb5c329aaa58a5b2d9cd45e1999c",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.7.0:L22-L24"
+        },
+        {
+          "path": "docs/versioning.md",
+          "start": 73,
+          "end": 92,
+          "sha256": "9b99615766c841dee2bd956781cf4ee8f3499b5745e6870ffb59fc8afb1af1ec",
+          "kind": "statement",
+          "ref": "docs/versioning.md@v0.7.0:L73-L92"
+        },
+        {
+          "path": "flatbuffers/fbs/term_structure.fbs",
+          "start": 119,
+          "end": 134,
+          "sha256": "ec273084dad4fc0a11d21220a0626ec612738ec7d26f73e68ad44868d2972a44",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.7.0:L119-L134"
+        },
+        {
+          "path": "flatbuffers/fbs/term_structure.fbs",
+          "start": 317,
+          "end": 328,
+          "sha256": "71c9840923afc7f104de6d141e41337f3d9d0e365ea4fc71fc5c62011939fbc4",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.7.0:L317-L328"
+        }
+      ],
+      "gaps": [
+        "Bootstrap accuracy, iteration limits and extrapolation policy are not documented at this tag; the engine uses QuantLib's `PiecewiseYieldCurve` defaults (a bond beyond the last pillar is rejected, see error-codes / the example `fixed_rate_bond_beyond_pillar_request`).",
+        "The pillar dates the engine reports for a bootstrapped curve are the helpers' tenor dates, not necessarily the helper maturity nodes (this server's live finding, CHANGELOG 0.1.1); rebuilding a curve from sampled discount factors at those dates does not reproduce it between nodes."
+      ]
+    },
+    {
+      "slug": "value-curves",
+      "title": "Value curves: zero, discount-factor and forward points",
+      "summary": "A curve given as values rather than par quotes interpolates ONE quantity: zero rates (`InterpolatedZero`), discount factors (`InterpolatedDiscount`) or instantaneous continuously-compounded forwards (`InterpolatedFwd`). The three disagree between nodes for the same market, so which table was pasted matters.",
+      "file": "value-curves.md",
+      "citations": [
+        {
+          "path": "flatbuffers/fbs/term_structure.fbs",
+          "start": 205,
+          "end": 219,
+          "sha256": "7b162e200733879a461bc53f0903a03181af68f4076e30d1957b92ddef63f55a",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.7.0:L205-L219"
+        },
+        {
+          "path": "flatbuffers/fbs/term_structure.fbs",
+          "start": 221,
+          "end": 234,
+          "sha256": "36fdfbce37b40f73e9ea2e1417095b538a037d11f52139101a9f87917285e28d",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.7.0:L221-L234"
+        },
+        {
+          "path": "flatbuffers/fbs/term_structure.fbs",
+          "start": 236,
+          "end": 253,
+          "sha256": "5ec1d295def6f3bc73d41f00dbd48f71875bfefec178663fb20e87faaff9a741",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.7.0:L236-L253"
+        },
+        {
+          "path": "docs/versioning.md",
+          "start": 145,
+          "end": 157,
+          "sha256": "a6bf4724fdb40d797689e484ade1e2cd9c3d367b876dcd0e86b2d4299bcc2b7a",
+          "kind": "statement",
+          "ref": "docs/versioning.md@v0.7.0:L145-L157"
+        },
+        {
+          "path": "flatbuffers/fbs/curve_query.fbs",
+          "start": 24,
+          "end": 42,
+          "sha256": "08fe6b8b28eee88ac76011cd2c3068fd2690dfdad14f1a4adf80c9834febf88a",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/curve_query.fbs@v0.7.0:L24-L42"
+        },
+        {
+          "path": "flatbuffers/fbs/enums.fbs",
+          "start": 37,
+          "end": 45,
+          "sha256": "1740318338fdaa15fa819445ca719583dd580471ad7fd23b96529c9420bdc5c2",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/enums.fbs@v0.7.0:L37-L45"
+        }
+      ],
+      "gaps": [
+        "The engine does not document how a vendor's own curve interpolates; when a pasted table reprices a trade differently from the vendor, interpolation between the pasted nodes is the first hypothesis to test (`reprice_with` on `interpolator`, or paste the other quantity)."
+      ]
+    },
+    {
+      "slug": "settlement-and-cash-settlement",
+      "title": "Swaption settlement type and method",
+      "summary": "`settlement_type` (Physical | Cash) is required. `settlement_method` (PhysicalOTC | PhysicalCleared | CollateralizedCashPrice | ParYieldCurve) has a wire default of PhysicalOTC and is passed straight to QuantLib's `Settlement::Method`; the engine documents no formula of its own.",
+      "file": "settlement-and-cash-settlement.md",
+      "citations": [
+        {
+          "path": "flatbuffers/fbs/swaption.fbs",
+          "start": 10,
+          "end": 27,
+          "sha256": "f54706cf1472cc01d56409580ce7386d977893cc29a3e1267f5a72591b77d89b",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/swaption.fbs@v0.7.0:L10-L27"
+        },
+        {
+          "path": "flatbuffers/fbs/enums.fbs",
+          "start": 232,
+          "end": 236,
+          "sha256": "5af340fd0ca80e492ddab25c50450e1faa0a239ccf6f83a602167dcf97e4e7e8",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/enums.fbs@v0.7.0:L232-L236"
+        },
+        {
+          "path": "flatbuffers/fbs/enums.fbs",
+          "start": 238,
+          "end": 244,
+          "sha256": "5cd0ee1bca1e05f63a61db28f0deb99807da334b4887d7a3d9aac2ade3d83241",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/enums.fbs@v0.7.0:L238-L244"
+        },
+        {
+          "path": "src/common/enum_convert.cpp",
+          "start": 320,
+          "end": 335,
+          "sha256": "4bc632159279ffcaf08ce1433467b792192c85d2023e15a95a4c2fc0b0a99c66",
+          "kind": "statement",
+          "ref": "src/common/enum_convert.cpp@v0.7.0:L320-L335"
+        },
+        {
+          "path": "src/evaluators/swaption_evaluator.cpp",
+          "start": 164,
+          "end": 178,
+          "sha256": "9459195f1263f85664be62cfc30f4a7443bc97f19bb77cce75b116c94956a8e3",
+          "kind": "statement",
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.7.0:L164-L178"
+        },
+        {
+          "path": "flatbuffers/fbs/pricing.fbs",
+          "start": 71,
+          "end": 72,
+          "sha256": "9d6e78792aeac5f75baf7959260a8d4602ded332e503e4f567aa9f8150cf4e00",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.7.0:L71-L72"
+        },
+        {
+          "path": "flatbuffers/fbs/swaption.fbs",
+          "start": 15,
+          "end": 19,
+          "sha256": "ee56349862c70e6fee4f4076818e5796a0d664b0217e0ca2c1f4003898784655",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/swaption.fbs@v0.7.0:L15-L19"
+        }
+      ],
+      "gaps": [
+        "The engine does not document what each cash-settlement method computes; it is QuantLib's semantics (CollateralizedCashPrice discounts the annuity on the discount curve; ParYieldCurve uses the par-yield annuity). Test the effect directly with `reprice_with` on `swaptions[0].swaption.settlement_method`.",
+        "`settlement_method` is the one swaption convention with a wire default; a cash-settled trade must state its method or it is priced as PhysicalOTC."
+      ]
+    },
+    {
+      "slug": "volatility-types",
+      "title": "Volatility types: Normal, Lognormal, ShiftedLognormal",
+      "summary": "Interest-rate vols carry a required `volatility_type`; `displacement` matters only for ShiftedLognormal. Normal vols price through QuantLib's Bachelier formula, (shifted) lognormal through Black with the shift added to strike and forward. Equity / FX vols are always lognormal. Vols are absolute decimals.",
+      "file": "volatility-types.md",
+      "citations": [
+        {
+          "path": "flatbuffers/fbs/enums.fbs",
+          "start": 252,
+          "end": 257,
+          "sha256": "d7595460f6b7c0f3e060d6937b59c9053e559059a7bfa6c790703245325f3053",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/enums.fbs@v0.7.0:L252-L257"
+        },
+        {
+          "path": "flatbuffers/fbs/volatility.fbs",
+          "start": 27,
+          "end": 43,
+          "sha256": "5b8d854607c7848e87b62c1c92342fd90b3689b499bda7e0e2ae2b7d862fe2ca",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/volatility.fbs@v0.7.0:L27-L43"
+        },
+        {
+          "path": "flatbuffers/fbs/volatility.fbs",
+          "start": 45,
+          "end": 55,
+          "sha256": "c94f50b65640ac6fc1af0b118e5f9b0a19aa2baf5d30dc6a9a67ef3acd1766cd",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/volatility.fbs@v0.7.0:L45-L55"
+        },
+        {
+          "path": "src/evaluators/swaption_evaluator.cpp",
+          "start": 635,
+          "end": 650,
+          "sha256": "308179bfd370fd143cf98d3d6384c28bd1b87493424a6990b624f169cd99e9df",
+          "kind": "statement",
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.7.0:L635-L650"
+        },
+        {
+          "path": "src/common/enum_convert.cpp",
+          "start": 552,
+          "end": 563,
+          "sha256": "22e5840fe6277f5d22940ab8b0fa19892425ab419424ddd0a74fa7f0dc56f1c8",
+          "kind": "statement",
+          "ref": "src/common/enum_convert.cpp@v0.7.0:L552-L563"
+        },
+        {
+          "path": "flatbuffers/fbs/swaption_response.fbs",
+          "start": 10,
+          "end": 11,
+          "sha256": "f6eb8416f47885725fea089333054e51c763c1bb9770efec3d84e9a8d6f7725f",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/swaption_response.fbs@v0.7.0:L10-L11"
+        },
+        {
+          "path": "tests/functional/CATALOG.md",
+          "start": 105,
+          "end": 106,
+          "sha256": "e180d90de3313d82b6f848bf975a93c767bfb35278e929780d242fc77ecce24c",
+          "kind": "statement",
+          "ref": "tests/functional/CATALOG.md@v0.7.0:L105-L106"
+        },
+        {
+          "path": "flatbuffers/fbs/volatility.fbs",
+          "start": 34,
+          "end": 39,
+          "sha256": "70ccbb1ad7a0e3a702d49a3b31b4b74f1263d472235dcef0d0eec9775a45c6d6",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/volatility.fbs@v0.7.0:L34-L39"
+        }
+      ],
+      "gaps": [
+        "Vol units are not stated in a schema comment; the catalog's wording (80bp normal = 0.008, 15% lognormal = 0.15 in the example files) is the documented usage: absolute decimals, never percent or bp numbers.",
+        "Normal-to-lognormal conversion is not performed by the engine; a vendor quoting the other type must be re-quoted by the user (or tested with `reprice_with` on `volatility_type` + the matching vol level)."
+      ]
+    },
+    {
+      "slug": "calendars-and-overrides",
+      "title": "Calendars, business-day rules and per-request holiday overrides",
+      "summary": "Every date adjustment uses the calendar and business-day convention the request states (nothing is defaulted). A request may add or remove holidays for a calendar for its own duration via `calendar_overrides`; nothing is stored.",
+      "file": "calendars-and-overrides.md",
+      "citations": [
+        {
+          "path": "flatbuffers/fbs/enums.fbs",
+          "start": 107,
+          "end": 116,
+          "sha256": "523fc48ef47518a812c604dcfef03d3812d806ff923059fff2d38a00483116f9",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/enums.fbs@v0.7.0:L107-L116"
+        },
+        {
+          "path": "flatbuffers/fbs/enums.fbs",
+          "start": 135,
+          "end": 145,
+          "sha256": "e6b30fabbeaf2aa5105075a2943fc0fe063c016a31edd59ff8d033b9b70f2a83",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/enums.fbs@v0.7.0:L135-L145"
+        },
+        {
+          "path": "flatbuffers/fbs/schedule.fbs",
+          "start": 14,
+          "end": 28,
+          "sha256": "f9510dc5e4826a41e154f2cca8b6aef024b3434c53296183aaa63b2ce9eec4bf",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/schedule.fbs@v0.7.0:L14-L28"
+        },
+        {
+          "path": "docs/http-api.md",
+          "start": 77,
+          "end": 98,
+          "sha256": "a0ba2e91d67654b260e684b1105c15139368e350f5de4ec8c209b2b1af9df77f",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.7.0:L77-L98"
+        },
+        {
+          "path": "docs/http-api.md",
+          "start": 143,
+          "end": 155,
+          "sha256": "4f45af60dcc0e30e500515f20ed6662d0ff2f8fcbcbef34482cd6b8f5318e7a1",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.7.0:L143-L155"
+        },
+        {
+          "path": "docs/http-api.md",
+          "start": 157,
+          "end": 177,
+          "sha256": "af7b7cfff6b39842af959aee2ee3a1701e2fffd5b5104f79d8cf9571375ae380",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.7.0:L157-L177"
+        },
+        {
+          "path": "docs/http-api.md",
+          "start": 179,
+          "end": 194,
+          "sha256": "21be8be04d50f997415d5ff61a4563bdcace07f5d5308585dcb352c39933abe6",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.7.0:L179-L194"
+        },
+        {
+          "path": "src/common/calendar_overrides.h",
+          "start": 5,
+          "end": 12,
+          "sha256": "6a4e47ccb7c142d70c564c05fdf4f13fd0f778793c7258ed7d9fd025a634cb7a",
+          "kind": "statement",
+          "ref": "src/common/calendar_overrides.h@v0.7.0:L5-L12"
+        },
+        {
+          "path": "flatbuffers/fbs/pricing.fbs",
+          "start": 84,
+          "end": 86,
+          "sha256": "6af3460438102a129e4247f923b896adc5ca4b6f56673ace02e2067c2c9f0adb",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.7.0:L84-L86"
+        }
+      ],
+      "gaps": []
+    },
+    {
+      "slug": "day-counters-and-compounding",
+      "title": "Day counters, compounding and yield conventions",
+      "summary": "Day counters and compounding are always what the request states: legs, indices, curves, zero points and bond yields each carry their own. Zero rates sampled from a curve default to the curve's day counter with continuous compounding unless the query says otherwise.",
+      "file": "day-counters-and-compounding.md",
+      "citations": [
+        {
+          "path": "flatbuffers/fbs/enums.fbs",
+          "start": 3,
+          "end": 20,
+          "sha256": "80f1bd0bf91a281ef2f5de45cb5bde28ad63fcb522b09ab245922f4c6e9221e8",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/enums.fbs@v0.7.0:L3-L20"
+        },
+        {
+          "path": "flatbuffers/fbs/enums.fbs",
+          "start": 183,
+          "end": 189,
+          "sha256": "1159a9e4597b5dacf033f9075c9365116c6a9607201b6405d0a03972c633f3f1",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/enums.fbs@v0.7.0:L183-L189"
+        },
+        {
+          "path": "flatbuffers/fbs/common.fbs",
+          "start": 14,
+          "end": 19,
+          "sha256": "0b56ed6309bf5e6cfa9975de21f565f403df5ca9599957cd6713269eede94f02",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/common.fbs@v0.7.0:L14-L19"
+        },
+        {
+          "path": "src/evaluators/fixed_rate_bond_evaluator.cpp",
+          "start": 89,
+          "end": 89,
+          "sha256": "00f2ed85f91d59597fa0f8abcb4fc183d8f7f3eba073e7a4042b92efbbccda07",
+          "kind": "statement",
+          "ref": "src/evaluators/fixed_rate_bond_evaluator.cpp@v0.7.0:L89-L89"
+        },
+        {
+          "path": "flatbuffers/fbs/term_structure.fbs",
+          "start": 215,
+          "end": 218,
+          "sha256": "df1274da4658fbbacdb0ad1523f4f086f8cd1cdf4bee30466738d3d818941994",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.7.0:L215-L218"
+        },
+        {
+          "path": "flatbuffers/fbs/curve_query.fbs",
+          "start": 25,
+          "end": 30,
+          "sha256": "7274fe6435862f8f50076f7afbab6f3d048cdee7b964c31f73e55ef2ddeb71d6",
+          "kind": "statement",
+          "ref": "flatbuffers/fbs/curve_query.fbs@v0.7.0:L25-L30"
+        },
+        {
+          "path": "docs/http-api.md",
+          "start": 16,
+          "end": 21,
+          "sha256": "5e9e3b9d71f4b8b90be0b8b1361589a6dfa40bdd84533f1b764d86ee7981704c",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.7.0:L16-L21"
+        },
+        {
+          "path": "docs/versioning.md",
+          "start": 103,
+          "end": 106,
+          "sha256": "148b6da45af0b01cc239db3cc4bd6995a355afa0b718d6e1a61ff48d004e67fb",
+          "kind": "statement",
+          "ref": "docs/versioning.md@v0.7.0:L103-L106"
+        },
+        {
+          "path": "docs/versioning.md",
+          "start": 189,
+          "end": 191,
+          "sha256": "a1fbd6f11eca3a17f22c935632bd7e6d6a6356c6bda66f89ee075c448f9b34be",
+          "kind": "statement",
+          "ref": "docs/versioning.md@v0.7.0:L189-L191"
+        },
+        {
+          "path": "flatbuffers/fbs/curve_query.fbs",
+          "start": 46,
+          "end": 53,
+          "sha256": "59f4acbc8793624601e3c5bc7ea0c05664a172ea0d776251608f7e1d30769670",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/curve_query.fbs@v0.7.0:L46-L53"
+        }
+      ],
+      "gaps": [
+        "The engine does not restate QuantLib's day-count formulas; the enum names are QuantLib's classes of the same name."
+      ]
+    },
+    {
+      "slug": "error-codes",
+      "title": "Error codes and what they mean",
+      "summary": "400 = the request is wrong (missing field, bad date, unsupported combination); 422 = well-formed but unpriceable (a QuantLib-level failure); 404 = a referenced id is not in the request's pricing block. Retrying without changing the payload never helps. The `error` field carries the cause.",
+      "file": "error-codes.md",
+      "citations": [
+        {
+          "path": "docs/http-api.md",
+          "start": 7,
+          "end": 24,
+          "sha256": "4c5005e36d797e4f64aa8e060bc80f40d223bf200b8af3de7ddeb40e004d09ff",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.7.0:L7-L24"
+        },
+        {
+          "path": "docs/http-api.md",
+          "start": 26,
+          "end": 48,
+          "sha256": "843909f5c32d4a8e38747b28c3bc65859c091c4aa9d70d6d650cfff1a465ca57",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.7.0:L26-L48"
+        },
+        {
+          "path": "docs/http-api.md",
+          "start": 50,
+          "end": 65,
+          "sha256": "8675cf9d3e0c287f1a8064363f50e3504acbf66abe7b026f0131c991d0ce773c",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.7.0:L50-L65"
+        },
+        {
+          "path": "docs/versioning.md",
+          "start": 159,
+          "end": 171,
+          "sha256": "dfe5f3934290daf5e68698dba4581502d890f3131284e3ae482b6675abfc6d88",
+          "kind": "statement",
+          "ref": "docs/versioning.md@v0.7.0:L159-L171"
+        },
+        {
+          "path": "docs/http-api.md",
+          "start": 67,
+          "end": 75,
+          "sha256": "12d8740c7a4cb561db968ef3ba95acdb0896b9ed3d449ceffc5739b82be77cd8",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.7.0:L67-L75"
+        }
+      ],
+      "gaps": []
+    }
+  ]
+}

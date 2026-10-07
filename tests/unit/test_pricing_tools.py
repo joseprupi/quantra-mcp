@@ -464,7 +464,7 @@ async def test_yoy_inflation_cap_floor_rebuilds_its_fixture(pricing_app: Any) ->
 
 
 @pytest.mark.parametrize("fixture", sorted(USD_OIS_SWAPTION_FIXTURES))
-async def test_usd_ois_swaption_rebuilds_the_bloomberg_fixtures(
+async def test_usd_ois_swaption_rebuilds_the_engine_ois_fixtures(
     pricing_app: Any, backend: FakeBackend, fixture: str
 ) -> None:
     """A swaption on a USD SOFR OIS underlying from the USD_SOFR_OIS preset: the
@@ -478,7 +478,7 @@ async def test_usd_ois_swaption_rebuilds_the_bloomberg_fixtures(
     assert r["request"] == fixture_body(fixture)
     assert r["request"]["swaptions"][0]["swaption"]["underlying_type"] == "OisSwap"
     assert "payment_lag" in r["request"]["swaptions"][0]["swaption"]["underlying"]["overnight_leg"]
-    assert any("trades.swaption" in n and "bloomberg" in n.lower() for n in r["notes"])
+    assert any("trades.swaption" in n and "swaption_ois" in n.lower() for n in r["notes"])
     _golden(f"price_swaption.{fixture}", r["request"])
     assert live["ok"], live
     assert len(live["date_resolution"]) == 2  # spot (exercise + 2 bd) and the 10Y end

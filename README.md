@@ -64,7 +64,7 @@ limits described under [Security](#security-and-limits).
 ### For business users (claude.ai)
 
 You do not need to know any of the tool names below. Connect the server (above),
-then talk about the trade: paste a Bloomberg SWPM / SWPM-OV screenshot, a term
+then talk about the trade: paste a screenshot (a Bloomberg SWPM screen), a term
 sheet or a ticket and ask "can we price this, and what market data do you need?".
 The assistant answers in trade terms: whether it can be priced, which market
 data is missing and how to paste it, the conventions it will assume, then the
@@ -86,10 +86,7 @@ What to paste when asked:
 What you get: the engine's NPV / premium and fair rate, every convention that was
 assumed and where it comes from, the dates the engine resolved, the difference to
 your screen with its likely causes, and, on request, the complete request that was
-sent so anyone can replay it. The USD SOFR OIS conventions reproduce the engine's own
-[Bloomberg SWPM-OV swaption comparison](https://quantra.io/docs/bloomberg-swaption-comparison)
-request exactly (1M x 10Y payer, normal vol, cash settled; engine premium
-10,585.40 on the shipped zero-rate curve against Bloomberg's 10,359.49).
+sent so anyone can replay it.
 
 Project instructions you can paste into a claude.ai Project that has the
 connector enabled:

@@ -9,6 +9,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ResourceNotFoundError
 
 from quantra_mcp import examples_catalog as cat
+from quantra_mcp import methodology
 from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.presets.registry import PresetError, get_preset, list_presets
 from quantra_mcp.schema.loader import SpecError, load_spec, normalize_endpoint, pin
@@ -185,6 +186,43 @@ def register(app: MCPServer) -> None:
         if name in cat.categories():
             return {"category": name, "examples": cat.list_examples(category=name)}
         return load_example(name)
+
+    @app.resource(
+        "quantra://methodology",
+        name="methodology-index",
+        description=(
+            "How the engine computes what it returns: one page per topic (npv, fair-rate, "
+            "greeks-bump-and-reprice, theta, curve-bootstrap, value-curves, "
+            "settlement-and-cash-settlement, volatility-types, calendars-and-overrides, "
+            "day-counters-and-compounding, error-codes), generated from the engine's own docs "
+            "and source at the pin with path@tag:line citations."
+        ),
+        mime_type="application/json",
+    )
+    def methodology_index() -> dict[str, Any]:
+        index = methodology.load_index()
+        return {
+            "engine_tag": index["engine_tag"],
+            "engine_sha": index["engine_sha"],
+            "topics": methodology.topics(),
+            "metric_topics": index["metric_topics"],
+        }
+
+    @app.resource(
+        "quantra://methodology/{topic}",
+        name="methodology-page",
+        description=(
+            "One methodology page as markdown, e.g. quantra://methodology/theta: plain-language "
+            "summary, the engine's own excerpts each cited path@tag:Lstart-Lend, the request "
+            "fields that control it, and what the engine does not document."
+        ),
+        mime_type="text/markdown",
+    )
+    def methodology_page(topic: str) -> str:
+        try:
+            return str(methodology.get_topic(topic)["markdown"])
+        except LocalValidationError as exc:
+            raise ResourceNotFoundError(exc.error) from None
 
     @app.resource(
         "quantra://presets",

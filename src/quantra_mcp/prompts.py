@@ -129,9 +129,9 @@ Goal: find a complete, verified pricing example for a product and run or adapt i
 def _price_from_screen(product: str = "") -> str:
     hint = f" The user says it is a {product}." if product.strip() else ""
     return f"""\
-Goal: the user pasted a screenshot or a ticket (a Bloomberg SWPM / SWPM-OV screen, a
-term sheet, a confirmation) and asks whether this trade can be priced here and what
-market data is needed.{hint} Work like a desk quant talking to a trader.
+Goal: the user pasted a screenshot or a ticket (a Bloomberg SWPM screen, a term sheet,
+a confirmation) and asks whether this trade can be priced here and what market data is
+needed.{hint} Work like a desk quant talking to a trader.
 
 {VOICE}
 Step 1, read the ticket. From the image or text, write down in trade terms: product and
@@ -151,8 +151,8 @@ Step 2, list the market data that is missing, in a form the user can paste:
   never available on this side; the user must paste them. Ask for either the discount
   factors from the Curves tab as `date, DF` rows (or `tenor, DF`), the zero rates as
   `date, zero %`, or the par quotes of the strip as `tenor, rate %`. Say which one is
-  closest to the screen (for a Bloomberg swaption screen: the discount factors of the
-  discount curve, and of the forward curve if it is a different one).
+  closest to what the screen shows; if the discount and forward curves differ, both
+  are needed.
 - The volatility: the normal vol in bp (or lognormal %) at the trade's expiry x tenor,
   or the ATM matrix if a surface is to be built.
 - Anything the screen implies but does not show (payment lag, fixing lag, day counts).
@@ -162,8 +162,7 @@ Step 3, confirm the conventions before pricing: list every convention you will a
 (fixed and floating leg frequency and day count, business day rule, calendar,
 settlement lag, payment lag, compounding of the overnight index, vol type and shift,
 cash settlement method) and where they come from (get_preset(id) gives the source of
-each; the USD SOFR OIS set reproduces the engine's Bloomberg SWPM-OV comparison
-fixture). Ask the user to confirm or correct the ones the screen shows.
+each). Ask the user to confirm or correct the ones the screen shows.
 
 Step 4, build the market from what was pasted:
 - discount factors: curve_from_pasted_table(text, id, kind="discount", preset=<the
@@ -181,10 +180,11 @@ Step 4, build the market from what was pasted:
 Step 5, price with the product's tool (price_swaption, price_vanilla_swap,
 price_ois_swap, price_cap_floor, ...) with market={{"session": name}} or
 {{"curves": [...], "indices": [...]}}, the preset for the currency, the trade economics
-and the dates from the ticket. For a swaption on a USD SOFR OIS underlying use
-preset="USD_SOFR_OIS" with underlying_type="OisSwap", settlement_type="Cash" and the
-settlement_method the screen shows (CollateralizedCashPrice or ParYieldCurve); the
-underlying's effective date may be "spot" (= expiry + the preset's settlement days).
+and the dates from the ticket. For a swaption on an overnight-index underlying use the
+currency's OIS preset with underlying_type="OisSwap"; give the settlement_type and, for
+cash settlement, the settlement_method the screen shows (CollateralizedCashPrice or
+ParYieldCurve); the underlying's effective date may be "spot" (= expiry + the preset's
+settlement days).
 If `ok` is false, explain the engine's `error` in plain words and what to paste to fix it.
 
 Step 6, reconcile. Put the engine's number next to the number on the screen (premium
@@ -248,7 +248,7 @@ def register(app: MCPServer) -> None:
         name="price-from-screen",
         title="Price a trade from a screenshot or ticket",
         description=(
-            "From a pasted Bloomberg screen or ticket: say whether it can be priced, list the "
+            "From a pasted pricing screen or ticket: say whether it can be priced, list the "
             "missing market data in paste-able form, confirm conventions, build the curve "
             "from pasted discount factors or quotes, price, and reconcile against the screen."
         ),

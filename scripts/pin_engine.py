@@ -15,7 +15,11 @@ and writes ``src/quantra_mcp/schema/PIN`` (``<tag> <commit sha>``),
 enum, so tool arguments are typed with the engine's own values) and
 ``src/quantra_mcp/examples/INDEX.json`` (one row per vendored example: name,
 category, endpoint, title / description / reference value parsed from the
-engine's functional manifest and CATALOG.md when the example is cataloged).
+engine's functional manifest and CATALOG.md when the example is cataloged),
+and the methodology pages ``src/quantra_mcp/docs/methodology/*.md`` +
+``INDEX.json`` (``methodology_gen.py`` driven by the curated anchors in
+``methodology_rules.py``: every statement is an excerpt of the engine tree at
+the tag with a ``path@tag:Lstart-Lend`` citation).
 
 The endpoint of a cataloged example comes from the manifest's ``product`` key
 (the engine's product catalog maps it to the HTTP route); an uncataloged
@@ -41,6 +45,9 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import methodology_gen
 
 ROOT = Path(__file__).resolve().parent.parent
 PKG = ROOT / "src" / "quantra_mcp"
@@ -444,6 +451,13 @@ def main(argv: list[str] | None = None) -> int:
         "examples": rows,
     }
     (EXAMPLES_DIR / "INDEX.json").write_text(json.dumps(index, indent=2) + "\n")
+    methodology = methodology_gen.generate(repo, tag, sha)
+    print(
+        f"methodology: {len(methodology['topics'])} topics, "
+        f"{sum(len(t['citations']) for t in methodology['topics'])} citations -> "
+        f"{methodology_gen.OUT_DIR.relative_to(ROOT)}",
+        file=sys.stderr,
+    )
     cataloged = sum(1 for r in rows if r.get("catalog_id"))
     print(
         f"examples: {len(rows)} rows ({cataloged} cataloged, "

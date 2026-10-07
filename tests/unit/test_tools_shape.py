@@ -74,6 +74,7 @@ async def test_lists_tools_and_resources(app: Any) -> None:
             "key_rate_ladder",
             "scenario",
             "fair_rate",
+            "explain_method",
         }
         uris = {str(r.uri) for r in (await c.list_resources()).resources}
         assert {
@@ -83,6 +84,7 @@ async def test_lists_tools_and_resources(app: Any) -> None:
             "quantra://pin",
             "quantra://presets",
             "quantra://examples",
+            "quantra://methodology",
         } <= uris
         prompts = {p.name for p in (await c.list_prompts()).prompts}
         assert prompts == {
@@ -99,6 +101,7 @@ async def test_lists_tools_and_resources(app: Any) -> None:
             "quantra://examples/{name}",
             "quantra://examples/{category}/{name}",
             "quantra://presets/{id}",
+            "quantra://methodology/{topic}",
         }
 
 

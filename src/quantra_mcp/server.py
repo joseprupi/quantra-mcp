@@ -18,7 +18,16 @@ from quantra_mcp.errors import EngineError, TransportError
 from quantra_mcp.hosted import AccessLog, build_http_app
 from quantra_mcp.schema.loader import load_spec, pin
 from quantra_mcp.session import SessionStore
-from quantra_mcp.tools import analytics, calendar, curves, discovery, examples, pricing, raw
+from quantra_mcp.tools import (
+    analytics,
+    calendar,
+    curves,
+    discovery,
+    examples,
+    explain,
+    pricing,
+    raw,
+)
 from quantra_mcp.tools import session as session_tools
 
 log = logging.getLogger("quantra_mcp")
@@ -62,8 +71,11 @@ How to work with a business user (a trader, a risk manager, a treasurer):
   supply or change; never alter an input to make a number match.
 - Market conventions come in named sets per currency and index (USD SOFR OIS, EUR
   Euribor 6M / 3M, EUR ESTR OIS, GBP SONIA, and trade-only sets for bonds, CDS, equity
-  and inflation). The USD SOFR OIS set reproduces the engine's own Bloomberg SWPM-OV
-  swaption comparison request (1M x 10Y payer, normal vol, cash settled).
+  and inflation); each field carries its source.
+- "How is this computed?" is answered from explain_method (quantra://methodology/*):
+  the engine's own documentation and source at the pinned tag, each statement with its
+  path@tag:line citation. Where the page says the engine does not document something,
+  say so. Never claim access to vendor data or vendor methodology.
 
 For developers (the technical map): quantra_meta reports the engine version and
 products; list_endpoints / engine_schema / list_enums describe request shapes;
@@ -77,7 +89,8 @@ build_query -> bootstrap_curve; session_put stores a built curve so later calls 
 whose trade block supplies every convention, and the trade economics; "spot" and
 tenor dates are resolved by the engine's /calendar-advance and reported in
 `date_resolution`. Analytics by composition: swap_dv01, key_rate_ladder, scenario,
-fair_rate (each reprice's full result is in `calls`). Every result echoes the exact
+fair_rate (each reprice's full result is in `calls`). explain_method(topic) returns the
+cited methodology page for a metric or mechanism. Every result echoes the exact
 request sent (`request`) and the engine body verbatim (`response`); on an engine error
 `ok` is false and `error` is the engine's text (400 = request wrong, 422 = well-formed
 but unpriceable). The engine does not default omitted fields; every convention a
@@ -199,6 +212,7 @@ def build_server(
     pricing.register(app, the_backend, the_store)
     analytics.register(app, the_backend, the_store, settings.max_concurrency)
     examples.register(app)
+    explain.register(app)
     session_tools.register(app, the_store)
     resources.register(app)
     prompts.register(app)

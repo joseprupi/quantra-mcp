@@ -454,7 +454,7 @@ def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
         frequency: Frequency | None = None,
         interpolator: Interpolator | None = None,
     ) -> ToolResult:
-        """A curve from a table the user pasted (Bloomberg Curves tab, a spreadsheet,
+        """A curve from a table the user pasted (a vendor curve screen, a spreadsheet,
         a ticket): parses it and calls build_value_curve (discount / zero) or
         build_curve (par quotes). No engine call; no arithmetic on the values.
 

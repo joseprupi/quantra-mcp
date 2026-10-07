@@ -38,7 +38,7 @@
   },
   "field_provenance": {
     "trades.ois_swap": "the SOFR post's OIS example (sofr-ois-swap-request.json: payment lag 2, Annual/Actual360/MF both legs on UnitedStatesGovernmentBond, spot T+2); the same conventions with payment_lag 0 are engine fixture (quantraserver v0.7.0) examples/data/ir_swaps/ois_usd_3y_payer_sofr.json",
-    "trades.swaption": "engine fixtures (quantraserver v0.7.0) examples/data/swaption_ois_bbg_zerorate_request.json and examples/data/swaption_ois_request.json (1M x 10Y payer on USD SOFR OIS, Bachelier normal vol 102.67bp, Cash CollateralizedCashPrice / ParYieldCurve, swap_index_id USD_SOFR_OIS, SwaptionVolSpec base UnitedStatesGovernmentBond/MF/Actual365Fixed, exercise + 2 business days to the underlying's effective date; underlying = trades.ois_swap) + quantra.io/docs/bloomberg-swaption-comparison (SWPM-OV 2024-08-14, Bloomberg premium 10,359.49). physical_settlement_method PhysicalOTC is market standard (ISDA), not from an in-repo source (both fixtures are cash settled)"
+    "trades.swaption": "engine fixtures (quantraserver v0.7.0) examples/data/swaption_ois_bbg_zerorate_request.json and examples/data/swaption_ois_request.json (1M x 10Y payer on USD SOFR OIS, Bachelier normal vol 102.67bp, Cash CollateralizedCashPrice / ParYieldCurve, swap_index_id USD_SOFR_OIS, SwaptionVolSpec base UnitedStatesGovernmentBond/MF/Actual365Fixed, exercise + 2 business days to the underlying's effective date; underlying = trades.ois_swap). physical_settlement_method PhysicalOTC is market standard (ISDA), not from an in-repo source (both fixtures are cash settled)"
   },
   "trades": {
     "ois_swap": {
