@@ -6,9 +6,9 @@ from quantra_mcp.schema.loader import SpecError, load_spec, normalize_endpoint, 
 
 def test_pin_matches_spec_version() -> None:
     p = pin()
-    assert p.tag == "v0.7.0"
+    assert p.tag == "v0.8.2"
     assert len(p.sha) == 40
-    assert load_spec().api_version == p.version == "0.7.0"
+    assert load_spec().api_version == p.version == "0.8.2"
 
 
 def test_24_post_endpoints_with_summaries() -> None:

@@ -25,7 +25,7 @@ the image, the PyPI package and the GitHub Release. See [RELEASING.md](RELEASING
 Live acceptance (needs a real engine; the CI `live` job does the same):
 
 ```bash
-docker run -d --name quantra-mcp-engine -p 18087:8080 ghcr.io/joseprupi/quantra-server:0.7.0
+docker run -d --name quantra-mcp-engine -p 18087:8080 ghcr.io/joseprupi/quantra-server:0.8.2
 QUANTRA_ENGINE_URL=http://localhost:18087 uv run pytest tests/live -m live
 QUANTRA_ENGINE_URL=http://localhost:18087 uv run python scripts/live_check.py
 ```
@@ -35,7 +35,7 @@ byte-equal to a direct HTTP replay of its echoed `request`; its M2 section
 builds the SOFR strip through `build_curve` and asserts the request is
 JSON-equal to the gold example and the 50Y DF matches the oracle, round-trips
 a discount value curve, bootstraps every preset (monotone DFs) and resolves a
-session reference; its M3 section sweeps all 222 vendored examples through
+session reference; its M3 section sweeps all 223 vendored examples through
 `engine_request` (status as indexed, reference values matched) and runs every
 pricing tool against its mapped fixture (built request JSON-equal, engine
 number equal to the oracle). `--sweep-table` prints one row per example.
@@ -62,7 +62,7 @@ request from an engine checkout at a tag, regenerates the enums and
 `examples/INDEX.json`, writes `PIN`):
 
 ```bash
-uv run python scripts/pin_engine.py --engine-repo /path/to/quantraserver --tag v0.7.0
+uv run python scripts/pin_engine.py --engine-repo /path/to/quantraserver --tag v0.8.2
 ```
 
 ## Layout
@@ -86,7 +86,7 @@ src/quantra_mcp/
   prompts.py         price-a-swap, bootstrap-from-strip, holiday-check, explore-examples,
                      price-from-screen, reconcile-external-price
   examples_catalog.py  INDEX.json access + oracle checks
-  docs/, examples/   vendored engine docs, catalog and the 222 example requests;
+  docs/, examples/   vendored engine docs, catalog and the 223 example requests;
                      docs/methodology/ = the generated cited pages + INDEX.json
 scripts/             pin_engine.py (+ methodology_gen.py, methodology_rules.py), live_check.py, parity_ql.py
 tests/               unit, contract (vendored spec), live (real engine), golden/ requests

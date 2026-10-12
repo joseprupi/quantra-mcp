@@ -29,7 +29,7 @@ are not from the engine repository and are kept as they are.
 
 Usage::
 
-    uv run python scripts/pin_engine.py --engine-repo /path/to/quantraserver --tag v0.7.0
+    uv run python scripts/pin_engine.py --engine-repo /path/to/quantraserver --tag v0.8.2
 """
 
 from __future__ import annotations

@@ -60,7 +60,7 @@ class SwapBackend(FakeBackend):
                     }
                 ]
             },
-            {"x-quantra-api-version": "0.7.0", "x-request-id": request_id or ""},
+            {"x-quantra-api-version": "0.8.2", "x-request-id": request_id or ""},
         )
 
 

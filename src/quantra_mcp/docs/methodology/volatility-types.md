@@ -1,6 +1,6 @@
 # Volatility types: Normal, Lognormal, ShiftedLognormal
 
-_Generated from the engine's documentation and source at `v0.7.0` (`ab4dd9b50fca`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.7.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.8.2` (`7b26e53ae084`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.8.2/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 Interest-rate vols carry a required `volatility_type`; `displacement` matters only for ShiftedLognormal. Normal vols price through QuantLib's Bachelier formula, (shifted) lognormal through Black with the shift added to strike and forward. Equity / FX vols are always lognormal. Vols are absolute decimals.
 
@@ -17,9 +17,9 @@ enum VolatilityType : byte {
 }
 ````
 
-Source: `flatbuffers/fbs/enums.fbs@v0.7.0:L252-L257`
+Source: `flatbuffers/fbs/enums.fbs@v0.8.2:L252-L257`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/enums.fbs#L252-L257>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/enums.fbs#L252-L257>
 
 ### 2. The IR vol base: `volatility_type` is presence-required (an omitted type is a 400, never Normal by default); `displacement` only for ShiftedLognormal.
 
@@ -43,9 +43,9 @@ table IrVolBaseSpec {
 }
 ````
 
-Source: `flatbuffers/fbs/volatility.fbs@v0.7.0:L27-L43`
+Source: `flatbuffers/fbs/volatility.fbs@v0.8.2:L27-L43`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/volatility.fbs#L27-L43>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/volatility.fbs#L27-L43>
 
 ### 3. Equity / FX vol base: always lognormal, no displacement.
 
@@ -63,66 +63,64 @@ table BlackVolBaseSpec {
 }
 ````
 
-Source: `flatbuffers/fbs/volatility.fbs@v0.7.0:L45-L55`
+Source: `flatbuffers/fbs/volatility.fbs@v0.8.2:L45-L55`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/volatility.fbs#L45-L55>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/volatility.fbs#L45-L55>
 
 ### 4. Analytic swaption greeks: Normal => `BachelierCalculator`; otherwise `BlackCalculator` on (strike + displacement, forward + displacement).
 
 ````cpp
                 if (volEntry.qlVolType == QuantLib::Normal) {
                     QuantLib::BachelierCalculator calc(
-                        optType, strike, row.atmForward, stdDev, row.annuity);
-                    row.delta = calc.deltaForward();
-                    row.vega = calc.vega(timeToExpiry);
-                    row.gamma = calc.gammaForward();
-                    row.theta = calc.theta(row.atmForward, timeToExpiry);
+                        optType, strike, *row.atmForward, stdDev, 1.0);
+                    row.delta = annuity * calc.deltaForward() * bp;
+                    row.gamma = annuity * calc.gammaForward() * bp * bp;
+                    row.vega = annuity * calc.vega(timeToExpiry) * bp;
+                    row.theta = annuity * calc.theta(*row.atmForward, timeToExpiry) / 365.0;
                 } else {
                     const double displacement = volEntry.displacement;
+                    const double shiftedForward = *row.atmForward + displacement;
                     QuantLib::BlackCalculator calc(
-                        optType, strike + displacement, row.atmForward + displacement,
-                        stdDev, row.annuity);
-                    row.delta = calc.deltaForward();
-                    row.vega = calc.vega(timeToExpiry);
-                    row.gamma = calc.gammaForward();
-                    row.theta = calc.theta(row.atmForward + displacement, timeToExpiry);
+                        optType, strike + displacement, shiftedForward, stdDev, 1.0);
+                    row.delta = annuity * calc.deltaForward() * bp;
+                    row.gamma = annuity * calc.gammaForward() * bp * bp;
+                    row.vega = annuity * calc.vega(timeToExpiry) * bp;
+                    row.theta = annuity * calc.theta(shiftedForward, timeToExpiry) / 365.0;
 ````
 
-Source: `src/evaluators/swaption_evaluator.cpp@v0.7.0:L635-L650`
+Source: `src/evaluators/swaption_evaluator.cpp@v0.8.2:L661-L676`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/evaluators/swaption_evaluator.cpp#L635-L650>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/swaption_evaluator.cpp#L661-L676>
 
 ### 5. Reporting back: a QuantLib lognormal vol with a non-zero displacement is labelled ShiftedLognormal.
 
 ````cpp
-quantra::enums::VolatilityType VolatilityTypeToFb(QuantLib::VolatilityType type, double displacement)
-{
-    if (type == QuantLib::Normal)
-    {
+quantra::enums::VolatilityType VolatilityTypeToFb(
+    QuantLib::VolatilityType type, double displacement) {
+    if (type == QuantLib::Normal) {
         return quantra::enums::VolatilityType_Normal;
     }
-    if (displacement != 0.0)
-    {
+    if (displacement != 0.0) {
         return quantra::enums::VolatilityType_ShiftedLognormal;
     }
     return quantra::enums::VolatilityType_Lognormal;
 }
 ````
 
-Source: `src/common/enum_convert.cpp@v0.7.0:L552-L563`
+Source: `src/common/enum_convert.cpp@v0.8.2:L386-L395`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/src/common/enum_convert.cpp#L552-L563>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/common/enum_convert.cpp#L386-L395>
 
 ### 6. Response: `used_volatility` is the vol actually queried from the surface; `implied_volatility` may be best-effort for non-constant surfaces.
 
 ````text
     /// Implied volatility reported by the engine. For non-constant vol setups this may be a best-effort value.
-    implied_volatility:double;
+    /// Absent when the engine provides none.
 ````
 
-Source: `flatbuffers/fbs/swaption_response.fbs@v0.7.0:L10-L11`
+Source: `flatbuffers/fbs/swaption_response.fbs@v0.8.2:L10-L11`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/swaption_response.fbs#L10-L11>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/swaption_response.fbs#L10-L11>
 
 ### 7. Units as the engine's own catalog states them: a flat 80bp normal vol, a 15% shifted-lognormal vol with a 2% displacement.
 
@@ -131,9 +129,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/
 | **EUR 5Y cap on shifted-lognormal vols (2% shift)**<br><sub>The baseline 5Y quarterly Euribor 3M cap priced with the shifted Black model: a flat 15% shifted-lognormal optionlet vol with a 2% displacement, the standard quoting convention from the negative-rate era. Exercises the ShiftedLognormal vol type and a non-zero displacement flowing into the Black engine.</sub> | `cap`, `shifted Black`, `displacement 2%`, `shifted-lognormal vol 15%`, `Euribor3M` | [cap_eur_5y_shifted_black_displacement_2pct.json](../../examples/data/cap_floor/cap_eur_5y_shifted_black_displacement_2pct.json) | 18,540.66 |
 ````
 
-Source: `tests/functional/CATALOG.md@v0.7.0:L105-L106`
+Source: `tests/functional/CATALOG.md@v0.8.2:L105-L106`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/tests/functional/CATALOG.md#L105-L106>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/tests/functional/CATALOG.md#L105-L106>
 
 ## Request fields that control it
 
@@ -148,11 +146,11 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/tests/functional
     displacement:double = 0.0;
 ````
 
-Source: `flatbuffers/fbs/volatility.fbs@v0.7.0:L34-L39`
+Source: `flatbuffers/fbs/volatility.fbs@v0.8.2:L34-L39`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.7.0/flatbuffers/fbs/volatility.fbs#L34-L39>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/volatility.fbs#L34-L39>
 
-## Not documented in engine v0.7.0
+## Not documented in engine v0.8.2
 
 - Vol units are not stated in a schema comment; the catalog's wording (80bp normal = 0.008, 15% lognormal = 0.15 in the example files) is the documented usage: absolute decimals, never percent or bp numbers.
 - Normal-to-lognormal conversion is not performed by the engine; a vendor quoting the other type must be re-quoted by the user (or tested with `reprice_with` on `volatility_type` + the matching vol level).

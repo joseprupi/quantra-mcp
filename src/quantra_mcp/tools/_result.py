@@ -4,7 +4,7 @@ Success::
 
     {"ok": true, "endpoint": "/calendar-holidays", "request": {...sent...},
      "response": {...engine body verbatim...}, "summary": {...selection...},
-     "engine": {"api_version": "0.7.0", "request_id": "qmcp-..."}}
+     "engine": {"api_version": "0.8.2", "request_id": "qmcp-..."}}
 
 Engine error (non-2xx)::
 

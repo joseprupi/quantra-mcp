@@ -157,4 +157,4 @@ async def test_meta_api_version_falls_back_to_the_body() -> None:
     app = build_server(Settings(engine_url="http://fake"), backend=HeaderlessBackend())
     async with Client(app) as c:
         meta = structured(await c.call_tool("quantra_meta", {}))
-    assert meta["engine"]["api_version"] == "0.7.0"  # from the body's openapi_version
+    assert meta["engine"]["api_version"] == "0.8.2"  # from the body's openapi_version

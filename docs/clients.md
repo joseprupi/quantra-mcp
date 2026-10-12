@@ -10,7 +10,7 @@ variables are in [configuration.md](configuration.md); the tools in
 One line, no account:
 
 ```bash
-docker run -d --name quantra-engine -p 8080:8080 ghcr.io/joseprupi/quantra-server:0.7.0
+docker run -d --name quantra-engine -p 8080:8080 ghcr.io/joseprupi/quantra-server:0.8.2
 curl http://localhost:8080/health   # {"status":"healthy"}
 ```
 

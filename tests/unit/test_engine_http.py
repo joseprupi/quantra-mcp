@@ -23,7 +23,7 @@ async def test_post_sends_json_and_request_id_and_reads_headers() -> None:
         return httpx.Response(
             200,
             json={"dates": []},
-            headers={"X-Quantra-Api-Version": "0.7.0", "X-Request-Id": "abc"},
+            headers={"X-Quantra-Api-Version": "0.8.2", "X-Request-Id": "abc"},
         )
 
     b = _backend(handler)
@@ -36,7 +36,7 @@ async def test_post_sends_json_and_request_id_and_reads_headers() -> None:
         "body": {"calendar": "TARGET"},
     }
     assert r.status == 200 and r.body == {"dates": []}
-    assert r.api_version == "0.7.0" and r.request_id == "abc"
+    assert r.api_version == "0.8.2" and r.request_id == "abc"
     await b.aclose()
 
 
@@ -49,7 +49,7 @@ async def test_non_2xx_raises_engine_error_verbatim() -> None:
                 "code": 3,
                 "message": "curve not bootstrappable",
             },
-            headers={"X-Quantra-Api-Version": "0.7.0"},
+            headers={"X-Quantra-Api-Version": "0.8.2"},
         )
 
     b = _backend(handler)
@@ -58,7 +58,7 @@ async def test_non_2xx_raises_engine_error_verbatim() -> None:
     assert exc.value.status == 422
     assert exc.value.error == "curve not bootstrappable"
     assert exc.value.body["code"] == 3
-    assert exc.value.headers["x-quantra-api-version"] == "0.7.0"
+    assert exc.value.headers["x-quantra-api-version"] == "0.8.2"
 
 
 async def test_non_json_error_body_is_kept_as_text() -> None:

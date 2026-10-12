@@ -15,7 +15,7 @@ invent numbers, ask instead.
 """
 
 EXAMPLE_SHAPE_RULE = """\
-The 222 vendored engine examples are request-SHAPE references only. For a trade the user
+The 223 vendored engine examples are request-SHAPE references only. For a trade the user
 brought, the market data MUST come from the user. Never reuse an example's market data
 for the user's trade, and never say "the engine already ships this trade". An example's
 own data runs only when the user explicitly asks for that example, and is reported as the

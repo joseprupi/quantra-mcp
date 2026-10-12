@@ -26,6 +26,118 @@ first release that promises wire stability.
 3. Create tag `vX.Y.Z`
 4. Publish release notes
 
+## Version 0.8.2 (October 2026) — rebump greeks bump curves once
+
+`v0.8.2` is a patch release: no schema change, no change to any plain pricing
+result.
+
+### Fixes
+
+- **Rebump greeks shift each curve quote exactly once.** With
+  `swaption_pricing_rebump`, the engine rebuilds the curves with every quote
+  moved by ±1bp and reprices. A curve pillar written with `quote_id` received
+  that shift twice: once when the request's `quotes[]` were loaded and again
+  when the pillar resolved its quote. Curves written entirely with `quote_id`
+  pillars therefore reported a rebump `dv01` about twice and a `gamma` about
+  four times the true value, and a curve mixing inline and `quote_id` pillars
+  got a lopsided shock (only the `quote_id` pillars moved 2bp). `vega` and
+  `theta`, plain pricing, `swaption_pricing_details` and curves written with
+  inline rates were never affected. Every pillar is now shifted once, so the
+  two spellings of the same market produce identical greeks.
+
+---
+
+## Version 0.8.1 (October 2026) — request isolation and input guards
+
+`v0.8.1` is a patch release: no schema change, no change to any correctly
+formed request's results.
+
+### Fixes
+
+- **Index fixings no longer leak between requests.** QuantLib keeps past
+  fixings in a process-global store, and the server only cleared an index's
+  fixings when the request supplied `fixings`. A request that supplied none
+  inherited the previous request's fixings on that worker and could price with
+  them. The store is now cleared at the start and end of every request.
+  Requests that relied on this by accident (omitting fixings a seasoned trade
+  needs) will now get the missing-fixing error they should always have had.
+- **Negative day counts are rejected.** `fixing_days`, `settlement_days`,
+  `cash_settlement_days` and `spot_days` across indices, bonds, deposit / FRA /
+  OIS / bond helpers, swap floating legs, CDS and constant optionlet volatility
+  used to be passed to QuantLib's unsigned parameters, so a negative value
+  became a day count of about four billion (a 500, or a silently wrong date).
+  They now return a `400` naming the field.
+
+### Internal
+
+- Dead code removed (unused flow builders, unreachable swaption helpers, a
+  duplicate guard); global `using namespace` directives removed from headers.
+- A `.clang-format` now encodes the existing code style and was applied once
+  to all hand-written C++ sources; `scripts/format.sh` reproduces it.
+
+## Version 0.8.0 (October 2026) — response fixes: zero values kept, swaption greeks corrected
+
+`v0.8.0` fixes three response defects. Requests are unchanged; what changes is
+what comes back, so this is a MINOR bump under the 0.x rules. Every change is
+listed here so a client can tell what to expect.
+
+### Zero-valued fields are no longer dropped
+
+A response number that was exactly zero (`npv`, `fair_spread`, a holiday
+`count`, `theta`, …) used to disappear from the JSON because the FlatBuffer did
+not store scalars equal to their schema default. Responses now carry every
+scalar, so a computed zero is returned as `0` / `0.0`. Fields declared optional
+(`= null`) are unaffected: they are still present only when set.
+
+Clients that treated a missing field as zero are unaffected. Clients that
+treated a missing field as "not applicable" should rely on the optional fields,
+which keep that meaning.
+
+### Swaption `swaption_pricing_details` greeks: units corrected
+
+The analytic greeks were written in the raw units of QuantLib's Black and
+Bachelier calculators, and `theta` was computed with the swap annuity passed
+where the calculator expects a discount factor, which made the number
+meaningless. All details greeks are now in the same units as the rebump
+greeks:
+
+| Field | Unit (both modes) | Change from 0.7.0 (details mode) |
+| --- | --- | --- |
+| `delta` | currency per 1 bp move of the forward | divided by 10,000 |
+| `gamma` | currency per bp² | divided by 1e8 |
+| `vega` | currency per 1 bp of volatility | divided by 10,000 |
+| `theta` | currency per calendar day | recomputed: time decay of the option premium with forward, volatility and annuity held fixed |
+| `dv01` | currency per 1 bp | unchanged (equals `delta`) |
+
+The values match native QuantLib computed with the same definitions.
+
+### Swaption `swaption_pricing_rebump` theta: the roll now moves the whole market
+
+Rebump `theta` is `NPV(tomorrow) − NPV(today)` with the market rolled one
+calendar day. In 0.7.0 the roll moved the evaluation date but left explicit
+curve and volatility `reference_date`s where they were, so a request whose
+curves carry a `reference_date` (the common shape) reported `theta` as exactly
+zero, which was then dropped, and helper-curve requests produced a partial
+roll without option time decay. The roll now shifts every explicit reference
+date and re-references the volatility entry, so `theta` includes both the
+curve roll and the option's time decay. Rebump theta values therefore change
+for every request. Known limit: SABR-calibrated surfaces roll curves only.
+
+### Swaption greek fields are optional
+
+`delta`, `annuity`, `atm_forward`, `vega`, `gamma`, `theta`, `dv01`,
+`implied_volatility` and the `used_*` diagnostics are now `= null` optionals,
+present only when the request flag that produces them is set. When both flags
+are set, the rebump values of `dv01`, `gamma`, `vega` and `theta` take
+precedence. Units, definitions and precedence are documented in
+[`docs/http-api.md`](http-api.md).
+
+### Migration (0.7.0 → 0.8.0)
+
+No request changes. If you consume swaption greeks, re-read the units above;
+if you parse responses strictly, expect scalars that were previously absent at
+zero to be present.
+
 ## Version 0.7.0 (October 2026) — per-request calendar holiday overrides, backward-compatible
 
 `v0.7.0` adds one feature, requested during an external validation POC: a
@@ -189,6 +301,9 @@ mis-built before).
 - The unused `FRA` day-counter/calendar/convention fields are no longer
   required (accepted-but-ignored, deprecated); discrete equity-barrier
   monitoring is rejected with a clear message (no native QuantLib engine).
+- The shipped container now enables the Hull-White calibration cache
+  (`QUANTRA_HW_CACHE_ENABLED=1`). In the 0.3.0 and 0.4.0 images it was
+  available but off unless set explicitly.
 
 ### Migration
 
@@ -268,9 +383,10 @@ timeout).
   dividends with American/Bermudan or digital payoffs) return a 400 naming
   the combination. Greeks an engine cannot compute are omitted from the
   response instead of serializing as invalid JSON.
-- **Hull-White calibration cache** (`QUANTRA_HW_CACHE_ENABLED`, on in the
-  shipped container): repeat calibrations ~150ms → ~47ms, bit-for-bit
-  transparent (gated by the cache-correctness suite).
+- **Hull-White calibration cache** (`QUANTRA_HW_CACHE_ENABLED`, off by
+  default; on in the shipped container from 0.5.0): repeat calibrations
+  ~150ms → ~47ms, bit-for-bit transparent (gated by the cache-correctness
+  suite).
 
 ### Behavior changes (degenerate cases only)
 

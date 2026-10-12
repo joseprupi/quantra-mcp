@@ -33,7 +33,7 @@ class Pin:
 
     @property
     def version(self) -> str:
-        """``v0.7.0`` -> ``0.7.0``."""
+        """``v0.8.2`` -> ``0.8.2``."""
         return self.tag.removeprefix("v")
 
 

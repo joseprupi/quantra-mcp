@@ -194,10 +194,10 @@ def test_every_citation_exists_at_the_pin_in_the_engine_repo() -> None:
     for path, line, text in [
         (
             "src/evaluators/vanilla_swap_evaluator.cpp",
-            243,
+            237,
             "out.fixedLegBps = swap->fixedLegBPS();",
         ),
-        ("src/evaluators/ois_swap_evaluator.cpp", 126, "out.fixedLegBps = swap->fixedLegBPS();"),
+        ("src/evaluators/ois_swap_evaluator.cpp", 116, "out.fixedLegBps = swap->fixedLegBPS();"),
         ("flatbuffers/fbs/vanilla_swap_response.fbs", 41, "fixed_leg_bps:double;"),
     ]:
         assert f"`{path}@{tag}:L{line}-L{line}`" in conn, (path, line)

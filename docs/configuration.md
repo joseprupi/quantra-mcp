@@ -73,4 +73,4 @@ Client setup is in [clients.md](clients.md).
   startup line records the active limits. Nothing is persisted.
 - **Numbers come from the engine.** Every result carries the exact request
   sent and the engine's body verbatim; replay it with `curl` against the same
-  engine and you get the same bytes. Supported engines: `>= 0.7.0`.
+  engine and you get the same bytes. Supported engines: `>= 0.7.0` (responses as the 0.8.2 pin documents them).

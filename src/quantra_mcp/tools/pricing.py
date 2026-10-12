@@ -778,6 +778,7 @@ async def price_swaption_impl(
     model: str | HullWhiteModel,
     as_of: str | None,
     include_details: bool,
+    include_rebump: bool,
     include_diagnostics: bool,
     calendar_overrides: list[CalendarOverride] | None,
     request_id: str | None,
@@ -847,7 +848,13 @@ async def price_swaption_impl(
         _require_model(pricing, out)
         return out
 
-    opts = {"swaption_pricing_details": True} if include_details else None
+    opts: dict[str, Any] | None = None
+    if include_details or include_rebump:
+        opts = {}
+        if include_details:
+            opts["swaption_pricing_details"] = True
+        if include_rebump:
+            opts["swaption_pricing_rebump"] = True
     return await _price(
         backend,
         store,
@@ -2700,7 +2707,27 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             ),
         ] = None,
         include_details: Annotated[
-            bool, Field(description="pricing.options.swaption_pricing_details (delta, vega, ...).")
+            bool,
+            Field(
+                description=(
+                    "pricing.options.swaption_pricing_details: analytic greeks (delta, dv01 = "
+                    "delta, gamma, vega, theta; currency per bp, per bp^2, per bp of vol, per "
+                    "calendar day) plus atm_forward and annuity."
+                )
+            ),
+        ] = False,
+        include_rebump: Annotated[
+            bool,
+            Field(
+                description=(
+                    "pricing.options.swaption_pricing_rebump: bump-and-reprice greeks (dv01 and "
+                    "gamma from a +/-1bp parallel curve bump, vega from a +/-1bp vol bump, theta "
+                    "= NPV(as_of + 1 calendar day) - NPV after a one-day roll of the whole "
+                    "market, every explicit reference_date included). Same units as the "
+                    "analytic greeks; with both flags the rebump values are reported. A greek "
+                    "absent from the response was not computed; 0.0 is a computed zero."
+                )
+            ),
         ] = False,
         include_diagnostics: Annotated[
             bool, Field(description="Per-SABR-surface diagnostics in the response.")
@@ -2729,7 +2756,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
         /price-swaption). The underlying is built from the preset's swap block, the vol surface
         (SwaptionVolSpec with the preset's swap_index_id) and the model are added to the market
         under explicit or default ids (noted). ``summary.swaptions``: npv, implied_volatility,
-        atm_forward, annuity.
+        atm_forward, annuity and, when requested, dv01, delta, gamma, vega, theta (present
+        exactly when the engine computed them; see quantra://methodology/greeks-bump-and-reprice).
         """
         first = pw.SwaptionTrade(
             exercise_date=exercise_date,
@@ -2753,6 +2781,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 model,
                 as_of,
                 include_details,
+                include_rebump,
                 include_diagnostics,
                 calendar_overrides,
                 request_id,

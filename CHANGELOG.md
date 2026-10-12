@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.1.8 (2026-10-12)
+
+Engine pin bump v0.7.0 -> v0.8.2 (M5.8). Requests are unchanged; what the engine returns is.
+
+- **Pin.** `scripts/pin_engine.py --tag v0.8.2` (`7b26e53a`): spec 0.8.2 (0 paths / schemas
+  added; only the `PricingOptions` and `SwaptionResponse` descriptions changed), enums
+  regenerated, engine docs and catalog revendored, one new fixture
+  (`swaption/swpt_eur_1y5y_payer_near_atm_physical_quote_ids`, 223 examples; the
+  vendor-named exclusion stands). CATALOG reference values unchanged, oracles 194/194.
+- **Goldens.** The request goldens are byte-identical (builders untouched). Every golden
+  request and every vendored example was replayed on 0.7.0 and 0.8.2 side by side and each
+  differing value falls in one of four classes: (1) a scalar at its schema default now
+  present (numeric zeros such as a zero-coupon bond's `accrued_amount`, and enum-valued
+  scalars at member 0 such as `measure: "DF"`, `used_settlement: "Physical"`,
+  `vol_kind: "Constant"`); (2) `swaption_pricing_details` greeks rescaled to bp units
+  (delta and vega / 1e4, gamma / 1e8, theta recomputed per calendar day); (3) rebump
+  `theta` now present and changed (the roll moves every explicit `reference_date`);
+  (4) rebump `dv01` / `gamma` on `quote_id` curves halved / quartered (0.8.2 bumps each
+  pillar once). Plain NPVs, fair rates, DFs, flows and bond prices are byte-identical. The
+  `used_atm_forward` / `used_cube_node_atm` `-1.0` sentinels of surfaces without an ATM
+  level are now absent (optional fields, 0.8.0).
+- **`price_swaption(include_rebump)`.** The tool can now request
+  `swaption_pricing_rebump`; `summary.swaptions` carries dv01 / delta / gamma / vega /
+  theta exactly when the engine computed them (an absent greek was not computed, `0.0` is
+  a computed zero). Live: a swaption on the engine's zero-rate value curve returns a
+  non-zero rebump theta (absent on 0.7.0).
+- **Methodology at v0.8.2.** All 137 citations re-resolved by anchor text; 7 rules
+  re-pointed after the engine's clang-format and the greek rewrite (the `PricingOptions`
+  comments, the analytic-greek block and the analytic theta line of
+  `swaption_evaluator.cpp`, the `SwaptionResponse` greek fields, the `SwapRateHelper`
+  construction end line); the hand-pinned PV01 lines moved
+  (`vanilla_swap_evaluator.cpp` L243 -> L237, `ois_swap_evaluator.cpp` L126 -> L116,
+  `vanilla_swap_response.fbs` L41 unchanged). `greeks-bump-and-reprice` and `theta`
+  rewritten to the 0.8.0 semantics citing `docs/http-api.md@v0.8.2` (units, optional
+  fields, precedence, the whole-market roll, 0.8.2 single bump); the claim that units are
+  undocumented and that theta can be absent on value curves is gone.
+- README, docs, CI workflow and compose example point at `quantra-server:0.8.2`.
+
 ## 0.1.7 (2026-10-12)
 
 Quant review fixes on the connector side (M5.7).

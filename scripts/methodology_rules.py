@@ -64,7 +64,7 @@ CONNECTOR_REPO_URL = "https://github.com/joseprupi/quantra-mcp"
 #: from THIS tree without the engine checkout). Line numbers verified at the pin by
 #: ``git show``; ``tests/unit/test_methodology.py`` re-checks them when the engine
 #: repository is available, so a pin bump that moves them fails the gate.
-ENGINE_PIN_TAG = "v0.7.0"
+ENGINE_PIN_TAG = "v0.8.2"
 
 
 def _engine_ref(path: str, line: int) -> dict[str, str]:
@@ -76,8 +76,8 @@ def _engine_ref(path: str, line: int) -> dict[str, str]:
     }
 
 
-ENGINE_FILL_VANILLA = _engine_ref(VS_CPP, 243)  # out.fixedLegBps = swap->fixedLegBPS();
-ENGINE_FILL_OIS = _engine_ref(OIS_CPP, 126)  # out.fixedLegBps = swap->fixedLegBPS();
+ENGINE_FILL_VANILLA = _engine_ref(VS_CPP, 237)  # out.fixedLegBps = swap->fixedLegBPS();
+ENGINE_FILL_OIS = _engine_ref(OIS_CPP, 116)  # out.fixedLegBps = swap->fixedLegBPS();
 ENGINE_FILL_FBS = _engine_ref(VS_RESP_FBS, 41)  # fixed_leg_bps:double;
 
 # this server's own source (the connector-analytics page cites the working tree)
@@ -285,7 +285,7 @@ TOPICS: list[Topic] = [
         "fields": [
             s(
                 "`pricing.options.swaption_pricing_details` turns the swaption analytics on.",
-                c(PRICING_FBS, r"Include detailed swaption analytics", 2),
+                c(PRICING_FBS, r"Include analytic swaption greeks", 5),
             ),
         ],
         "gaps": [
@@ -301,13 +301,36 @@ TOPICS: list[Topic] = [
         "title": "DV01, gamma, vega: bump-and-reprice vs analytic",
         "summary": (
             "Swaption sensitivities exist in two forms selected by request flags: analytic "
-            "(`swaption_pricing_details`, QuantLib's Black / Bachelier calculator) and "
-            "bump-and-reprice (`swaption_pricing_rebump`: 1bp parallel curve bump, 1bp vol "
-            "bump, 1-day roll). Equity greeks are analytic. Bonds report duration and "
-            "convexity under `bond_pricing_details`. Swaps, FRAs, caps and CDS carry no "
-            "sensitivities in the response."
+            "(`swaption_pricing_details`: QuantLib's Black / Bachelier calculator built with "
+            "discount 1, the swap annuity applied explicitly) and bump-and-reprice "
+            "(`swaption_pricing_rebump`: +/-1bp parallel curve bump, +/-1bp vol bump, "
+            "1-calendar-day market roll). Since engine 0.8.0 both report the same units "
+            "(currency per bp, gamma per bp^2, vega per bp of vol, theta per calendar day), "
+            "every greek is an optional response field present only when computed, and the "
+            "rebump dv01 / gamma / vega / theta take precedence when both flags are set. "
+            "Equity greeks are analytic. Bonds report duration and convexity under "
+            "`bond_pricing_details`. Swaps, FRAs, caps and CDS carry no sensitivities in the "
+            "response."
         ),
         "statements": [
+            s(
+                "Units and definitions of every swaption greek under each flag, as the engine "
+                "documents them: the two flags report the same units and are directly "
+                "comparable; dv01 is the forward-rate delta (analytic) or a parallel curve "
+                "bump (rebump).",
+                c(HTTP_API, r"^## Swaption greeks: units and definitions", r"^\| `theta` \|"),
+            ),
+            s(
+                "Which fields each flag fills, that every greek is optional (`= null`, present "
+                "exactly when computed; none with neither flag), and the precedence when both "
+                "flags are set (rebump dv01 / gamma / vega / theta; analytic delta, "
+                "atm_forward, annuity kept).",
+                c(
+                    HTTP_API,
+                    r"^The analytic values come from QuantLib's `BlackCalculator`",
+                    r"^kept from the analytic pass\.$",
+                ),
+            ),
             s(
                 "Rebump bump sizes: a 1bp parallel curve bump (DV01 / gamma), a 1bp absolute "
                 "vol bump (vega) and a 1-day evaluation-date roll (theta), fixed in one place.",
@@ -330,23 +353,44 @@ TOPICS: list[Topic] = [
                 ),
             ),
             s(
-                "Analytic path (`swaption_pricing_details`): delta, vega, gamma, theta from "
+                "Analytic path (`swaption_pricing_details`): delta, gamma, vega, theta from "
                 "QuantLib's `BachelierCalculator` (Normal vol) or `BlackCalculator` (with the "
-                "displacement added to strike and forward), and dv01 = delta x 1bp.",
+                "displacement added to strike and forward), built with discount 1 and "
+                "multiplied by the annuity and 1bp (1bp^2 for gamma, /365 for theta); "
+                "dv01 = delta. Absent when the option is expired or has no vol.",
                 c(
                     SWPT_CPP,
-                    r"if \(row.annuity != 0.0 && stdDev > 0.0 && timeToExpiry > 0.0\)",
-                    r"row.dv01 = row.delta \* 1.0e-4;",
+                    r"if \(\*row.annuity != 0.0 && stdDev > 0.0 && timeToExpiry > 0.0\)",
+                    r"if \(row.delta\) row.dv01 = row.delta;",
                 ),
             ),
             s(
-                'The response documents `dv01` as "may be analytic or rebump-based depending on '
-                'request flags" and delta / vega / gamma / theta as "from pricing details / '
-                'rebump logic".',
+                "What changed in 0.8.0 for the details greeks: the 0.7.0 values were in the "
+                "calculators' raw units (delta and vega 10,000 times larger, gamma 1e8 times, "
+                "theta computed with the annuity where a discount factor was expected).",
+                c(
+                    VERSIONING,
+                    r"^### Swaption `swaption_pricing_details` greeks: units corrected",
+                    r"^The values match native QuantLib computed with the same definitions\.$",
+                ),
+            ),
+            s(
+                "0.8.2: under `swaption_pricing_rebump` every curve pillar is shifted exactly "
+                "once; a curve written with `quote_id` pillars no longer reports about twice "
+                "the dv01 and four times the gamma of the same curve written inline.",
+                c(
+                    VERSIONING,
+                    r"^## Version 0.8.2",
+                    r"two spellings of the same market produce identical greeks\.$",
+                ),
+            ),
+            s(
+                "The response schema: every greek is `= null` (absent unless computed) and "
+                "each field states its unit and the flag that fills it.",
                 c(
                     SWPT_RESP_FBS,
-                    r"Option delta from pricing details/rebump logic",
-                    r"dv01:double;",
+                    r"Analytic forward delta \(swaption_pricing_details\)",
+                    r"dv01:double = null;",
                 ),
             ),
             s(
@@ -367,7 +411,8 @@ TOPICS: list[Topic] = [
         "fields": [
             s(
                 "`pricing.options`: `bond_pricing_details`, `bond_pricing_flows`, "
-                "`swaption_pricing_details`, `swaption_pricing_rebump`.",
+                "`swaption_pricing_details`, `swaption_pricing_rebump` (each with its units "
+                "and what it fills).",
                 c(PRICING_FBS, r"^table PricingOptions", r"^}"),
             ),
         ],
@@ -376,23 +421,44 @@ TOPICS: list[Topic] = [
             "fields in the response. This server's `swap_dv01`, `key_rate_ladder`, `scenario` "
             "and `reprice_with` tools obtain them by repricing under bumped quotes "
             "(differences of engine NPVs, inputs shown).",
-            "When both swaption flags are set the rebump block runs after the analytic one "
-            "and overwrites dv01 / gamma / vega / theta (source order above).",
-            "Units: the rebump dv01 is per 1bp parallel move of the curves the request names "
-            "(not a key-rate or a 100bp number); the vega bump is 1e-4 absolute in the vol's "
-            "own quotation units.",
+            "The rebump dv01 is per 1bp parallel move of the curves the request names (not a "
+            "key-rate or a 100bp number) and moves forward and annuity together; the analytic "
+            "dv01 moves the forward swap rate alone with the annuity held fixed, so the two "
+            "dv01s differ by construction even on the same market.",
+            "Known limit stated by the engine: on a SABR-calibrated surface the rebump roll "
+            "moves the curves only.",
         ],
     },
     {
         "slug": "theta",
         "title": "Theta: exact definition",
         "summary": (
-            "Two definitions exist, selected by request flags. Rebump theta "
-            "(`swaption_pricing_rebump`) is NPV(as-of + 1 day) - NPV(as-of) with the same "
-            "market, in currency. Analytic theta (`swaption_pricing_details`, equity options) "
-            "is QuantLib's calculator theta."
+            "Two definitions exist, selected by request flags, both in currency per calendar "
+            "day since engine 0.8.0. Rebump theta (`swaption_pricing_rebump`) is "
+            "NPV(as_of + 1 calendar day) - NPV(as_of) after a clean one-day roll of the whole "
+            "market: the evaluation date and every explicit curve and vol `reference_date` "
+            "move one day, date-anchored points and fixings stay. Analytic theta "
+            "(`swaption_pricing_details`) is the pure time decay of the option premium with "
+            "forward, vol and annuity held fixed, per calendar day. Equity options report "
+            "QuantLib's calculator theta times quantity."
         ),
         "statements": [
+            s(
+                "Both thetas as the engine documents them (definition and unit under each flag).",
+                c(HTTP_API, r"^## Swaption greeks: units and definitions", r"^\| `theta` \|"),
+            ),
+            s(
+                "The rebump roll moves every explicit `reference_date` (curves, helper curves, "
+                "vol surfaces) with the evaluation date; date-anchored market data (zero / "
+                "discount / forward points pinned to a date, index fixings) is not shifted, so "
+                "theta equals the difference of two plain requests at as_of and as_of + 1 with "
+                "the reference dates moved.",
+                c(
+                    HTTP_API,
+                    r"^The rebump roll rebuilds the market at `as_of_date \+ 1`",
+                    r"^spread-from-ATM strikes\)\.$",
+                ),
+            ),
             s(
                 "Rebump theta = NPV repriced with the evaluation date rolled by `rollDays` "
                 "minus the base NPV.",
@@ -404,7 +470,7 @@ TOPICS: list[Topic] = [
             ),
             s(
                 'The roll leg is "bump 0 @ asOf + rollDays": no curve or vol bump, only the '
-                "evaluation date moves.",
+                "date moves.",
                 c(SWPT_H, r"- roll:\s+bump 0 @ asOf \+ rollDays", 1),
             ),
             s(
@@ -413,37 +479,59 @@ TOPICS: list[Topic] = [
                 c(SWPT_H, r"eval-date-dependent pieces \(American exercise", 3),
             ),
             s(
-                "Analytic theta (details flag): `calc.theta(forward, timeToExpiry)` from "
-                "QuantLib's Bachelier calculator for Normal vol, or the Black calculator with "
-                "the displacement for (shifted) lognormal.",
-                c(SWPT_CPP, r"row.theta = calc.theta\(row.atmForward, timeToExpiry\);", 1),
+                "What changed in 0.8.0: in 0.7.0 the roll left explicit reference dates where "
+                "they were, so a request whose curves carry a `reference_date` (value curves, "
+                "the common shape) reported theta as exactly zero, which was then dropped; "
+                "rebump theta values change for every request from 0.8.0 on.",
+                c(
+                    VERSIONING,
+                    r"^### Swaption `swaption_pricing_rebump` theta",
+                    r"Known limit: SABR-calibrated surfaces roll curves only\.$",
+                ),
+            ),
+            s(
+                "Analytic theta (details flag): the calculator's `theta(forward, timeToExpiry)` "
+                "built with discount 1, times the annuity, divided by 365 (per calendar day); "
+                "Bachelier for Normal vol, Black with the displacement for (shifted) lognormal.",
+                c(
+                    SWPT_CPP,
+                    r"row.theta = annuity \* calc.theta\(\*row.atmForward, timeToExpiry\) / 365.0;",
+                    1,
+                ),
             ),
             s(
                 "Equity option theta: the QuantLib option's `theta()` times `quantity`.",
                 c(EQ_CPP, r"out.theta = safeGreek", 1),
             ),
             s(
-                "Response fields that do not apply are omitted rather than reported as a "
-                "sentinel (0.5.0 note).",
-                c(VERSIONING, r"are now \*\*omitted when inapplicable\*\*", 3),
+                "A theta that is exactly zero is reported as `0.0`; an absent theta means not "
+                "computed (the flag was not set, or the option is expired / has no vol), never "
+                "zero.",
+                c(
+                    HTTP_API,
+                    r"^## Response fields at their default value",
+                    r"computed and equal to zero",
+                ),
             ),
         ],
         "fields": [
             s(
                 "`pricing.options.swaption_pricing_rebump` selects the rebump definition; "
-                "`swaption_pricing_details` the analytic one.",
-                c(PRICING_FBS, r"Include detailed swaption analytics", 4),
+                "`swaption_pricing_details` the analytic one; with both set the rebump theta "
+                "is reported.",
+                c(
+                    PRICING_FBS,
+                    r"Include analytic swaption greeks",
+                    r"swaption_pricing_rebump:bool = false;",
+                ),
             ),
         ],
         "gaps": [
-            "Units are not stated in engine prose. From source: rebump theta is a currency "
-            "amount over one calendar day of evaluation-date roll (the curves are rebuilt at "
-            "the new date from the same quotes); analytic theta is QuantLib's calculator "
-            "value (a rate of change per year in QuantLib's convention). Divide / multiply "
-            "accordingly before comparing with a vendor's daily theta.",
-            "Whether the roll re-fixes any coupon or moves across a payment is not documented; "
-            "test with `reprice_with` on `pricing.as_of_date` to see the one-day change "
-            "directly.",
+            "Whether the one-day roll re-fixes a coupon or crosses a payment date is not "
+            "stated; test with `reprice_with` on `pricing.as_of_date` (and the curves' "
+            "`reference_date`) to see the one-day change directly.",
+            "Known limit stated by the engine: on a SABR-calibrated surface the roll moves the "
+            "curves only.",
         ],
     },
     {
@@ -575,7 +663,7 @@ TOPICS: list[Topic] = [
                 c(
                     TS_POINT_CPP,
                     r"return std::make_shared<SwapRateHelper>\(",
-                    r"^        \);$",
+                    r"point->fwd_start_days\(\) \* Days, discount\);",
                 ),
             ),
         ],
@@ -754,7 +842,7 @@ TOPICS: list[Topic] = [
                 c(
                     SWPT_CPP,
                     r"if \(volEntry.qlVolType == QuantLib::Normal\)",
-                    r"row.theta = calc.theta\(row.atmForward \+ displacement, timeToExpiry\);",
+                    r"row.theta = annuity \* calc.theta\(shiftedForward, timeToExpiry\) / 365.0;",
                 ),
             ),
             s(

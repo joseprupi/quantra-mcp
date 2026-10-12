@@ -166,7 +166,7 @@ async def test_pasted_discount_table_reprices_the_sofr_example() -> None:
 
     Byte-identity is NOT expected: the engine prints the sampled DFs with 12 significant
     digits, so the pasted curve is the bootstrapped one rounded at every point. The
-    observed difference on engine 0.7.0 is -7.5e-6 on 337,986.79 (2.2e-11 relative);
+    observed difference on engines 0.7.0 and 0.8.2 is -7.5e-6 on 337,986.79 (2.2e-11 relative);
     the test bounds it at 1e-9 relative and reports the actual difference on failure.
     Pasting only the curve's nodes (spot + tenor + 2bd payment lag, found as the slope
     changes of log DF) reprices to +1.6e-6; pasting the reported ``pillar_dates`` (tenor
@@ -339,7 +339,7 @@ async def test_dual_curve_bootstrap_with_discount_curve_moves_the_5y_df_in_eithe
                 await replay("/bootstrap-curves", r["request"])
             )
     print({k: (repr(v[0]), repr(v[1])) for k, v in out.items()})
-    # order of the curves in the request does not matter (engine 0.7.0)
+    # order of the curves in the request does not matter (engines 0.7.0 and 0.8.2)
     assert out["self ois-first"] == out["self six-first"]
     assert out["dual ois-first"] == out["dual six-first"]
     # exogenous discounting moves the bootstrap

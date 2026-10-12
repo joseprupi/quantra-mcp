@@ -395,7 +395,7 @@ def build_curve(
     bootstrapped (dual-curve). Deposit / FRA / future points are untouched
     (the engine schema has no ``deps`` for them). Omitted = self-discounted,
     exactly the engine fixtures' behaviour and byte-identical to the previous
-    output. Verified live on engine 0.7.0: the two curves can be listed in
+    output. Verified live on engines 0.7.0 and 0.8.2: the two curves can be listed in
     either order within one ``/bootstrap-curves`` body (discount curve first or
     last gives the same discount factors).
     """

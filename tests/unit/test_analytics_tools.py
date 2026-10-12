@@ -48,7 +48,7 @@ class QuoteSensitiveBackend(FakeBackend):
         return BackendResponse(
             200,
             {"swaps": [{"npv": npv, "fair_rate": 0.0311, "fixed_leg_npv": 1.0}]},
-            {"x-quantra-api-version": "0.7.0", "x-request-id": request_id or ""},
+            {"x-quantra-api-version": "0.8.2", "x-request-id": request_id or ""},
         )
 
 

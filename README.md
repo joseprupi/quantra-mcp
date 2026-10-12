@@ -31,7 +31,7 @@ for business users are in [docs/clients.md](docs/clients.md).
 Run an engine (one line, no account):
 
 ```bash
-docker run -d --name quantra-engine -p 8080:8080 ghcr.io/joseprupi/quantra-server:0.7.0
+docker run -d --name quantra-engine -p 8080:8080 ghcr.io/joseprupi/quantra-server:0.8.2
 ```
 
 Run the server against it, from PyPI or from a clone:
@@ -77,7 +77,7 @@ with a title and MCP annotations (read-only / open-world hints):
 - Analytics by composition (4): `swap_dv01`, `key_rate_ladder`, `scenario`, `fair_rate`, all finite differences of engine NPVs (compact by default; `include_calls` for every replayable result)
 - Reconciliation (3): `explain_method` (cited engine methodology), `compare_results`, `reprice_with`
 - Session scratch (2): `session_put`, `session` (get / list / delete; private to the MCP session, in memory, bounded, never persisted)
-- Examples (2): `list_examples`, `get_example` over the engine's 222 vendored example requests
+- Examples (2): `list_examples`, `get_example` over the engine's 223 vendored example requests
 - Resources (docs, schemas, enums, examples, presets, pin, methodology) and 6 prompts
 
 Catalog with every argument: [docs/tools.md](docs/tools.md).
@@ -120,7 +120,7 @@ QUANTRA_ENGINE_URL=http://localhost:18087 uv run python scripts/live_check.py   
 ```
 
 The engine contract is pinned to the tag in `src/quantra_mcp/schema/PIN`
-(v0.7.0); any engine `>= 0.7.0` that keeps the contract works. Bump it with
+(v0.8.2). Requests are unchanged since 0.7.0; responses follow the pinned 0.8.x contract (swaption greek units, theta, zero-valued fields present). Bump it with
 `scripts/pin_engine.py`, never by hand ([docs/development.md](docs/development.md)).
 
 ## License

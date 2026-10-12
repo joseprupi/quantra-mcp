@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 import pytest
@@ -128,3 +129,40 @@ async def test_usd_ois_swaption_reproduces_the_engine_fixture(fixture: str) -> N
     assert r["response"]["swaptions"][0]["npv"] == direct["swaptions"][0]["npv"]
     assert canonical(r["response"]) == canonical(await replay("/price-swaption", r["request"]))
     assert r["summary"]["swaptions"][0]["used_strike"] == 0.03367463
+
+
+async def test_swaption_rebump_theta_on_a_value_curve_market_is_non_zero() -> None:
+    """Engine 0.8.0+: the rebump roll shifts every explicit ``reference_date``, so a swaption
+    priced on a value curve (InterpolatedZero points pinned to a reference date) reports a
+    non-zero rebump ``theta``. On 0.7.0 the roll left fixed-reference value curves where they
+    were, theta came out exactly zero and was dropped from the JSON. The market is the EUR
+    swaption case with its bootstrapped curve replaced by the engine's own zero-rate value
+    curve fixture (same as-of), so no market data is invented."""
+    case = CASES["price_swaption"]
+    zero = fixture_body("frb_usd_10y_treasury_semiannual_zero_curve")["pricing"]["rates"]["curves"]
+    assert len(zero) == 1 and zero[0]["bootstrap_trait"] == "InterpolatedZero"
+    market: dict[str, Any] = copy.deepcopy(case.live["market"])
+    market["rates"]["curves"] = [{**zero[0], "id": "discount"}]
+    async with live_client() as client:
+        r = await _call(
+            client,
+            "price_swaption",
+            {
+                "market_data_source": "engine_example",
+                **case.live,
+                "market": market,
+                "include_rebump": True,
+            },
+        )
+    assert r["ok"], r
+    assert r["request"]["pricing"]["options"] == {"swaption_pricing_rebump": True}
+    assert (
+        r["request"]["pricing"]["rates"]["curves"][0]["points"][0]["point_type"] == "ZeroRatePoint"
+    )
+    sw = r["response"]["swaptions"][0]
+    for greek in ("dv01", "gamma", "vega", "theta"):
+        assert greek in sw, (greek, sw)
+    assert "delta" not in sw and "atm_forward" not in sw  # details-only fields stay absent
+    assert sw["theta"] != 0.0, sw
+    assert r["summary"]["swaptions"][0]["theta"] == sw["theta"]
+    assert canonical(r["response"]) == canonical(await replay("/price-swaption", r["request"]))

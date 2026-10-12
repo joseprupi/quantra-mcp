@@ -5,7 +5,7 @@ Engine pages are generated from the engine repository at a tag; the
 curated rules in :mod:`methodology_rules`; called by ``pin_engine.py`` (and
 runnable alone)::
 
-    uv run python scripts/methodology_gen.py --engine-repo /path/to/quantraserver --tag v0.7.0
+    uv run python scripts/methodology_gen.py --engine-repo /path/to/quantraserver --tag v0.8.2
     uv run python scripts/methodology_gen.py --connector-only   # after a source commit
     uv run python scripts/methodology_gen.py --check            # gate: page + INDEX current
 

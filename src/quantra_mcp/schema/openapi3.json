@@ -3,7 +3,7 @@
   "info": {
     "title": "Quantra Pricing API",
     "description": "\n## QuantLib-powered Financial Instrument Pricing API\n\nQuantra provides a high-performance JSON HTTP API for pricing financial instruments using the QuantLib library.\n\n### Supported Products\n\n| Product | Endpoint | Description |\n|---------|----------|-------------|\n| Fixed Rate Bond | `/price-fixed-rate-bond` | Price fixed coupon bonds |\n| Floating Rate Bond | `/price-floating-rate-bond` | Price floating rate notes |\n| Vanilla Swap | `/price-vanilla-swap` | Price interest rate swaps |\n| Zero Coupon Inflation Swap | `/price-zero-coupon-inflation-swap` | Price zero-coupon inflation swaps |\n| Year-on-Year Inflation Swap | `/price-year-on-year-inflation-swap` | Price year-on-year inflation swaps |\n| OIS Swap | `/price-ois-swap` | Price overnight indexed swaps |\n| Basis Swap | `/price-basis-swap` | Price two-floating-leg basis swaps |\n| FRA | `/price-fra` | Price forward rate agreements |\n| Cap/Floor | `/price-cap-floor` | Price interest rate caps and floors |\n| Swaption | `/price-swaption` | Price swaptions |\n| CDS | `/price-cds` | Price credit default swaps |\n| Bootstrap Curves | `/bootstrap-curves` | Bootstrap yield curves and extract rates |\n| Bootstrap Inflation Curves | `/bootstrap-inflation-curves` | Bootstrap inflation curves and extract zero/YoY rates |\n| Vol Surface Sampler | `/sample-vol-surfaces` | Sample volatility surfaces on expiry/tenor/strike grids |\n| Calendar Business Days | `/calendar-business-days` | List business days for a calendar and date range |\n| Calendar Holidays | `/calendar-holidays` | List holidays for a calendar and date range |\n| Calendar Advance | `/calendar-advance` | Advance a date by period using calendar conventions |\n| Calibrate Swaption Model | `/calibrate-swaption-model` | Calibrate Hull-White model parameters from swaption vol surface |\n| Calibrate Swaption Vol | `/calibrate-swaption-vol` | Calibrate a SABR swaption volatility surface and return diagnostics |\n| Equity Option | `/price-equity-option` | Price equity vanilla/barrier options |\n| Zero Coupon Bond | `/price-zero-coupon-bond` | Price zero-coupon (single redemption) bonds |\n| Zero Coupon Swap | `/price-zero-coupon-swap` | Price zero-coupon fixed-vs-compounded-floating swaps |\n| Year-on-Year Inflation Cap/Floor | `/price-year-on-year-inflation-cap-floor` | Price year-on-year inflation caps, floors, and collars |\n| Callable Fixed Rate Bond | `/price-callable-fixed-rate-bond` | Price callable/puttable fixed-rate bonds on a Hull-White tree |\n| Status | `/status` | Runtime health and worker aggregation |\n| Meta | `/meta` | Service/version/build metadata |\n| Health | `/health` | Lightweight liveness check |\n\n### Quick Start\n\n```bash\n# Health check\ncurl http://localhost:8080/health\n\n# Price a fixed rate bond\ncurl -X POST http://localhost:8080/price-fixed-rate-bond \\\n  -H \"Content-Type: application/json\" \\\n  -d @examples/data/fixed_rate_bond_request.json\n```\n",
-    "version": "0.7.0",
+    "version": "0.8.2",
     "contact": {
       "name": "Quantra API Support",
       "url": "https://github.com/joseprupi/quantraserver"
@@ -5032,11 +5032,11 @@
           },
           "swaption_pricing_details": {
             "type": "boolean",
-            "description": "Include detailed swaption analytics (delta/vega/gamma/theta/DV01)."
+            "description": "Include analytic swaption greeks (delta/vega/gamma/theta/DV01) from the\nBlack/Bachelier calculator: rate sensitivities per 1bp (gamma per bp^2),\nvega per 1bp of vol, theta per calendar day. Also fills atm_forward,\nannuity and implied_volatility. See SwaptionResponse field comments."
           },
           "swaption_pricing_rebump": {
             "type": "boolean",
-            "description": "Include curve-rebump swaption analytics (Bloomberg-style)."
+            "description": "Include bump-and-reprice swaption analytics: dv01 and gamma from a +/-1bp\nparallel curve bump, vega from a +/-1bp vol bump, theta from a 1-calendar-\nday clean market roll (evaluation date AND every explicit reference_date\nmove one day; date-anchored points and fixings stay). Same units as the\nanalytic greeks. When both flags are set the rebump dv01/gamma/vega/theta\noverwrite the analytic ones; delta, atm_forward and annuity are only\nproduced by swaption_pricing_details. Greeks not computed are absent."
           }
         },
         "additionalProperties": false
@@ -7903,35 +7903,35 @@
           },
           "implied_volatility": {
             "type": "number",
-            "description": "Implied volatility reported by the engine. For non-constant vol setups this may be a best-effort value."
+            "description": "Implied volatility reported by the engine. For non-constant vol setups this may be a best-effort value.\nAbsent when the engine provides none."
           },
           "atm_forward": {
             "type": "number",
-            "description": "ATM forward swap rate used for pricing diagnostics."
+            "description": "ATM forward swap rate used for pricing diagnostics. Present only with\nswaption_pricing_details."
           },
           "annuity": {
             "type": "number",
-            "description": "Underlying swap annuity (PV01-style quantity)."
+            "description": "Underlying swap annuity (PV01-style quantity). Present only with\nswaption_pricing_details."
           },
           "delta": {
             "type": "number",
-            "description": "Option delta from pricing details/rebump logic."
+            "description": "Analytic forward delta (swaption_pricing_details): change in NPV for a 1bp\nmove of the forward swap rate, annuity held fixed (Black/Bachelier\ndeltaForward x annuity x 1e-4). Currency per bp. Absent unless\nswaption_pricing_details is set (the rebump path does not compute it)."
           },
           "vega": {
             "type": "number",
-            "description": "Option vega from pricing details/rebump logic."
+            "description": "Vega: change in NPV for a 1bp (1e-4) move of the quoted volatility\n(lognormal vol for Black, normal vol for Bachelier). Currency per bp of vol.\nswaption_pricing_details: analytic (calculator vega x annuity x 1e-4).\nswaption_pricing_rebump: central difference of a +/-1bp vol bump.\nWhen both flags are set the rebump value is reported. Absent when neither\nflag is set."
           },
           "gamma": {
             "type": "number",
-            "description": "Option gamma from pricing details/rebump logic."
+            "description": "Gamma per bp^2. swaption_pricing_details: analytic d2NPV/dF2 of the forward\nswap rate x 1e-8, annuity held fixed. swaption_pricing_rebump: second\ndifference of a +/-1bp parallel curve bump (npvUp - 2 npv + npvDown).\nWhen both flags are set the rebump value is reported. Absent when neither\nflag is set."
           },
           "theta": {
             "type": "number",
-            "description": "Option theta from pricing details/rebump logic."
+            "description": "Theta in currency per calendar day. swaption_pricing_details: pure time\ndecay of the option premium with forward, volatility and annuity held fixed\n(-1/2 sigma^2 F^2 Gamma for Black, -1/2 sigma_N^2 Gamma for Bachelier,\nper year, divided by 365). swaption_pricing_rebump: NPV(as_of + 1 calendar\nday) - NPV(as_of) from a full market roll. When both flags are set the\nrebump value is reported. Absent when neither flag is set."
           },
           "dv01": {
             "type": "number",
-            "description": "1bp rate sensitivity. May be analytic or rebump-based depending on request flags."
+            "description": "DV01 in currency per bp. swaption_pricing_details: equals `delta` (forward\nrate moved 1bp, annuity held fixed). swaption_pricing_rebump: central\ndifference of a +/-1bp parallel bump of the discounting and forwarding\ncurves (forward and annuity both move). When both flags are set the rebump\nvalue is reported. Absent when neither flag is set."
           },
           "used_volatility": {
             "type": "number",
@@ -7951,18 +7951,18 @@
           },
           "used_atm_forward": {
             "type": "number",
-            "description": "ATM forward used when smile conventions need ATM anchoring."
+            "description": "ATM forward used when smile conventions need ATM anchoring. Absent when the\nvol surface carries no ATM levels."
           },
           "used_strike_kind": {
             "$ref": "#/components/schemas/quantra_enums_SwaptionStrikeKind"
           },
           "used_spread_from_atm": {
             "type": "number",
-            "description": "Difference between used strike and cube ATM level when spread-from-ATM is active."
+            "description": "Difference between used strike and cube ATM level. Absent unless the\nsurface uses spread-from-ATM strikes and an ATM level is available."
           },
           "used_cube_node_atm": {
             "type": "number",
-            "description": "ATM level retrieved from cube node when available."
+            "description": "ATM level retrieved from cube node. Absent when no ATM level is available."
           },
           "vol_kind": {
             "$ref": "#/components/schemas/quantra_enums_SwaptionVolKind"
