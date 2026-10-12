@@ -40,7 +40,7 @@ from quantra_mcp.builders.schedule import problem
 from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.presets.registry import PresetError
 from quantra_mcp.schema.enums_generated import RateAveragingType, SwapType
-from quantra_mcp.session import SessionStore
+from quantra_mcp.session import ScratchStore
 from quantra_mcp.tools._market_source import MarketDataSource, stamp
 from quantra_mcp.tools._result import ToolResult, new_request_id
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
@@ -165,7 +165,7 @@ def _fail(
 
 async def _price_spec(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     pricing: dict[str, Any],
     spec: SwapSpec,
     request_id: str,
@@ -311,7 +311,7 @@ class _Runner:
         self,
         tool: str,
         backend: Backend,
-        store: SessionStore,
+        store: ScratchStore,
         max_concurrency: int,
         request_id: str | None,
     ) -> None:
@@ -447,7 +447,7 @@ def _bumped_curves(
 
 async def swap_dv01_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     max_concurrency: int,
     market: Market,
     trade: SwapSpec,
@@ -508,7 +508,7 @@ async def swap_dv01_impl(
 
 async def key_rate_ladder_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     max_concurrency: int,
     market: Market,
     trade: SwapSpec,
@@ -595,7 +595,7 @@ async def key_rate_ladder_impl(
 
 async def scenario_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     max_concurrency: int,
     market: Market,
     trade: SwapSpec,
@@ -668,7 +668,7 @@ async def scenario_impl(
 
 async def fair_rate_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     trade: SwapSpec,
     as_of: str | None,
@@ -706,7 +706,7 @@ async def fair_rate_impl(
 # --------------------------------------------------------------------------
 
 
-def register(app: MCPServer, backend: Backend, store: SessionStore, max_concurrency: int) -> None:
+def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurrency: int) -> None:
     @app.tool()
     async def swap_dv01(
         market: Market,

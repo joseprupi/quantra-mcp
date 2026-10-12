@@ -51,6 +51,11 @@ def test_hosted_defaults() -> None:
     s = Settings.from_env({})
     assert s.session_max_total_bytes == 32 * 1024 * 1024
     assert (s.max_queue, s.rate_limit_rpm, s.rate_limit_burst) == (8, 60, 20)
+    assert (s.rate_limit_ip_rpm, s.max_concurrency_per_session, s.session_max_sessions) == (
+        600,
+        2,
+        256,
+    )
     assert s.max_body_bytes == 2 * 1024 * 1024
     assert s.trust_proxy is False and s.log_raw_ip is False and s.require_engine is False
     assert s.allowed_hosts == () and s.allowed_origins == () and s.public_url == ""
@@ -63,6 +68,9 @@ def test_hosted_overrides() -> None:
             "QUANTRA_MAX_QUEUE": "0",
             "QUANTRA_RATE_LIMIT_RPM": "0",
             "QUANTRA_RATE_LIMIT_BURST": "5",
+            "QUANTRA_RATE_LIMIT_IP_RPM": "0",
+            "QUANTRA_MAX_CONCURRENCY_PER_SESSION": "1",
+            "QUANTRA_SESSION_MAX_SESSIONS": "3",
             "QUANTRA_MAX_BODY_BYTES": "1024",
             "QUANTRA_TRUST_PROXY": "1",
             "QUANTRA_ALLOWED_HOSTS": "mcp.quantra.io, localhost",
@@ -74,6 +82,8 @@ def test_hosted_overrides() -> None:
     )
     assert s.session_max_total_bytes == 4096 and s.max_queue == 0 and s.rate_limit_rpm == 0
     assert s.rate_limit_burst == 5 and s.max_body_bytes == 1024
+    assert s.rate_limit_ip_rpm == 0 and s.max_concurrency_per_session == 1
+    assert s.session_max_sessions == 3
     assert s.trust_proxy and s.log_raw_ip and s.require_engine
     assert s.allowed_hosts == ("mcp.quantra.io", "localhost")
     assert s.allowed_origins == ("https://claude.ai",)

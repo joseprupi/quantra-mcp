@@ -1,25 +1,61 @@
 """In-memory session scratch: named curves / indices / market blocks reused across calls.
 
-Per server process, bounded (least-recently-used eviction at
-``QUANTRA_SESSION_MAX_ITEMS`` items and at ``QUANTRA_SESSION_MAX_TOTAL_BYTES``
-of serialized JSON across all items), never persisted, never shared across
-processes. In HTTP mode one store serves every connected client. Tools
-resolve ``{"session": "<name>"}`` references through :func:`resolve_refs`, and
-the echoed request always shows the resolved body.
+One :class:`SessionStore` per MCP session, held by a :class:`SessionStores`
+registry keyed on the transport's session id (the ``Mcp-Session-Id`` the
+streamable-HTTP transport mints at ``initialize``); stdio and in-memory clients,
+which have no session id, share one implicit session. Bounded three ways:
+least-recently-used eviction at ``QUANTRA_SESSION_MAX_ITEMS`` items per session,
+at ``QUANTRA_SESSION_MAX_SESSIONS`` sessions (whole least-recently-used sessions
+go), and at ``QUANTRA_SESSION_MAX_TOTAL_BYTES`` of serialized JSON across every
+session together. Never persisted, never shared across processes, never visible
+to another session: a ``session_get`` miss lists only the caller's own names.
+
+Tools receive the registry, which implements the store interface by delegating
+to the session bound to the current request (:func:`bind_session`, set by the
+server's per-request middleware), so a tool body never sees another client's
+items. Tools resolve ``{"session": "<name>"}`` references through
+:func:`resolve_refs`, and the echoed request always shows the resolved body.
 """
 
 from __future__ import annotations
 
+import contextvars
 import datetime as dt
 import json
 from collections import OrderedDict
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 
 from quantra_mcp.errors import LocalValidationError
 
 SessionKind = Literal["curve", "index", "market"]
 SESSION_KINDS: tuple[SessionKind, ...] = ("curve", "index", "market")
+
+#: the key of the one implicit session used when the transport has no session id
+LOCAL_SESSION = "local"
+DEFAULT_MAX_SESSIONS = 256
+
+_current_session: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "quantra_mcp_session", default=None
+)
+
+
+def current_session_id() -> str | None:
+    """The MCP session id bound to the running request, ``None`` outside one."""
+    return _current_session.get()
+
+
+@contextmanager
+def bind_session(session_id: str | None) -> Iterator[None]:
+    """Bind ``session_id`` (``None`` = the implicit local session) for the block."""
+    token = _current_session.set(session_id)
+    try:
+        yield
+    finally:
+        _current_session.reset(token)
+
 
 #: what each kind must look like (shallow shape check; the spec validator does the rest)
 _SHAPE_HINT = {
@@ -62,6 +98,30 @@ class SessionItem:
             row["curves"] = [c.get("id") for c in v.get("curves") or [] if isinstance(c, dict)]
             row["indices"] = [c.get("id") for c in v.get("indices") or [] if isinstance(c, dict)]
         return row
+
+
+class ScratchStore(Protocol):
+    """What the tools need from a session scratch (a :class:`SessionStore` or the
+    per-session :class:`SessionStores` registry)."""
+
+    @property
+    def max_items(self) -> int: ...
+
+    def put(
+        self, name: str, kind: str, value: Any, market_data_source: str | None = None
+    ) -> tuple[SessionItem, str | None]: ...
+
+    def delete(self, name: str) -> bool: ...
+
+    def clear(self) -> None: ...
+
+    def get(self, name: str) -> SessionItem: ...
+
+    def attached_indices(self, name: str) -> list[dict[str, Any]]: ...
+
+    def items(self) -> list[SessionItem]: ...
+
+    def __len__(self) -> int: ...
 
 
 class SessionStore:
@@ -201,12 +261,112 @@ class SessionStore:
             )
 
 
+class SessionStores:
+    """One :class:`SessionStore` per MCP session, LRU-bounded, with a shared byte budget.
+
+    Implements the :class:`SessionStore` interface itself by delegating to the store
+    of the session bound to the current request (:func:`bind_session`), so the tools
+    hold one object and never pick the wrong session. Sessions beyond
+    ``max_sessions`` are evicted least-recently-used as whole; ``max_total_bytes``
+    is the budget across every session together (each session's own store is
+    capped at the same figure, so a single session can never exceed it, and
+    the least-recently-used *other* sessions are dropped when the total is over).
+    """
+
+    def __init__(
+        self,
+        max_items: int = 64,
+        max_total_bytes: int = 32 * 1024 * 1024,
+        max_sessions: int = DEFAULT_MAX_SESSIONS,
+    ) -> None:
+        if max_sessions < 1:
+            raise ValueError("max_sessions must be >= 1")
+        self.max_items = max_items
+        self.max_total_bytes = max_total_bytes
+        self.max_sessions = max_sessions
+        self._stores: OrderedDict[str, SessionStore] = OrderedDict()
+
+    # --- registry -----------------------------------------------------------
+
+    @staticmethod
+    def key(session_id: str | None) -> str:
+        return session_id or LOCAL_SESSION
+
+    def for_session(self, session_id: str | None) -> SessionStore:
+        """The store of ``session_id`` (created on first use; marks it most recently used)."""
+        k = self.key(session_id)
+        store = self._stores.get(k)
+        if store is None:
+            store = SessionStore(self.max_items, self.max_total_bytes)
+            self._stores[k] = store
+            while len(self._stores) > self.max_sessions:
+                self._stores.popitem(last=False)
+        else:
+            self._stores.move_to_end(k)
+        return store
+
+    def current(self) -> SessionStore:
+        return self.for_session(current_session_id())
+
+    def drop_session(self, session_id: str | None) -> bool:
+        return self._stores.pop(self.key(session_id), None) is not None
+
+    @property
+    def session_count(self) -> int:
+        return len(self._stores)
+
+    @property
+    def total_bytes(self) -> int:
+        return sum(s.total_bytes for s in self._stores.values())
+
+    def _enforce_budget(self, keep: str) -> list[str]:
+        """Drop least-recently-used sessions other than ``keep`` until under budget."""
+        dropped: list[str] = []
+        while self.total_bytes > self.max_total_bytes and len(self._stores) > 1:
+            for k in list(self._stores):
+                if k != keep:
+                    del self._stores[k]
+                    dropped.append(k)
+                    break
+            else:  # pragma: no cover - only ``keep`` is left
+                break
+        return dropped
+
+    # --- SessionStore interface, delegated to the current session --------------
+
+    def put(
+        self, name: str, kind: str, value: Any, market_data_source: str | None = None
+    ) -> tuple[SessionItem, str | None]:
+        k = self.key(current_session_id())
+        result = self.for_session(k).put(name, kind, value, market_data_source)
+        self._enforce_budget(k)
+        return result
+
+    def delete(self, name: str) -> bool:
+        return self.current().delete(name)
+
+    def clear(self) -> None:
+        self.current().clear()
+
+    def get(self, name: str) -> SessionItem:
+        return self.current().get(name)
+
+    def attached_indices(self, name: str) -> list[dict[str, Any]]:
+        return self.current().attached_indices(name)
+
+    def items(self) -> list[SessionItem]:
+        return self.current().items()
+
+    def __len__(self) -> int:
+        return len(self.current())
+
+
 def is_ref(item: Any) -> bool:
     return isinstance(item, dict) and set(item) == {"session"} and isinstance(item["session"], str)
 
 
 def resolve_refs(
-    store: SessionStore,
+    store: ScratchStore,
     curves: list[Any],
     indices: list[Any] | None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:

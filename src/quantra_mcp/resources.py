@@ -25,6 +25,48 @@ EXAMPLE_ENDPOINTS: dict[str, str] = {
 }
 
 
+DEVELOPER_GUIDE = """\
+# quantra-mcp for developers: the technical map
+
+quantra_meta reports the engine version and
+products; list_endpoints / engine_schema / list_enums describe request shapes;
+quantra://examples/* and list_examples / get_example give 222 complete verified
+engine requests (an example's `pricing` block is a valid `market`); engine_request
+POSTs any endpoint. Curves: list_presets / get_preset -> build_curve(preset, quotes)
+or curve_from_pasted_table(text, kind=discount|zero|par) or build_value_curve ->
+build_query -> bootstrap_curve; session_put stores a built curve so later calls pass
+{"session": "<name>"}. Pricing: one price_<product> tool per product takes a `market`
+({"session": name} | an engine pricing block | {curves, indices, ...}), a `preset`
+whose trade block supplies every convention, and the trade economics; "spot" and
+tenor dates are resolved by the engine's /calendar-advance and reported in
+`date_resolution`. Analytics by composition: swap_dv01, key_rate_ladder, scenario,
+fair_rate (each reprice's full result is in `calls`; DV01 `method` centered | up | down,
+centered by default = (NPV(+bp) - NPV(-bp)) / 2). Reconciliation: compare_results
+(external {label: number} vs a result; abs / rel differences; topic per metric),
+explain_method(topic) (the cited methodology page) and reprice_with(result, changes)
+(edit fields of an echoed request by path, reprice, diff both requests and the numeric
+fields). The connector-side computations (bumps, DV01 differences, scenario changes,
+reprice diffs) are documented and cited into this server's own source at
+quantra://methodology/connector-analytics, which also lists which result fields are
+engine outputs and which are differences computed here. Every citation carries a GitHub
+permalink; the two repositories are the engine https://github.com/joseprupi/quantraserver
+(cited at the pinned tag) and this server https://github.com/joseprupi/quantra-mcp (cited
+at a commit); both URLs are also the first entry of the quantra://methodology index.
+Every result echoes the exact
+request sent (`request`) and the engine body verbatim (`response`); on an engine error
+`ok` is false and `error` is the engine's text (400 = request wrong, 422 = well-formed
+but unpriceable). The engine does not default omitted fields; every convention a
+builder applies is listed in `notes` with its preset source.
+
+Failures are tool errors: every result whose `ok` is false (an engine error, a local
+validation rejection, a provenance refusal, a hosted-mode rate or concurrency refusal)
+is returned with the MCP `isError` flag set, with the same JSON body as content and as
+`structuredContent`; a refusal carries `retry_after_s`. Session scratch (session_put /
+session_get / session_list / session_delete and `{"session": name}` references) is
+private to the MCP session, in memory, bounded, never persisted.
+"""
+
+
 def example_names() -> list[str]:
     """The two blog examples at the top of ``examples/`` (the M1 resource set)."""
     return sorted(p.stem for p in EXAMPLES_DIR.glob("*.json") if p.name != "INDEX.json")
@@ -47,6 +89,18 @@ def read_doc(name: str) -> str:
 
 
 def register(app: MCPServer) -> None:
+    @app.resource(
+        "quantra://guide/developers",
+        name="developer-guide",
+        description=(
+            "The technical map of this server for developers: discovery, curve, pricing, "
+            "analytics and reconciliation tools, result shapes, errors, session scratch."
+        ),
+        mime_type="text/markdown",
+    )
+    def guide_developers() -> str:
+        return DEVELOPER_GUIDE
+
     @app.resource(
         "quantra://docs/http-api",
         name="engine-http-api",

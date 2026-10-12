@@ -9,7 +9,7 @@ import pytest
 from mcp import Client
 
 from quantra_mcp.resources import load_example
-from tests.conftest import FakeBackend
+from tests.conftest import FakeBackend, structured
 from tests.strips import STRIPS
 
 SOFR = STRIPS["USD_SOFR_OIS"]
@@ -30,8 +30,7 @@ CANNED_BOOTSTRAP = {
 
 
 def _s(result: Any) -> dict[str, Any]:
-    assert result.structured_content is not None, result.content
-    return dict(result.structured_content)
+    return structured(result)  # also checks is_error == (ok is False)
 
 
 async def _build_sofr(c: Client) -> dict[str, Any]:

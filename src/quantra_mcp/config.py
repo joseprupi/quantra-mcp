@@ -6,11 +6,14 @@
 | ``QUANTRA_TIMEOUT_S`` | ``60`` | Per-request timeout in seconds. |
 | ``QUANTRA_MCP_LOG`` | ``info`` | stderr log level (stdout is the MCP channel). |
 | ``QUANTRA_SESSION_MAX_ITEMS`` | ``64`` | Cap on in-memory session scratch items (LRU). |
-| ``QUANTRA_SESSION_MAX_TOTAL_BYTES`` | ``33554432`` | Cap on serialized session bytes (LRU). |
+| ``QUANTRA_SESSION_MAX_TOTAL_BYTES`` | ``33554432`` | Cap on session bytes, all sessions (LRU). |
+| ``QUANTRA_SESSION_MAX_SESSIONS`` | ``256`` | Cap on MCP sessions with scratch (LRU). |
 | ``QUANTRA_MAX_CONCURRENCY`` | ``4`` | Max simultaneous engine calls (fan-outs; HTTP tool calls). |
-| ``QUANTRA_MAX_QUEUE`` | ``8`` | HTTP: tool calls allowed to wait for a slot before 503. |
-| ``QUANTRA_RATE_LIMIT_RPM`` | ``60`` | HTTP: per-client requests per minute (``0`` disables). |
+| ``QUANTRA_MAX_CONCURRENCY_PER_SESSION`` | ``2`` | HTTP: in-flight tool calls per MCP session. |
+| ``QUANTRA_MAX_QUEUE`` | ``8`` | HTTP: tool calls allowed to wait for a slot before refusal. |
+| ``QUANTRA_RATE_LIMIT_RPM`` | ``60`` | HTTP: per-session tool calls + reads per min (``0`` off). |
 | ``QUANTRA_RATE_LIMIT_BURST`` | ``20`` | HTTP: token-bucket burst size. |
+| ``QUANTRA_RATE_LIMIT_IP_RPM`` | ``600`` | HTTP: per-IP ceiling over every request (``0`` off). |
 | ``QUANTRA_MAX_BODY_BYTES`` | ``2097152`` | HTTP: request body cap (413 above). |
 | ``QUANTRA_TRUST_PROXY`` | ``0`` | HTTP: honour ``X-Forwarded-For`` (only behind your proxy). |
 | ``QUANTRA_ALLOWED_HOSTS`` | *(empty)* | HTTP: ``Host`` allow-list (DNS-rebinding protection). |
@@ -31,10 +34,13 @@ DEFAULT_TIMEOUT_S = 60.0
 DEFAULT_LOG_LEVEL = "info"
 DEFAULT_SESSION_MAX_ITEMS = 64
 DEFAULT_SESSION_MAX_TOTAL_BYTES = 32 * 1024 * 1024
+DEFAULT_SESSION_MAX_SESSIONS = 256
 DEFAULT_MAX_CONCURRENCY = 4
+DEFAULT_MAX_CONCURRENCY_PER_SESSION = 2
 DEFAULT_MAX_QUEUE = 8
 DEFAULT_RATE_LIMIT_RPM = 60
 DEFAULT_RATE_LIMIT_BURST = 20
+DEFAULT_RATE_LIMIT_IP_RPM = 600
 DEFAULT_MAX_BODY_BYTES = 2 * 1024 * 1024
 
 _LOG_LEVELS = ("debug", "info", "warning", "error", "critical")
@@ -80,10 +86,13 @@ class Settings:
     log_level: str = DEFAULT_LOG_LEVEL
     session_max_items: int = DEFAULT_SESSION_MAX_ITEMS
     session_max_total_bytes: int = DEFAULT_SESSION_MAX_TOTAL_BYTES
+    session_max_sessions: int = DEFAULT_SESSION_MAX_SESSIONS
     max_concurrency: int = DEFAULT_MAX_CONCURRENCY
+    max_concurrency_per_session: int = DEFAULT_MAX_CONCURRENCY_PER_SESSION
     max_queue: int = DEFAULT_MAX_QUEUE
     rate_limit_rpm: int = DEFAULT_RATE_LIMIT_RPM
     rate_limit_burst: int = DEFAULT_RATE_LIMIT_BURST
+    rate_limit_ip_rpm: int = DEFAULT_RATE_LIMIT_IP_RPM
     max_body_bytes: int = DEFAULT_MAX_BODY_BYTES
     trust_proxy: bool = False
     allowed_hosts: tuple[str, ...] = field(default_factory=tuple)
@@ -136,10 +145,22 @@ class Settings:
             session_max_total_bytes=_int(
                 source, "QUANTRA_SESSION_MAX_TOTAL_BYTES", DEFAULT_SESSION_MAX_TOTAL_BYTES, 1024
             ),
+            session_max_sessions=_int(
+                source, "QUANTRA_SESSION_MAX_SESSIONS", DEFAULT_SESSION_MAX_SESSIONS, 1
+            ),
             max_concurrency=_int(source, "QUANTRA_MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY, 1),
+            max_concurrency_per_session=_int(
+                source,
+                "QUANTRA_MAX_CONCURRENCY_PER_SESSION",
+                DEFAULT_MAX_CONCURRENCY_PER_SESSION,
+                1,
+            ),
             max_queue=_int(source, "QUANTRA_MAX_QUEUE", DEFAULT_MAX_QUEUE, 0),
             rate_limit_rpm=_int(source, "QUANTRA_RATE_LIMIT_RPM", DEFAULT_RATE_LIMIT_RPM, 0),
             rate_limit_burst=_int(source, "QUANTRA_RATE_LIMIT_BURST", DEFAULT_RATE_LIMIT_BURST, 1),
+            rate_limit_ip_rpm=_int(
+                source, "QUANTRA_RATE_LIMIT_IP_RPM", DEFAULT_RATE_LIMIT_IP_RPM, 0
+            ),
             max_body_bytes=_int(source, "QUANTRA_MAX_BODY_BYTES", DEFAULT_MAX_BODY_BYTES, 1024),
             trust_proxy=_bool(source, "QUANTRA_TRUST_PROXY"),
             allowed_hosts=_list(source, "QUANTRA_ALLOWED_HOSTS"),

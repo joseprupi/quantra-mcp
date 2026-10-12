@@ -74,7 +74,7 @@ from quantra_mcp.schema.enums_generated import (
     SwapType,
 )
 from quantra_mcp.schema.validate import validate_request
-from quantra_mcp.session import SessionStore
+from quantra_mcp.session import ScratchStore
 from quantra_mcp.tools._dates import DateResolutionFailed, DateResolver
 from quantra_mcp.tools._market_source import MarketDataSource, stamp
 from quantra_mcp.tools._result import ToolResult, local_error_result, new_request_id, run_post
@@ -97,7 +97,7 @@ Market = dict[str, Any]
 
 async def _price(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     endpoint: str,
     list_key: str,
     market: Market,
@@ -219,7 +219,7 @@ def _src(preset: Preset, dotted: str) -> str:
 
 async def price_vanilla_swap_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     preset: str,
     trades: list[ps.VanillaSwapTrade],
@@ -273,7 +273,7 @@ async def price_vanilla_swap_impl(
 
 async def price_ois_swap_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     preset: str,
     trades: list[ps.OisSwapTrade],
@@ -367,7 +367,7 @@ def _bond_options(include_details: bool, include_flows: bool) -> dict[str, Any] 
 
 async def price_fixed_rate_bond_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     preset: str,
     trades: list[pb.FixedRateBondTrade],
@@ -416,7 +416,7 @@ async def price_fixed_rate_bond_impl(
 
 async def price_floating_rate_bond_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     preset: str,
     trades: list[pb.FloatingRateBondTrade],
@@ -496,7 +496,7 @@ async def price_floating_rate_bond_impl(
 
 async def price_zero_coupon_bond_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     preset: str,
     trades: list[pb.ZeroCouponBondTrade],
@@ -557,7 +557,7 @@ async def price_zero_coupon_bond_impl(
 
 async def price_callable_fixed_rate_bond_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     preset: str,
     trades: list[pb.CallableBondTrade],
@@ -610,7 +610,7 @@ async def price_callable_fixed_rate_bond_impl(
 
 async def price_fra_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     preset: str,
     trades: list[pr.FraTrade],
@@ -676,7 +676,7 @@ async def price_fra_impl(
 
 async def price_cap_floor_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     preset: str,
     trades: list[pr.CapFloorTrade],
@@ -764,7 +764,7 @@ def _require_model(pricing: dict[str, Any], built: list[BuiltTrade]) -> None:
 
 async def price_swaption_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     preset: str,
     trades: list[pw.SwaptionTrade],
@@ -862,7 +862,7 @@ async def price_swaption_impl(
 
 async def price_cds_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     preset: str,
     trades: list[pc.CdsTrade],
@@ -926,7 +926,7 @@ async def price_cds_impl(
 
 async def price_equity_option_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market | None,
     preset: str,
     trades: list[pe.EquityOptionTrade],
@@ -1042,7 +1042,7 @@ async def _inflation_dates(
 
 async def price_zc_inflation_swap_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     preset: str,
     trades: list[pi.ZcInflationSwapTrade],
@@ -1100,7 +1100,7 @@ async def price_zc_inflation_swap_impl(
 
 async def price_yoy_inflation_swap_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     preset: str,
     trades: list[pi.YoyInflationSwapTrade],
@@ -1158,7 +1158,7 @@ async def price_yoy_inflation_swap_impl(
 
 async def price_yoy_inflation_cap_floor_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     market: Market,
     preset: str,
     trades: list[pi.YoyInflationCapFloorTrade],
@@ -1280,7 +1280,7 @@ _MARKET_DOC = """market: ``{"session": name}`` (a stored market or curve), an en
             or ``{curves: [...], indices: [...], ...}`` from build_curve results."""
 
 
-def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
+def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
     @app.tool()
     async def price_vanilla_swap(
         market: Market,

@@ -10,7 +10,7 @@ from mcp import Client
 from mcp.types import TextContent
 
 from quantra_mcp.errors import EngineError, TransportError
-from tests.conftest import FakeBackend
+from tests.conftest import FakeBackend, structured
 
 OVERRIDE = {
     "calendar": "TARGET",
@@ -23,7 +23,7 @@ def _structured(result: Any) -> dict[str, Any]:
     assert result.structured_content is not None
     assert isinstance(result.content[0], TextContent)
     assert json.loads(result.content[0].text) == result.structured_content
-    return dict(result.structured_content)
+    return structured(result)  # also checks is_error == (ok is False)
 
 
 async def test_lists_tools_and_resources(app: Any) -> None:

@@ -1,7 +1,15 @@
 import pytest
 
 from quantra_mcp.errors import LocalValidationError
-from quantra_mcp.session import SessionStore, is_ref, resolve_refs
+from quantra_mcp.session import (
+    LOCAL_SESSION,
+    SessionStore,
+    SessionStores,
+    bind_session,
+    current_session_id,
+    is_ref,
+    resolve_refs,
+)
 
 CURVE = {"id": "c1", "reference_date": "2025-01-15", "points": []}
 INDEX = {"id": "IX", "name": "ix"}
@@ -97,3 +105,74 @@ def test_total_bytes_bound_evicts_lru_and_refuses_oversize() -> None:
         s.put("big", "curve", big)
     with pytest.raises(ValueError, match="max_total_bytes"):
         SessionStore(max_total_bytes=0)
+
+
+# --- per-MCP-session registry (M5.5) ---------------------------------------
+
+
+def test_stores_are_private_per_session_and_errors_list_only_own_names() -> None:
+    reg = SessionStores(max_items=4, max_total_bytes=1 << 20, max_sessions=8)
+    with bind_session("A"):
+        reg.put("sofr", "curve", CURVE, "user_pasted")
+        assert [i.name for i in reg.items()] == ["sofr"] and len(reg) == 1
+    with bind_session("B"):
+        assert reg.items() == [] and len(reg) == 0
+        with pytest.raises(LocalValidationError) as exc:
+            reg.get("sofr")
+        assert "(none)" in exc.value.error and "sofr" not in exc.value.error.split("stored:")[1]
+        reg.put("sofr", "curve", {**CURVE, "id": "B"}, "user_pasted")
+        assert reg.get("sofr").value["id"] == "B"
+        assert reg.delete("nope") is False
+    with bind_session("A"):
+        assert reg.get("sofr").value["id"] == "c1"  # B's put did not clobber A's
+        assert resolve_refs(reg, [{"session": "sofr"}], None)[0][0]["id"] == "c1"
+    assert reg.session_count == 2
+    # no session bound (stdio, in-memory client) = the implicit local session
+    assert current_session_id() is None
+    reg.put("x", "index", INDEX)
+    assert reg.for_session(None) is reg.for_session(LOCAL_SESSION)
+    assert [i.name for i in reg.for_session(None).items()] == ["x"]
+    assert reg.session_count == 3
+    assert reg.drop_session("B") and not reg.drop_session("B") and reg.session_count == 2
+
+
+def test_registry_evicts_whole_sessions_lru_and_holds_a_global_byte_budget() -> None:
+    reg = SessionStores(max_items=8, max_total_bytes=1 << 20, max_sessions=2)
+    for sid in ("A", "B"):
+        with bind_session(sid):
+            reg.put("c", "curve", CURVE, "user_pasted")
+    with bind_session("A"):
+        reg.get("c")  # A is now the most recently used
+    with bind_session("C"):
+        reg.put("c", "curve", CURVE, "user_pasted")  # third session: B (LRU) goes
+    assert reg.session_count == 2
+    assert reg.drop_session("B") is False  # gone; A (recently used) survived
+    with bind_session("A"):
+        assert len(reg) == 1
+    with bind_session("B"):
+        assert reg.items() == []  # re-created empty, which in turn evicts the LRU session
+    assert reg.session_count == 2
+    # the byte budget is global: filling one session drops the least-recently-used others
+    big = {**CURVE, "points": [{"n": "x" * 300}]}
+    reg2 = SessionStores(max_items=8, max_total_bytes=1000, max_sessions=8)
+    with bind_session("A"):
+        reg2.put("c", "curve", big, "user_pasted")
+    with bind_session("B"):
+        reg2.put("c", "curve", big, "user_pasted")
+    with bind_session("C"):
+        reg2.put("c", "curve", big, "user_pasted")
+    assert reg2.total_bytes <= 1000 and reg2.session_count == 2
+    with bind_session("A"):
+        assert reg2.items() == []  # A was the oldest and was dropped
+    with pytest.raises(ValueError):
+        SessionStores(max_sessions=0)
+
+
+def test_bind_session_restores_the_previous_binding() -> None:
+    assert current_session_id() is None
+    with bind_session("outer"):
+        assert current_session_id() == "outer"
+        with bind_session("inner"):
+            assert current_session_id() == "inner"
+        assert current_session_id() == "outer"
+    assert current_session_id() is None

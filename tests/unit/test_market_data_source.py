@@ -16,7 +16,7 @@ from quantra_mcp.server import build_server
 from quantra_mcp.session import SessionStore
 from quantra_mcp.tools._market_source import MARKET_DATA_SOURCES, check_source, stamp
 from quantra_mcp.tools.session import session_put_impl
-from tests.conftest import FakeBackend
+from tests.conftest import FakeBackend, structured
 from tests.product_cases import product_cases
 from tests.strips import STRIPS
 from tests.unit.test_pricing_tools import CANNED
@@ -61,8 +61,7 @@ BUILD_ARGS: dict[str, Any] = {
 
 
 def _s(result: Any) -> dict[str, Any]:
-    assert result.structured_content is not None, result.content
-    return dict(result.structured_content)
+    return structured(result)  # also checks is_error == (ok is False)
 
 
 @pytest.fixture

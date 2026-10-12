@@ -14,7 +14,7 @@ from quantra_mcp.resources import load_example
 from quantra_mcp.server import build_server
 from quantra_mcp.tools import reconcile
 from quantra_mcp.tools.reconcile import FieldChange, apply_change, parse_path, request_diff
-from tests.conftest import FakeBackend
+from tests.conftest import FakeBackend, structured
 from tests.product_cases import product_cases
 
 FIXTURE = "irs_eur_5y_payer_ois_discounted_multicurve"
@@ -68,9 +68,7 @@ async def _call(backend: FakeBackend, name: str, args: dict[str, Any]) -> dict[s
     app = build_server(Settings(engine_url="http://fake"), backend=backend)
     async with Client(app) as c:
         r = await c.call_tool(name, args)
-    assert not r.is_error, r.content
-    assert r.structured_content is not None
-    return dict(r.structured_content)
+    return structured(r)  # also checks is_error == (ok is False)
 
 
 # ---------------------------------------------------------------- path helpers

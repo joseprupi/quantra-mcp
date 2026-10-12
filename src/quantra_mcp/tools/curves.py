@@ -30,7 +30,7 @@ from quantra_mcp.schema.enums_generated import (
     Interpolator,
 )
 from quantra_mcp.schema.validate import validate_component, validate_request
-from quantra_mcp.session import SessionStore, resolve_refs
+from quantra_mcp.session import ScratchStore, resolve_refs
 from quantra_mcp.tools._market_source import MarketDataSource, stamp
 from quantra_mcp.tools._result import ToolResult, local_error_result, new_request_id, run_post
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
@@ -262,7 +262,7 @@ def _unwrap_query(item: Any, i: int) -> dict[str, Any]:
 
 async def bootstrap_curve_impl(
     backend: Backend,
-    store: SessionStore,
+    store: ScratchStore,
     curves: list[dict[str, Any]],
     as_of: str,
     queries: list[dict[str, Any]],
@@ -335,7 +335,7 @@ async def bootstrap_inflation_curve_impl(
     )
 
 
-def register(app: MCPServer, backend: Backend, store: SessionStore) -> None:
+def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
     @app.tool()
     def list_presets() -> dict[str, Any]:
         """Market-convention presets available to build_curve / build_value_curve.

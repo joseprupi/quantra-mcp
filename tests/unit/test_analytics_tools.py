@@ -15,7 +15,7 @@ from quantra_mcp.backend.base import BackendResponse
 from quantra_mcp.config import Settings
 from quantra_mcp.resources import load_example
 from quantra_mcp.server import build_server
-from tests.conftest import FakeBackend
+from tests.conftest import FakeBackend, structured
 
 FIXTURE = "irs_eur_5y_payer_ois_discounted_multicurve"
 
@@ -77,9 +77,7 @@ async def _call(backend: FakeBackend, name: str, args: dict[str, Any]) -> dict[s
     app = build_server(Settings(engine_url="http://fake"), backend=backend)
     async with Client(app) as c:
         r = await c.call_tool(name, args)
-    assert not r.is_error, r.content
-    assert r.structured_content is not None
-    return dict(r.structured_content)
+    return structured(r)  # also checks is_error == (ok is False)
 
 
 async def test_swap_dv01_default_is_centered_and_reports_every_call() -> None:

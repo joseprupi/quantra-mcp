@@ -1,4 +1,4 @@
-"""Tier 3: in-memory session scratch tools (invariant 6: never persisted)."""
+"""Tier 3: in-memory, per-MCP-session scratch tools (invariant 6: never persisted)."""
 
 from __future__ import annotations
 
@@ -8,14 +8,14 @@ from mcp.server.mcpserver import MCPServer
 
 from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.schema.validate import validate_component
-from quantra_mcp.session import SessionKind, SessionStore
+from quantra_mcp.session import ScratchStore, SessionKind
 from quantra_mcp.tools._market_source import MarketDataSource, check_source
 
 _COMPONENT = {"curve": "TermStructure", "index": "IndexDef", "market": "RatesMarketData"}
 
 
 def session_put_impl(
-    store: SessionStore, name: str, kind: str, value: Any, market_data_source: Any
+    store: ScratchStore, name: str, kind: str, value: Any, market_data_source: Any
 ) -> dict[str, Any]:
     try:
         source = check_source(market_data_source)
@@ -42,7 +42,7 @@ def session_put_impl(
     return out
 
 
-def session_get_impl(store: SessionStore, name: str) -> dict[str, Any]:
+def session_get_impl(store: ScratchStore, name: str) -> dict[str, Any]:
     try:
         item = store.get(name)
     except LocalValidationError as exc:
@@ -54,7 +54,7 @@ def session_get_impl(store: SessionStore, name: str) -> dict[str, Any]:
     return out
 
 
-def session_list_impl(store: SessionStore) -> dict[str, Any]:
+def session_list_impl(store: ScratchStore) -> dict[str, Any]:
     return {
         "ok": True,
         "items": [i.summary() for i in store.items()],
@@ -63,11 +63,11 @@ def session_list_impl(store: SessionStore) -> dict[str, Any]:
     }
 
 
-def session_delete_impl(store: SessionStore, name: str) -> dict[str, Any]:
+def session_delete_impl(store: ScratchStore, name: str) -> dict[str, Any]:
     return {"ok": True, "name": name, "deleted": store.delete(name), "size": len(store)}
 
 
-def register(app: MCPServer, store: SessionStore) -> None:
+def register(app: MCPServer, store: ScratchStore) -> None:
     @app.tool()
     def session_put(
         name: str, kind: SessionKind, value: dict[str, Any], market_data_source: MarketDataSource
@@ -90,8 +90,9 @@ def register(app: MCPServer, store: SessionStore) -> None:
                 invent numbers, do not call this tool: ask the user for the data. A
                 build_curve result already carries its declaration; the two must agree.
 
-        In-memory only, per server process, least-recently-used eviction at
-        ``QUANTRA_SESSION_MAX_ITEMS`` (default 64). Reference it later as
+        In-memory only, private to this MCP session (another client of the same server
+        never sees it), least-recently-used eviction at ``QUANTRA_SESSION_MAX_ITEMS``
+        (default 64), never persisted. Reference it later as
         ``{"session": "<name>"}`` in ``bootstrap_curve`` (and pricing tools); the stored
         ``market_data_source`` is reported in their ``notes``.
         """

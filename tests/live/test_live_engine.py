@@ -17,6 +17,7 @@ from mcp import Client
 from quantra_mcp.config import Settings
 from quantra_mcp.resources import load_example
 from quantra_mcp.server import build_server
+from tests.conftest import structured
 
 ENGINE_URL = os.environ.get("QUANTRA_ENGINE_URL", "").rstrip("/")
 
@@ -53,9 +54,7 @@ def live_client() -> Client:
 
 async def _call(client: Client, name: str, args: dict[str, Any]) -> dict[str, Any]:
     r = await client.call_tool(name, args)
-    assert not r.is_error, r.content
-    assert r.structured_content is not None
-    return dict(r.structured_content)
+    return structured(r)  # also checks is_error == (ok is False)
 
 
 async def test_meta_and_health() -> None:

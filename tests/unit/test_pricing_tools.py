@@ -21,7 +21,7 @@ from mcp import Client
 from quantra_mcp.config import Settings
 from quantra_mcp.resources import load_example
 from quantra_mcp.server import build_server
-from tests.conftest import FakeBackend
+from tests.conftest import FakeBackend, structured
 from tests.product_cases import (
     FIXTURES,
     USD_OIS_SWAPTION_FIXTURES,
@@ -73,8 +73,7 @@ def _golden(name: str, body: dict[str, Any]) -> None:
 
 
 def _s(result: Any) -> dict[str, Any]:
-    assert result.structured_content is not None, result.content
-    return dict(result.structured_content)
+    return structured(result)  # also checks is_error == (ok is False)
 
 
 @pytest.fixture

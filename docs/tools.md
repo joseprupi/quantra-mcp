@@ -24,7 +24,7 @@ result shape (below). Conventions come from the [presets](presets.md).
 | `build_query(curve_id, measures, tenors? \| range_grid?, calendar?, business_day_convention?, zero?, fwd?)` | A `CurveQuerySpec`; FWD needs explicit `fwd` options. No engine call. |
 | `bootstrap_curve(curves, as_of, queries, indices?, calendar_overrides?, request_id?)` | `POST /bootstrap-curves`. `curves` items: `TermStructure`, `build_curve` result or `{"session": name}`; echoed `request` is the resolved body; `summary` = per curve `{id, pillars, first_grid_date, last_grid_date, measures}`. |
 | `bootstrap_inflation_curve(body, request_id?)` | `POST /bootstrap-inflation-curves` with a raw body (validated first). |
-| `session_put(name, kind, value)` / `session_get(name)` / `session_list()` / `session_delete(name)` | In-memory scratch (`curve`, `index`, `market`), per process, never persisted, LRU-capped. |
+| `session_put(name, kind, value)` / `session_get(name)` / `session_list()` / `session_delete(name)` | In-memory scratch (`curve`, `index`, `market`), private to the MCP session, never persisted, LRU-capped per session and globally. |
 | `list_examples(category?, product?)` / `get_example(name)` | The 222 vendored example requests (engine fixtures + the two blog examples) with endpoint, catalog description and QuantLib reference value; `body` is ready for `engine_request`, `body.pricing` is a valid `market`. No engine call. |
 
 ### Pricing tools (one per product)

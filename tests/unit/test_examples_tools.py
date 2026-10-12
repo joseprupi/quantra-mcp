@@ -10,11 +10,11 @@ from mcp import Client
 
 from quantra_mcp import examples_catalog as cat
 from quantra_mcp.schema.loader import load_spec, pin
+from tests.conftest import structured
 
 
 def _s(result: Any) -> dict[str, Any]:
-    assert result.structured_content is not None, result.content
-    return dict(result.structured_content)
+    return structured(result)  # also checks is_error == (ok is False)
 
 
 def test_index_covers_every_vendored_file_once() -> None:

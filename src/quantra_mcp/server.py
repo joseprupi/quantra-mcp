@@ -16,8 +16,10 @@ from quantra_mcp.backend.engine_http import EngineHttpBackend
 from quantra_mcp.config import Settings
 from quantra_mcp.errors import EngineError, TransportError
 from quantra_mcp.hosted import AccessLog, build_http_app
+from quantra_mcp.middleware import FailuresAreErrors, SessionScope
+from quantra_mcp.rules import ABSOLUTE_RULE, EXAMPLE_SHAPE_RULE
 from quantra_mcp.schema.loader import load_spec, pin
-from quantra_mcp.session import SessionStore
+from quantra_mcp.session import ScratchStore, SessionStores
 from quantra_mcp.tools import (
     analytics,
     calendar,
@@ -35,105 +37,23 @@ log = logging.getLogger("quantra_mcp")
 
 SERVER_NAME = "quantra"
 
-INSTRUCTIONS = """\
-You are connected to a Quantra pricing engine (QuantLib-based). Through it you can
-price interest-rate swaps (fixed vs IBOR, overnight-index such as SOFR / ESTR /
-SONIA), fixed, floating, zero-coupon and callable bonds, FRAs, caps and floors,
-swaptions (European, Bermudan, American; on a vanilla or an OIS underlying; normal or
-lognormal vol; physical or cash settlement), credit default swaps, equity options,
-inflation swaps and inflation caps/floors; build discount curves from par quotes,
-from discount factors or from zero rates; compute DV01, key-rate ladders, scenarios
-and fair rates; and check business calendars. Every number you report comes from the
-engine; nothing is computed on this side.
+GUIDANCE = """\
+Quantra pricing engine (QuantLib): swaps, bonds, FRAs, caps/floors, swaptions, CDS,
+equity options, inflation; curves from par quotes, discount factors or zero rates; DV01,
+ladders, scenarios, fair rates; calendars. Every number comes from the engine. With a
+business user speak in trade terms, not tool or preset names. For a trade: (1) can it be
+priced here; (2) which market data is missing, in paste-able form; (3) every convention
+assumed, with its source; (4) the engine's result against the user's number, causes
+tested with reprice_with, never asserted; (5) the engine's numbers with their
+assumptions. State sign conventions and dates. Turn engine refusals into what the user
+can supply; never alter an input to match. "How is this computed?" comes from
+explain_method with citations; never claim vendor data or methodology.
 
-How to work with a business user (a trader, a risk manager, a treasurer):
-- Speak in trade and market terms: notional, strike, expiry, the curve, the vol, the
-  settlement style, day counts. Do not mention tool names, presets, sessions, request
-  bodies, schemas or MCP unless the user asks how it works.
-- When the user describes a trade, pastes a screenshot or a ticket (Bloomberg SWPM,
-  a term sheet), answer in this order: (1) can it be priced here, yes or no, and why;
-  (2) exactly which market data is missing and in what simple form they can paste it
-  ("the discount factors from the Curves tab as date, DF rows", "the par quotes of the
-  SOFR curve as tenor, rate %", "the normal vol in bp at 1M x 10Y"); (3) every
-  convention you will assume, with its source, before pricing; (4) the engine's result
-  reconciled against the number on the screen, premium against spot premium (the price
-  paid today, not the forward premium), fair rate against fair rate, with the
-  difference and its likely causes; (5) always the engine's own numbers together with
-  the assumptions they rest on; the complete request only on demand.
-- Licensed vendor curves and surfaces (Bloomberg ICVS / SWDF, Refinitiv, Markit, a
-  bank's internal curve) are never available on this side and must not be invented
-  or recalled from memory: the user has to paste them. A pasted table of discount
-  factors, zero rates or par quotes is enough; it is read as given (percent signs and
-  thousands separators are the only things normalised) and every row that cannot be
-  read is reported back.
-- State the sign convention of a value (positive = in favour of the side the user
-  named), the valuation date and the dates the engine resolved (spot, maturity).
-- If the engine refuses a request, translate its message into what the user can
-  supply or change; never alter an input to make a number match.
-- Market conventions come in named sets per currency and index (USD SOFR OIS, EUR
-  Euribor 6M / 3M, EUR ESTR OIS, GBP SONIA, and trade-only sets for bonds, CDS, equity
-  and inflation); each field carries its source.
-- When the user brings a number from another system (a vendor screen, a counterparty,
-  a spreadsheet, a risk report), follow the reconcile-external-price order: identify
-  the instrument, list the inputs needed in paste-able form, confirm conventions, build
-  the market from what was pasted, price, put the two numbers side by side
-  (compare_results), then for each difference consult explain_method for that metric
-  and TEST the candidate cause with reprice_with (flip the settlement method, swap
-  zeros for discount factors, change the vol type or interpolator, bump a quote, roll
-  the date) so the explanation is demonstrated, not asserted.
-- "How is this computed?" is answered from explain_method (quantra://methodology/*):
-  the engine's own documentation and source at the pinned tag, each statement with its
-  path@tag:line citation. Where the page says the engine does not document something,
-  say so. Never claim access to vendor data or vendor methodology. Never assert a cause
-  for a difference without either a citation or a reprice that demonstrates it.
-
-ABSOLUTE RULE on market data: Never type, estimate, recall or invent market data (quotes,
-discount factors, zero rates, vols, fixings). Not as a placeholder, not as a test run, not
-labelled as approximate. Market data for a user's trade exists only when the user has
-pasted or dictated it in this conversation. Until then: say what is needed, in paste-able
-form, and stop. Do not call any curve-building or pricing tool. Every curve-building and
-pricing tool requires a market_data_source declaration (user_pasted, user_file,
-engine_example, session); none of its values describes estimated, recalled or placeholder
-data, so if you would have to invent numbers there is nothing you may declare: ask instead.
-The 222 vendored engine examples are request-SHAPE references only. When pricing a trade
-the user brought (a screenshot, a ticket, a description), the market data (curves, vols,
-fixings) MUST come from the user, as pasted values or quotes they provide. Never reuse an
-example's market data for the user's trade, even when the example looks like the same
-instrument, and never say "the engine already ships this trade". An example's own market
-data may be run only when the user explicitly asks to run that example, and then it is
-reported as the example's data, never as a price of the user's trade. If the user has not
-supplied market data, ask for it in paste-able form and stop there.
-
-For developers (the technical map): quantra_meta reports the engine version and
-products; list_endpoints / engine_schema / list_enums describe request shapes;
-quantra://examples/* and list_examples / get_example give 222 complete verified
-engine requests (an example's `pricing` block is a valid `market`); engine_request
-POSTs any endpoint. Curves: list_presets / get_preset -> build_curve(preset, quotes)
-or curve_from_pasted_table(text, kind=discount|zero|par) or build_value_curve ->
-build_query -> bootstrap_curve; session_put stores a built curve so later calls pass
-{"session": "<name>"}. Pricing: one price_<product> tool per product takes a `market`
-({"session": name} | an engine pricing block | {curves, indices, ...}), a `preset`
-whose trade block supplies every convention, and the trade economics; "spot" and
-tenor dates are resolved by the engine's /calendar-advance and reported in
-`date_resolution`. Analytics by composition: swap_dv01, key_rate_ladder, scenario,
-fair_rate (each reprice's full result is in `calls`; DV01 `method` centered | up | down,
-centered by default = (NPV(+bp) - NPV(-bp)) / 2). Reconciliation: compare_results
-(external {label: number} vs a result; abs / rel differences; topic per metric),
-explain_method(topic) (the cited methodology page) and reprice_with(result, changes)
-(edit fields of an echoed request by path, reprice, diff both requests and the numeric
-fields). The connector-side computations (bumps, DV01 differences, scenario changes,
-reprice diffs) are documented and cited into this server's own source at
-quantra://methodology/connector-analytics, which also lists which result fields are
-engine outputs and which are differences computed here. Every citation carries a GitHub
-permalink; the two repositories are the engine https://github.com/joseprupi/quantraserver
-(cited at the pinned tag) and this server https://github.com/joseprupi/quantra-mcp (cited
-at a commit); both URLs are also the first entry of the quantra://methodology index.
-Every result echoes the exact
-request sent (`request`) and the engine body verbatim (`response`); on an engine error
-`ok` is false and `error` is the engine's text (400 = request wrong, 422 = well-formed
-but unpriceable). The engine does not default omitted fields; every convention a
-builder applies is listed in `notes` with its preset source.
+Developers: the technical map is the resource quantra://guide/developers.
 """
+
+#: order matters: the rule first, the example-shape rule second, the guidance last
+INSTRUCTIONS = f"{ABSOLUTE_RULE}\n{EXAMPLE_SHAPE_RULE}\n{GUIDANCE}"
 
 
 def configure_logging(level: str) -> None:
@@ -209,17 +129,19 @@ def make_backend(settings: Settings) -> EngineHttpBackend:
 def build_server(
     settings: Settings | None = None,
     backend: Backend | None = None,
-    store: SessionStore | None = None,
+    store: ScratchStore | None = None,
     *,
     close_backend: bool | None = None,
 ) -> MCPServer:
     """Create the app. ``backend`` defaults to the HTTP engine at ``settings.engine_url``;
-    ``store`` defaults to a fresh in-memory session store capped by the settings.
+    ``store`` defaults to a fresh per-MCP-session scratch registry capped by the settings.
     ``close_backend`` (default: only when the backend was created here) closes the
     backend when the server's lifespan ends."""
     settings = settings or Settings.from_env()
     owned = backend is None if close_backend is None else close_backend
-    the_store = store or SessionStore(settings.session_max_items, settings.session_max_total_bytes)
+    the_store: ScratchStore = store or SessionStores(
+        settings.session_max_items, settings.session_max_total_bytes, settings.session_max_sessions
+    )
     the_backend: Backend = backend or make_backend(settings)
 
     @asynccontextmanager
@@ -242,7 +164,10 @@ def build_server(
         lifespan=lifespan,
         log_level="WARNING",
     )
+    # outermost first: the access log sees the final (flagged) result
     app.middleware.append(AccessLog(settings.log_raw_ip, settings.trust_proxy))
+    app.middleware.append(FailuresAreErrors())
+    app.middleware.append(SessionScope())
     discovery.register(app, the_backend)
     calendar.register(app, the_backend)
     raw.register(app, the_backend)
@@ -267,15 +192,18 @@ def run(
         import uvicorn
 
         log.info(
-            "streamable HTTP on http://%s:%d/mcp -> engine %s (rate %d rpm burst %d, "
-            "concurrency %d+%d queued, body cap %d bytes, trust_proxy=%s, allowed_hosts=%s)",
+            "streamable HTTP on http://%s:%d/mcp -> engine %s (per-session rate %d rpm burst "
+            "%d, per-IP ceiling %d rpm, concurrency %d+%d queued (%d per session), "
+            "body cap %d bytes, trust_proxy=%s, allowed_hosts=%s)",
             host,
             port,
             settings.engine_url,
             settings.rate_limit_rpm,
             settings.rate_limit_burst,
+            settings.rate_limit_ip_rpm,
             settings.max_concurrency,
             settings.max_queue,
+            settings.max_concurrency_per_session,
             settings.max_body_bytes,
             settings.trust_proxy,
             ",".join(settings.allowed_hosts) or "(none)",

@@ -77,6 +77,15 @@ class FakeBackend:
         return None
 
 
+def structured(result: Any) -> dict[str, Any]:
+    """The structured body of a tool result, checking the M5.5 invariant: a failed body
+    (``ok`` false) is flagged ``is_error`` and a successful one is not."""
+    assert result.structured_content is not None, result.content
+    body = dict(result.structured_content)
+    assert result.is_error == (body.get("ok") is False), (result.is_error, body)
+    return body
+
+
 @pytest.fixture
 def fake_backend() -> FakeBackend:
     return FakeBackend()
@@ -97,4 +106,4 @@ def bootstrap_example() -> dict[str, Any]:
     return json.loads((EXAMPLES / "sofr-bootstrap-request.json").read_text())
 
 
-__all__ = ["EngineError", "FakeBackend", "TransportError"]
+__all__ = ["EngineError", "FakeBackend", "TransportError", "structured"]

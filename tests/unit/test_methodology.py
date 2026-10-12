@@ -212,6 +212,7 @@ async def test_explain_method_tool_and_resources(app: Any) -> None:
         assert all(link.startswith(f"{ENGINE_URL}/blob/{pin().tag}/") for link in page["links"])
         conn = await c.call_tool("explain_method", {"topic": "connector-analytics"})
         assert conn.structured_content is not None and conn.structured_content["ok"]
+        assert not conn.is_error
         cpage = conn.structured_content
         assert cpage["source"] == "connector" and cpage["repository"] == CONNECTOR_URL
         sha = cpage["connector_sha"]
@@ -221,6 +222,7 @@ async def test_explain_method_tool_and_resources(app: Any) -> None:
         )
         bad = await c.call_tool("explain_method", {"topic": "vendor-screens"})
         assert bad.structured_content is not None and bad.structured_content["ok"] is False
+        assert bad.is_error  # a failed body is an MCP tool error (M5.5)
         assert "unknown methodology topic" in bad.structured_content["error"]
         assert {t["slug"] for t in bad.structured_content["topics"]} == BRIEF_TOPICS
         upper = await c.call_tool("explain_method", {"topic": "Curve Bootstrap"})

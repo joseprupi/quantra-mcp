@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.1.5 (2026-10-12)
+
+Hosted-mode fixes from an external review of the public server (M5.5).
+
+- **Session scratch is per MCP session.** `session_put` / `session_get` /
+  `session_list` / `session_delete` and `{"session": name}` references now resolve to
+  a store keyed on the transport's session id (the `Mcp-Session-Id` the streamable-HTTP
+  transport mints at `initialize`; stdio and in-memory clients share one implicit
+  session). One client's `session_put("sofr")` no longer overwrites another's, and a
+  miss lists only the caller's own names. Bounds: `QUANTRA_SESSION_MAX_ITEMS` per
+  session (unchanged), new `QUANTRA_SESSION_MAX_SESSIONS` (default 256, whole-session
+  LRU), `QUANTRA_SESSION_MAX_TOTAL_BYTES` now a budget across every session.
+- **Rate limiting per MCP session, not per IP.** The token bucket is keyed on the
+  session id when present (claude.ai connector traffic reaches the server from a few
+  shared egress addresses), on the client address before `initialize`; only
+  `tools/call` and `resources/read` spend tokens (the handshake and the listings are
+  free). A separate, higher per-IP ceiling (`QUANTRA_RATE_LIMIT_IP_RPM`, default 600)
+  stays as abuse protection. New `QUANTRA_MAX_CONCURRENCY_PER_SESSION` (default 2)
+  caps the tool calls one session may hold or queue, so one client cannot take every
+  global slot.
+- **Failures are tool errors.** Every failed tool result (`ok: false`: an engine
+  error, a local validation rejection, a provenance refusal) is returned with the MCP
+  `isError` flag and the same JSON body as content and `structuredContent`
+  (middleware `FailuresAreErrors`). A `tools/call` refused by the hosted layer (rate
+  limit, per-session cap, concurrency gate) is answered as a JSON-RPC tool error with
+  `status` 429 / 503, `retry_after_s` and a retry hint instead of a bare HTTP error;
+  plain routes and resource reads keep the HTTP status and `Retry-After`.
+- **Instructions reordered and trimmed** (7,628 -> under 2,000 characters): the
+  ABSOLUTE RULE on market data first, the example-shape rule second, the business-user
+  guidance condensed; the developer technical map moved to the resource
+  `quantra://guide/developers`. Both rules live in `rules.py` and are quoted verbatim
+  by the instructions and every prompt's VOICE block.
+- Access log: a flagged failure keeps its engine status (`engine_422`, `local_error`).
+
 ## 0.1.4 (2026-10-07)
 
 Connector self-documentation, centered DV01, front-stub default (M5.4). Driven by two

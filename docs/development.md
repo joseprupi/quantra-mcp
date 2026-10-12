@@ -70,13 +70,15 @@ uv run python scripts/pin_engine.py --engine-repo /path/to/quantraserver --tag v
 ```
 src/quantra_mcp/
   server.py          MCPServer app, transport selection, startup engine check
-  hosted.py          --http hardening: guard middleware (429/413/503), / /healthz /readyz, host validation, access log
+  hosted.py          --http hardening: guard (per-session + per-IP rate limits, body cap, concurrency; refusals as tool errors), / /healthz /readyz, host validation, access log
+  middleware.py      MCP-level middleware: session scope (binds the Mcp-Session-Id), failures -> isError
+  rules.py           the two market-data rules, quoted verbatim by INSTRUCTIONS and every prompt
   config.py          env -> Settings
   backend/           Backend protocol + the engine HTTP client
   schema/            vendored openapi3.json, PIN, generated enums, loader, validator
   presets/           market-convention presets (JSON data + registry; curve + trade blocks)
   builders/          pure builders: tenor parser, curves, schedule, market, bumps, products/<product>
-  session.py         in-memory session scratch (LRU, per process)
+  session.py         in-memory session scratch: one store per MCP session (LRU per session, LRU sessions, global byte budget)
   tools/             discovery, calendar, raw passthrough, curves, pricing, analytics, examples, session,
                      explain (methodology), reconcile (compare_results, reprice_with)
   resources.py       docs / schema / enums / examples / pin / presets / methodology

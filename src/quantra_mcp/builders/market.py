@@ -25,7 +25,7 @@ from typing import Any
 
 from quantra_mcp.builders.curves import merge_indices
 from quantra_mcp.builders.schedule import check_date, problem
-from quantra_mcp.session import SessionStore, resolve_refs
+from quantra_mcp.session import ScratchStore, resolve_refs
 
 #: market-object key -> (pricing path, list key)
 SECTIONS: dict[str, tuple[tuple[str, ...], str]] = {
@@ -103,7 +103,7 @@ def add_item(
 
 
 def resolve_market(
-    store: SessionStore,
+    store: ScratchStore,
     market: Any,
     as_of: str | None,
     calendar_overrides: list[dict[str, Any]] | None = None,

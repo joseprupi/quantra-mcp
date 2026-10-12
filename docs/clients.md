@@ -21,7 +21,7 @@ Or point the server at the public demo with `QUANTRA_ENGINE_URL=https://api.quan
 ```bash
 uvx quantra-mcp --version        # from PyPI, nothing else to install (needs uv)
 pipx install quantra-mcp         # or pip install quantra-mcp
-docker run --rm -p 8765:8765 -e QUANTRA_ENGINE_URL=http://host.docker.internal:8080 ghcr.io/joseprupi/quantra-mcp:0.1.4
+docker run --rm -p 8765:8765 -e QUANTRA_ENGINE_URL=http://host.docker.internal:8080 ghcr.io/joseprupi/quantra-mcp:0.1.5
 ```
 
 From a checkout: `git clone https://github.com/joseprupi/quantra-mcp && cd quantra-mcp && uv sync && uv run quantra-mcp --help`.

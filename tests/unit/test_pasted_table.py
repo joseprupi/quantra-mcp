@@ -10,11 +10,11 @@ import pytest
 from mcp import Client
 
 from quantra_mcp.builders import pasted_table as pt
+from tests.conftest import structured
 
 
 def _s(result: Any) -> dict[str, Any]:
-    assert result.structured_content is not None, result.content
-    return dict(result.structured_content)
+    return structured(result)  # also checks is_error == (ok is False)
 
 
 def test_tsv_with_header_dates_and_tenors() -> None:

@@ -13,7 +13,8 @@ agent ──(MCP: stdio / streamable HTTP)──▶ quantra-mcp ──(HTTP/JSON
 ## Use the public server
 
 Hosted instance, no account: `https://mcp.quantra.io/mcp` (prices on the same
-engine as `api.quantra.io`; open, rate-limited, nothing stored).
+engine as `api.quantra.io`; open, rate-limited per MCP session; session
+scratch is per MCP session, in memory, bounded, never persisted).
 
 claude.ai: Settings → Connectors → Add custom connector → URL
 `https://mcp.quantra.io/mcp` → ask Claude to price a trade.
@@ -74,7 +75,7 @@ request body, validated against the vendored OpenAPI spec first. 47 tools:
 - Pricing (17): `price_*` for vanilla and OIS swaps, fixed / floating / zero-coupon / callable bonds, FRA, cap/floor, swaption, CDS, equity option, ZC and YoY inflation swaps and YoY cap/floor (14), plus swaption vol / model calibration and vol-surface sampling (3)
 - Analytics by composition (4): `swap_dv01`, `key_rate_ladder`, `scenario`, `fair_rate`, all finite differences of engine NPVs
 - Reconciliation (3): `explain_method` (cited engine methodology), `compare_results`, `reprice_with`
-- Session scratch (4): `session_put`, `session_get`, `session_list`, `session_delete`
+- Session scratch (4): `session_put`, `session_get`, `session_list`, `session_delete` (private to the MCP session, in memory, bounded, never persisted)
 - Examples (2): `list_examples`, `get_example` over the engine's 222 vendored example requests
 - Resources (docs, schemas, enums, examples, presets, pin, methodology) and 6 prompts
 
@@ -92,7 +93,8 @@ Catalog with every argument: [docs/tools.md](docs/tools.md).
   and stops.
 - Every result echoes the exact `request` sent and the engine's `response`
   verbatim, so any number can be replayed with `curl` against the same engine.
-  Engine errors pass through unchanged (`400` request wrong, `422` unpriceable).
+  Engine errors pass through unchanged (`400` request wrong, `422` unpriceable);
+  every failed result (`ok: false`) is also an MCP tool error (`isError`).
 - Every convention applied is listed in `notes` with its source (a preset
   field, an engine fixture, or "market standard, not from an in-repo source").
 - The shipped examples are request-shape references only; an example's market
