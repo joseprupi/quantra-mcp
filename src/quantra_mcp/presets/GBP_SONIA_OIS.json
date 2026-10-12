@@ -2,13 +2,16 @@
   "id": "GBP_SONIA_OIS",
   "description": "GBP SONIA OIS discount curve from the cleared SONIA OIS strip: spot T+0, annual fixed leg (Actual/365 Fixed via the index), ModifiedFollowing on the UK calendar, payment lag 0, compounded averaging, no lookback, no lockout. Curve Actual365Fixed / LogLinear / Discount.",
   "currency": "GBP",
-  "provenance": "index: quantra-backend scripts/seed_demo_entities.py SONIA (UnitedKingdom, Actual365Fixed, fixing_days 0) and pricing/_translator.py _KNOWN_OVERNIGHT_INDICES['SONIA']; OIS helper conventions: market standard (ISDA/CCP), not from an in-repo source; curve day counter / interpolator / trait: seed_demo_entities.py GBP SONIA OIS curve body",
+  "provenance": "index: index as defined by QuantLib 1.41 (the engine's QuantLib) QuantLib::Sonia in ql/indexes/ibor/sonia.hpp (https://github.com/lballabio/QuantLib/blob/v1.41/ql/indexes/ibor/sonia.hpp; constructor in ql/indexes/ibor/sonia.cpp, https://github.com/lballabio/QuantLib/blob/v1.41/ql/indexes/ibor/sonia.cpp: 0 fixing days, GBP, UnitedKingdom(UnitedKingdom::Exchange), Actual365Fixed; the engine's Calendar enum value UnitedKingdom); business_day_convention / end_of_month: the engine fixtures' values (QuantLib's OvernightIndex passes Following / false to IborIndex; a 1-day tenor advances by business days, so neither enters its fixing or value dates); OIS helper conventions: market standard (ISDA/CCP), not from an in-repo source; curve day counter / interpolator / trait: modelling choice (the index day counter Actual365Fixed; LogLinear / Discount as the SOFR gold example)",
   "index": {
     "id": "GBP_SONIA",
     "name": "SONIA",
     "index_type": "Overnight",
     "currency": "GBP",
-    "tenor": {"n": 0, "unit": "Days"},
+    "tenor": {
+      "n": 0,
+      "unit": "Days"
+    },
     "fixing_days": 0,
     "calendar": "UnitedKingdom",
     "day_counter": "Actual365Fixed",

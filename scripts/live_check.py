@@ -541,7 +541,7 @@ async def main() -> int:
                 continue
             data = dict(result.structured_content)
             endpoint = str(data.get("endpoint", "-"))
-            if "ok" not in data:  # spec lookups: no engine call, nothing to replay
+            if "response" not in data:  # spec lookups: no engine call, nothing to replay
                 rows.append(Row(label, "(spec)", "ok", "n/a", f"keys={list(data)[:4]}"))
                 continue
             if not data["ok"]:

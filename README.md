@@ -20,8 +20,8 @@ claude.ai: Settings → Connectors → Add custom connector → URL
 `https://mcp.quantra.io/mcp` → ask Claude to price a trade.
 
 - Claude Code: `claude mcp add --transport http quantra https://mcp.quantra.io/mcp`
-- Claude Desktop: add `{"mcpServers": {"quantra": {"url": "https://mcp.quantra.io/mcp"}}}` to `claude_desktop_config.json`
-- Cursor: add the same `mcpServers` entry to `.cursor/mcp.json` or `~/.cursor/mcp.json`
+- Claude Desktop: Settings → Connectors → Add custom connector → URL `https://mcp.quantra.io/mcp` (the same custom connector as claude.ai; no config file)
+- Cursor: add `{"mcpServers": {"quantra": {"url": "https://mcp.quantra.io/mcp"}}}` to `.cursor/mcp.json` or `~/.cursor/mcp.json`
 
 Per-client setup, the stdio form for a local engine, and project instructions
 for business users are in [docs/clients.md](docs/clients.md).
@@ -67,15 +67,16 @@ The full table, hosted-mode hardening, security and limits:
 One tool per engine capability. Convenience tools turn trade terms and a
 preset into a complete engine request (dates the server cannot compute are
 resolved by the engine's calendar endpoints); raw passthrough takes any
-request body, validated against the vendored OpenAPI spec first. 47 tools:
+request body, validated against the vendored OpenAPI spec first. 38 tools, each
+with a title and MCP annotations (read-only / open-world hints):
 
-- Discovery and calendars (8): `quantra_meta`, `quantra_health`, `list_endpoints`, `engine_schema`, `list_enums`, `calendar_holidays`, `calendar_business_days`, `calendar_advance`
-- Raw passthrough (1): `engine_request` for any of the 24 POST endpoints
-- Curves and presets (8): `list_presets`, `get_preset`, `build_curve`, `build_value_curve`, `curve_from_pasted_table`, `build_query`, `bootstrap_curve`, `bootstrap_inflation_curve`
-- Pricing (17): `price_*` for vanilla and OIS swaps, fixed / floating / zero-coupon / callable bonds, FRA, cap/floor, swaption, CDS, equity option, ZC and YoY inflation swaps and YoY cap/floor (14), plus swaption vol / model calibration and vol-surface sampling (3)
-- Analytics by composition (4): `swap_dv01`, `key_rate_ladder`, `scenario`, `fair_rate`, all finite differences of engine NPVs
+- Discovery and calendars (6): `quantra_meta`, `engine_schema` (one endpoint, or all 24 without an argument), `list_enums`, `calendar_holidays`, `calendar_business_days`, `calendar_advance`
+- Raw passthrough (1): `engine_request` for any of the 24 POST endpoints, including the four without a builder (swaption vol / model calibration, vol-surface sampling, inflation bootstrap)
+- Curves and presets (6): `preset` (one or all), `build_curve`, `build_value_curve`, `curve_from_pasted_table`, `build_query`, `bootstrap_curve`; builder results carry a content `digest`
+- Pricing (14): `price_*` for vanilla and OIS swaps, fixed / floating / zero-coupon / callable bonds, FRA, cap/floor, swaption, CDS, equity option, ZC and YoY inflation swaps and YoY cap/floor
+- Analytics by composition (4): `swap_dv01`, `key_rate_ladder`, `scenario`, `fair_rate`, all finite differences of engine NPVs (compact by default; `include_calls` for every replayable result)
 - Reconciliation (3): `explain_method` (cited engine methodology), `compare_results`, `reprice_with`
-- Session scratch (4): `session_put`, `session_get`, `session_list`, `session_delete` (private to the MCP session, in memory, bounded, never persisted)
+- Session scratch (2): `session_put`, `session` (get / list / delete; private to the MCP session, in memory, bounded, never persisted)
 - Examples (2): `list_examples`, `get_example` over the engine's 222 vendored example requests
 - Resources (docs, schemas, enums, examples, presets, pin, methodology) and 6 prompts
 

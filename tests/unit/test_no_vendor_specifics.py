@@ -65,6 +65,8 @@ def test_preset_provenance_cites_only_vendored_fixtures() -> None:
         assert not VENDOR_RE.search(NEUTRAL_PROVENANCE_RE.sub("", text)), path.name
         for name in re.findall(r"examples/data/(?:[a-z_]+/)?([a-z0-9_]+)\.json", text):
             assert name in vendored, (path.name, name)
+        # provenance is public: no private repository, no filesystem path
+        assert "quantra-backend" not in text and "/root/" not in text, path.name
 
 
 def _flat(text: str) -> str:

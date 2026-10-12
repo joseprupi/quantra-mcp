@@ -2,7 +2,7 @@
   "id": "EUR_EURIBOR_3M",
   "description": "EUR 3M Euribor projection curve: Euribor deposits for the short end (fixing days 2, TARGET, ModifiedFollowing, Actual/360), FRAs and/or 3M Euribor futures (future_months 3, convexity adjustment stated explicitly), and vanilla swaps vs 3M Euribor with an annual 30/360 ModifiedFollowing fixed leg on TARGET. Curve Actual365Fixed / LogLinear / Discount.",
   "currency": "EUR",
-  "provenance": "index: quantra-backend pricing/_translator.py _KNOWN_IBOR_INDICES['EURIBOR_3M'] (Euribor, 3M, TARGET, Actual360, ModifiedFollowing, fixing_days 2, EUR); deposit, FRA and future helpers carry the same Euribor money-market conventions; future_months 3 and the swap fixed leg (Annual, Thirty360, ModifiedFollowing, TARGET): market standard (ISDA/CCP), not from an in-repo source; curve day counter / interpolator / trait: same modelling choice as the SOFR gold example",
+  "provenance": "index: index as defined by QuantLib 1.41 (the engine's QuantLib) QuantLib::Euribor3M in ql/indexes/ibor/euribor.hpp (https://github.com/lballabio/QuantLib/blob/v1.41/ql/indexes/ibor/euribor.hpp; constructor in ql/indexes/ibor/euribor.cpp, https://github.com/lballabio/QuantLib/blob/v1.41/ql/indexes/ibor/euribor.cpp: Euribor with a 3-month tenor: 2 fixing days, EUR, TARGET, Actual360, ModifiedFollowing and end-of-month for month tenors (euriborConvention / euriborEOM)); deposit and FRA helpers carry the same Euribor money-market conventions; future_months 3 and the swap fixed leg (Annual, Thirty360, ModifiedFollowing, TARGET): market standard (ISDA/CCP), not from an in-repo source; curve day counter / interpolator / trait: same modelling choice as the SOFR gold example",
   "index": {
     "id": "EURIBOR_3M",
     "name": "Euribor",
@@ -53,7 +53,7 @@
     }
   },
   "field_provenance": {
-    "index.end_of_month": "market standard (ISDA/CCP), not from an in-repo source",
+    "index.end_of_month": "QuantLib 1.41 euriborEOM: true for month tenors (ql/indexes/ibor/euribor.cpp, https://github.com/lballabio/QuantLib/blob/v1.41/ql/indexes/ibor/euribor.cpp)",
     "helpers.future.future_months": "market standard (ISDA/CCP), not from an in-repo source",
     "helpers.future.convexity_adjustment": "explicit zero: no convexity adjustment unless the quote supplies one; the engine reads an absent value as 0.0",
     "helpers.swap.calendar": "market standard (ISDA/CCP), not from an in-repo source",

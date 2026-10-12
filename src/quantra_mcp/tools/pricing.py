@@ -40,6 +40,7 @@ from quantra_mcp.builders.products._common import (
     ScheduleOverrides,
 )
 from quantra_mcp.builders.schedule import check_date, parse_end, parse_start, problem
+from quantra_mcp.digest import market_notes
 from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.presets.registry import (
     CallableBondConventions,
@@ -113,6 +114,8 @@ async def _price(
         pricing, notes = mk.resolve_market(
             store, market, as_of, overrides_to_wire(calendar_overrides)
         )
+        digest_notes, market_digests = market_notes(pricing)
+        notes += digest_notes
         resolver = DateResolver(backend, pricing.get("calendar_overrides"))
         built = await build(pricing, resolver)
         items: list[dict[str, Any]] = []
@@ -154,6 +157,8 @@ async def _price(
         )
     result = await run_post(backend, endpoint, body, request_id=rid, summarize=summarize)
     result["notes"] = notes
+    if market_digests:
+        result["market_digests"] = market_digests
     if resolver.calls:
         result["date_resolution"] = resolver.calls
     return result

@@ -111,7 +111,16 @@ async def test_build_curve_tool_shape_and_no_engine_call(
                 },
             )
         )
-    assert set(r) == {"ok", "curve", "indices", "preset", "notes", "market_data_source"}
+    assert set(r) == {
+        "ok",
+        "curve",
+        "indices",
+        "preset",
+        "notes",
+        "market_data_source",
+        "digest",
+        "curve_digest",
+    }
     assert r["ok"] is True and r["market_data_source"] == "user_pasted"
     assert r["preset"] == "USD_SOFR_OIS" and len(r["curve"]["points"]) == 15
     assert any(n.startswith("ois.payment_lag=2 from preset USD_SOFR_OIS") for n in r["notes"])

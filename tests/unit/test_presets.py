@@ -101,13 +101,34 @@ def test_market_standard_fields_carry_the_exact_provenance_string() -> None:
         ("GBP_SONIA_OIS", "helpers.ois.settlement_days"),
         ("EUR_EURIBOR_6M", "helpers.swap.sw_fixed_leg_frequency"),
         ("EUR_EURIBOR_3M", "helpers.future.future_months"),
-        ("EUR_EURIBOR_6M", "index.end_of_month"),
     ]:
         assert get_preset(pid).provenance_of(dotted).startswith(MARKET_STANDARD), (pid, dotted)
-    # a sourced field falls back to the preset-level provenance
-    assert "seed_demo_entities" in get_preset("GBP_SONIA_SWAP").provenance_of(
-        "helpers.swap.calendar"
-    )
+    # Euribor end-of-month is now sourced from QuantLib (euriborEOM), with a permalink
+    eom = get_preset("EUR_EURIBOR_6M").provenance_of("index.end_of_month")
+    assert eom.startswith("QuantLib 1.41 euriborEOM") and "/blob/v1.41/" in eom
+    # a sourced field falls back to the preset-level provenance (the QuantLib index class)
+    assert "QuantLib::Sonia" in get_preset("GBP_SONIA_SWAP").provenance_of("index.calendar")
+
+
+def test_index_provenance_cites_quantlib_and_no_private_path() -> None:
+    """Every curve preset's index conventions cite the QuantLib index class at the
+    engine's QuantLib version with a GitHub permalink; no preset mentions the private
+    platform repository or a filesystem path."""
+    expected = {
+        "USD_SOFR_OIS": "QuantLib::Sofr",
+        "EUR_ESTR_OIS": "QuantLib::Estr",
+        "GBP_SONIA_OIS": "QuantLib::Sonia",
+        "GBP_SONIA_SWAP": "QuantLib::Sonia",
+        "EUR_EURIBOR_6M": "QuantLib::Euribor6M",
+        "EUR_EURIBOR_3M": "QuantLib::Euribor3M",
+    }
+    for pid, cls in expected.items():
+        prov = get_preset(pid).provenance_of("index.fixing_days")
+        assert cls in prov and "https://github.com/lballabio/QuantLib/blob/v1.41/ql/" in prov, pid
+    for pid in preset_ids():
+        text = (PRESETS_DIR / f"{pid}.json").read_text()
+        assert "quantra-backend" not in text and "/root/" not in text, pid
+        assert "seed_demo_entities" not in text and "_translator" not in text, pid
 
 
 def test_as_data_round_trips_the_file() -> None:

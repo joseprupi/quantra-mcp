@@ -21,7 +21,7 @@ Or point the server at the public demo with `QUANTRA_ENGINE_URL=https://api.quan
 ```bash
 uvx quantra-mcp --version        # from PyPI, nothing else to install (needs uv)
 pipx install quantra-mcp         # or pip install quantra-mcp
-docker run --rm -p 8765:8765 -e QUANTRA_ENGINE_URL=http://host.docker.internal:8080 ghcr.io/joseprupi/quantra-mcp:0.1.5
+docker run --rm -p 8765:8765 -e QUANTRA_ENGINE_URL=http://host.docker.internal:8080 ghcr.io/joseprupi/quantra-mcp:0.1.6
 ```
 
 From a checkout: `git clone https://github.com/joseprupi/quantra-mcp && cd quantra-mcp && uv sync && uv run quantra-mcp --help`.
@@ -137,19 +137,11 @@ Project form (`.mcp.json` in the repo root, shared with the team):
 
 ### Claude Desktop
 
-`claude_desktop_config.json` (Settings → Developer → Edit Config):
-
-```json
-{
-  "mcpServers": {
-    "quantra": {
-      "command": "uvx",
-      "args": ["quantra-mcp"],
-      "env": { "QUANTRA_ENGINE_URL": "http://localhost:8080" }
-    }
-  }
-}
-```
+Claude Desktop uses the same custom connector as claude.ai: Settings → Connectors →
+**Add custom connector** → URL `https://mcp.quantra.io/mcp` (or the URL of your own
+`--http` instance, see below). No configuration file is needed; the connector is
+shared between claude.ai and the desktop app on the same account. A local stdio
+engine is reachable from Claude Code or Cursor (below).
 
 ### Cursor
 

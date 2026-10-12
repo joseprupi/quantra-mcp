@@ -1,5 +1,51 @@
 # Changelog
 
+## 0.1.6 (2026-10-12)
+
+Size, protocol, schemas and provenance, from the external review (M5.6).
+
+- **Compact analytics results.** `swap_dv01`, `key_rate_ladder` and `scenario` take
+  `include_calls` (default false): the result carries the base call's echoed request
+  once (`base_request`) and, per reprice, its label, engine NPV, the quotes moved and a
+  `request_diff` against the base (the `reprice_with` diff format); `include_calls=true`
+  returns `calls`, every complete pricing result, as before. The 5Y EUR fixture's
+  key-rate ladder is under 25 KB compact. `list_examples` without a filter answers
+  counts per category and product plus the first 20 names (under 12 KB); a category,
+  product or the new `limit` returns rows.
+- **Titles and annotations.** Every tool has a human title and MCP `ToolAnnotations`
+  (`readOnlyHint` true except `session_put` / `session`, `destructiveHint` false,
+  `idempotentHint` true, `openWorldHint` true for the engine callers).
+- **38 tools (was 47).** `calibrate_swaption_vol`, `calibrate_swaption_model`,
+  `sample_vol_surface` and `bootstrap_inflation_curve` are `engine_request` with the
+  engine's own body (same validation, same selected `summary`; the docstring names the
+  example families). `session_get` / `session_list` / `session_delete` are
+  `session(action, name)`. `list_endpoints` is `engine_schema()` without an argument;
+  `list_presets` / `get_preset` are `preset(id?)`. `quantra_health` is gone:
+  `quantra_meta` proves liveness and the server's `/readyz` serves operators.
+- **Schemas.** Every argument carries a description (`market_data_source` as one line
+  pointing at `quantra://guide/developers`, which now states the rule and the meaning
+  of each value); ISO dates carry `^\d{4}-\d{2}-\d{2}$` (with `spot` / `as_of`
+  where the tool accepts them), tenors `^\d+[DWMY]$`; `underlying_type`, the equity
+  `exercise`, the swaption / cap-floor / CDS `model` and the vol `type` are enums
+  (a plain string stays a market id where ids are accepted); pydantic's automatic
+  `title` keys are stripped; docstrings are flush-left and under 1,500 characters;
+  nested model fields are described too. A test pins all of it.
+- **Provenance is public.** The six curve presets cite the QuantLib index class at
+  the engine's QuantLib version (`QuantLib::Sofr`, `Estr`, `Sonia`, `Euribor6M`,
+  `Euribor3M` in `ql/indexes/ibor/*.hpp` at v1.41, with GitHub permalinks to the
+  header and the constructor that fixes the fixing days, calendar and day counter)
+  instead of the private platform repository; helper conventions that come from
+  nowhere in-repo say so. A test refuses any private repository or filesystem path.
+- **Builder digests.** `build_curve` / `build_value_curve` / `curve_from_pasted_table`
+  results carry `digest` (sha256 of the canonical `{curve, indices}` JSON) and
+  `curve_digest`; a session item carries its own. Pricing and analytics tools report
+  per market curve (`market_digests`, `notes`) whether it came out of a builder in
+  this session or was hand-typed ("market block not produced by a builder in this
+  session"). Nothing is added to what the engine receives.
+- `quantra_meta`: `engine.api_version` falls back to the body's `openapi_version`
+  when the engine does not send the header. README and docs agree that Claude
+  Desktop uses the custom connector (same as claude.ai).
+
 ## 0.1.5 (2026-10-12)
 
 Hosted-mode fixes from an external review of the public server (M5.5).

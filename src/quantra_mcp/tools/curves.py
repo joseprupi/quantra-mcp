@@ -18,6 +18,7 @@ from pydantic import Field
 from quantra_mcp.backend.base import Backend
 from quantra_mcp.builders import curves as cb
 from quantra_mcp.builders import pasted_table as pt
+from quantra_mcp.digest import stamp_built
 from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.presets.registry import HelperType, PresetError, get_preset
 from quantra_mcp.presets.registry import list_presets as _list_presets
@@ -55,7 +56,7 @@ def _check_built(built: cb.BuiltCurve) -> ToolResult:
             "built fragment does not match the vendored spec (this is a server bug; please report)",
             problems,
         )
-    return built.as_result()
+    return stamp_built(built.as_result())
 
 
 def build_curve_impl(

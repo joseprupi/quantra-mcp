@@ -37,6 +37,7 @@ from quantra_mcp.builders import market as mk
 from quantra_mcp.builders.products import swaps as ps
 from quantra_mcp.builders.products._common import FixedLegOverrides, FloatingLegOverrides
 from quantra_mcp.builders.schedule import problem
+from quantra_mcp.digest import market_notes
 from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.presets.registry import PresetError
 from quantra_mcp.schema.enums_generated import RateAveragingType, SwapType
@@ -343,6 +344,7 @@ class _Runner:
             self.store, market, as_of, overrides_to_wire(overrides)
         )
         self.notes += notes
+        self.notes += market_notes(self.pricing)[0]
         for cid in trade.curves():
             mk.require_curve(self.pricing, cid, "trade.discounting_curve/forwarding_curve")
         self.spec = trade

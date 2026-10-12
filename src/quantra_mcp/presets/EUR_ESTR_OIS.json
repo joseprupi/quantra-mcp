@@ -2,7 +2,7 @@
   "id": "EUR_ESTR_OIS",
   "description": "EUR ESTR OIS discount curve from the cleared ESTR OIS strip: spot T+2, annual fixed leg (Actual/360 via the index), ModifiedFollowing on TARGET, payment lag 1 business day, compounded averaging, no lookback, no lockout. Curve Actual365Fixed / LogLinear / Discount.",
   "currency": "EUR",
-  "provenance": "index: quantra-backend pricing/_translator.py _KNOWN_OVERNIGHT_INDICES['ESTR'] (TARGET, Actual360, fixing_days 0, EUR); OIS helper conventions: market standard (ISDA/CCP), not from an in-repo source; curve day counter / interpolator / trait: same modelling choice as the SOFR gold example (sofr-bootstrap-request.json)",
+  "provenance": "index: index as defined by QuantLib 1.41 (the engine's QuantLib) QuantLib::Estr in ql/indexes/ibor/estr.hpp (https://github.com/lballabio/QuantLib/blob/v1.41/ql/indexes/ibor/estr.hpp; constructor in ql/indexes/ibor/estr.cpp, https://github.com/lballabio/QuantLib/blob/v1.41/ql/indexes/ibor/estr.cpp: 0 fixing days, EUR, TARGET, Actual360); business_day_convention / end_of_month: the engine fixtures' values (QuantLib's OvernightIndex passes Following / false to IborIndex; a 1-day tenor advances by business days, so neither enters its fixing or value dates); OIS helper conventions: market standard (ISDA/CCP), not from an in-repo source; curve day counter / interpolator / trait: same modelling choice as the SOFR gold example (sofr-bootstrap-request.json)",
   "index": {
     "id": "EUR_ESTR",
     "name": "ESTR",

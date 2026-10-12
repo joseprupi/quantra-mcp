@@ -123,10 +123,15 @@ async def run_get(backend: Backend, path: str) -> ToolResult:
         }
     except TransportError as exc:
         return local_error_result(path, None, f"engine unreachable: {exc.error}")
+    api_version = resp.api_version
+    if api_version is None and isinstance(resp.body, dict):
+        # /meta carries the version in the body; the header is not on every engine route
+        body_version = resp.body.get("openapi_version") or resp.body.get("api_version")
+        api_version = str(body_version) if body_version else None
     return {
         "ok": True,
         "endpoint": path,
         "request": None,
         "response": resp.body,
-        "engine": _engine_block(resp.api_version, resp.request_id),
+        "engine": _engine_block(api_version, resp.request_id),
     }

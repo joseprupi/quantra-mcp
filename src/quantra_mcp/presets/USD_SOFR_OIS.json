@@ -2,7 +2,7 @@
   "id": "USD_SOFR_OIS",
   "description": "USD SOFR OIS discount curve from the cleared SOFR OIS strip: spot T+2, annual fixed leg (Actual/360 via the index), ModifiedFollowing on the US government securities calendar, payment lag 2 business days, compounded averaging, no lookback, no lockout. Curve Actual365Fixed / LogLinear / Discount.",
   "currency": "USD",
-  "provenance": "quantra.io/blog/bootstrapping-a-sofr-curve (2026-08-03) cleared-OIS conventions table + src/quantra_mcp/examples/sofr-bootstrap-request.json (byte-verified against engine 0.6.0/0.7.0, 50Y DF 0.262755579831); overnight-index conventions also in quantra-backend pricing/_translator.py _KNOWN_OVERNIGHT_INDICES (SOFR: Actual360, fixing_days 0)",
+  "provenance": "quantra.io/blog/bootstrapping-a-sofr-curve (2026-08-03) cleared-OIS conventions table + src/quantra_mcp/examples/sofr-bootstrap-request.json (byte-verified against engine 0.6.0/0.7.0, 50Y DF 0.262755579831); index as defined by QuantLib 1.41 (the engine's QuantLib) QuantLib::Sofr in ql/indexes/ibor/sofr.hpp (https://github.com/lballabio/QuantLib/blob/v1.41/ql/indexes/ibor/sofr.hpp; constructor in ql/indexes/ibor/sofr.cpp, https://github.com/lballabio/QuantLib/blob/v1.41/ql/indexes/ibor/sofr.cpp: 0 fixing days, USD, Actual360, calendar UnitedStates(UnitedStates::SOFR); the engine's Calendar enum names that SIFMA-based calendar UnitedStatesGovernmentBond, the value the post and the fixture use); business_day_convention / end_of_month: the engine fixtures' values (QuantLib's OvernightIndex passes Following / false to IborIndex; a 1-day tenor advances by business days, so neither enters its fixing or value dates)",
   "index": {
     "id": "USD_SOFR",
     "name": "SOFR",

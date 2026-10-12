@@ -1,31 +1,33 @@
 # Tools, resources and prompts
 
-The complete catalog. Every tool takes its market data from the caller
-(see the rules in the [README](../README.md#rules)) and returns the same
-result shape (below). Conventions come from the [presets](presets.md).
+The complete catalog: 38 tools, each with a title and MCP annotations
+(`readOnlyHint` except the two session writers, `destructiveHint` false,
+`idempotentHint` true, `openWorldHint` on the engine callers), every argument
+described in the input schema (dates `YYYY-MM-DD`, tenors `^\d+[DWMY]$`,
+closed choices as enums), descriptions under 1,500 characters. Every tool takes
+its market data from the caller (see the rules in the [README](../README.md#rules))
+and returns the same result shape (below). Conventions come from the
+[presets](presets.md).
 
 ## Tools
 
 | Tool | Does |
 |---|---|
-| `quantra_meta` | `GET /meta` verbatim: API version, QuantLib version, products, endpoints. Call first. |
-| `quantra_health` | `GET /health`. |
-| `list_endpoints` | The 24 POST endpoints with one-line descriptions (from the vendored spec). |
-| `engine_schema(endpoint, depth=3)` | Request + response schema for one endpoint, `$ref`s inlined to `depth`, top-level required fields. |
+| `quantra_meta` | `GET /meta` verbatim: API version, QuantLib version, products, endpoints. Call first (it also proves liveness; `engine.api_version` falls back to the body's `openapi_version` when the header is absent). |
+| `engine_schema(endpoint?, depth=3)` | Request + response schema for one endpoint, `$ref`s inlined to `depth`, top-level required fields; without `endpoint` the 24 POST endpoints with one-line descriptions (from the vendored spec). |
 | `list_enums(name)` | Values of an engine enum (`Calendar`, `DayCounter`, `Frequency`, `BusinessDayConvention`, `TimeUnit`, ...). |
 | `calendar_holidays(calendar, start_date, end_date, include_weekends=False, calendar_overrides=None)` | `POST /calendar-holidays`. |
 | `calendar_business_days(calendar, start_date, end_date, include_start=True, include_end=True, calendar_overrides=None)` | `POST /calendar-business-days`. |
 | `calendar_advance(calendar, date, tenor_number, tenor_unit, convention, end_of_month=False, calendar_overrides=None)` | `POST /calendar-advance`. |
-| `engine_request(endpoint, body, validate=True, request_id=None)` | POST any endpoint. Validates `body` against the vendored spec first (readable JSON-pointer errors); forwards `X-Request-Id`. |
-| `list_presets()` / `get_preset(id)` | The market-convention presets (data + provenance). No engine call. |
-| `build_curve(id, preset, quotes, reference_date, trait?, interpolator?, day_counter?)` | Quote strip -> `{curve, indices, preset, notes}`; sorted by maturity, duplicate tenors rejected, every convention noted with its source. No engine call. |
+| `engine_request(endpoint, body, validate=True, request_id=None)` | POST any endpoint. Validates `body` against the vendored spec first (readable JSON-pointer errors); forwards `X-Request-Id`. Also the home of the four endpoints without a builder: `/calibrate-swaption-vol` (`sabrcal_*` examples), `/calibrate-swaption-model` (`hwcal_*`), `/sample-vol-surfaces` (`volsample_*`), `/bootstrap-inflation-curves`; their results carry the selected `summary` the former dedicated tools produced. |
+| `preset(id?)` | The market-convention presets (data + provenance): all of them, or one as data. No engine call. |
+| `build_curve(id, preset, quotes, reference_date, trait?, interpolator?, day_counter?)` | Quote strip -> `{curve, indices, preset, notes, digest, curve_digest}`; sorted by maturity, duplicate tenors rejected, every convention noted with its source. `digest` = sha256 of the canonical `{curve, indices}` JSON, `curve_digest` of the curve alone; pricing tools recognise a curve built in this session (`market_digests`, `notes`). No engine call. |
 | `build_value_curve(id, kind, points, reference_date, preset? \| conventions?, compounding?, frequency?, interpolator?)` | Explicit zero / discount / forward values -> an `Interpolated*` curve (discount: first point must be 1.0 at the reference date). No engine call. |
 | `curve_from_pasted_table(text, id, kind=discount\|zero\|par, preset?, reference_date?, conventions?, quote_type?, percent?, date_format?, ...)` | A pasted table (CSV / TSV / whitespace, header optional; date or tenor + value; `%` and thousands separators normalised, nothing else) -> `build_value_curve` (discount / zero) or `build_curve` (par quotes); returns the built curve plus `parsed_rows`, `unparsed` (with reasons) and `notes`. No engine call. |
 | `build_query(curve_id, measures, tenors? \| range_grid?, calendar?, business_day_convention?, zero?, fwd?)` | A `CurveQuerySpec`; FWD needs explicit `fwd` options. No engine call. |
 | `bootstrap_curve(curves, as_of, queries, indices?, calendar_overrides?, request_id?)` | `POST /bootstrap-curves`. `curves` items: `TermStructure`, `build_curve` result or `{"session": name}`; echoed `request` is the resolved body; `summary` = per curve `{id, pillars, first_grid_date, last_grid_date, measures}`. |
-| `bootstrap_inflation_curve(body, request_id?)` | `POST /bootstrap-inflation-curves` with a raw body (validated first). |
-| `session_put(name, kind, value)` / `session_get(name)` / `session_list()` / `session_delete(name)` | In-memory scratch (`curve`, `index`, `market`), private to the MCP session, never persisted, LRU-capped per session and globally. |
-| `list_examples(category?, product?)` / `get_example(name)` | The 222 vendored example requests (engine fixtures + the two blog examples) with endpoint, catalog description and QuantLib reference value; `body` is ready for `engine_request`, `body.pricing` is a valid `market`. No engine call. |
+| `session_put(name, kind, value, market_data_source)` / `session(action=get\|list\|delete, name?)` | In-memory scratch (`curve`, `index`, `market`), private to the MCP session, never persisted, LRU-capped per session and globally; every item carries its `digest`. |
+| `list_examples(category?, product?, limit?)` / `get_example(name)` | The 222 vendored example requests (engine fixtures + the two blog examples) with endpoint, catalog description and QuantLib reference value; `body` is ready for `engine_request`, `body.pricing` is a valid `market`. Unfiltered and without `limit` the answer is compact (counts per category / product, the first 20 names, under 12 KB); a filter or `limit` returns rows. No engine call. |
 
 ### Pricing tools (one per product)
 
@@ -58,7 +60,6 @@ flat curves, quotes) are added to the market under an explicit or default id
 | `price_zc_inflation_swap(market, inflation_index_id, fixings, swap_type, notional, fixed_rate, discounting_curve, inflation_curve, preset="EUR_HICP", start_date="as_of", maturity_date \| tenor)` | `/price-zero-coupon-inflation-swap` | observation lag and interpolation, calendars, day counter |
 | `price_yoy_inflation_swap(... effective_date="as_of", termination_date \| tenor, spread=0)` | `/price-year-on-year-inflation-swap` | shared fixed / YoY schedule, day counters, payment conventions |
 | `price_yoy_inflation_cap_floor(... cap_floor_type, cap_rate?, floor_rate?, vol={constant, type} \| id)` | `/price-year-on-year-inflation-cap-floor` | schedule, day counter, YoYOptionletVolSpec conventions |
-| `calibrate_swaption_vol(body)` / `calibrate_swaption_model(body)` / `sample_vol_surface(body)` | `/calibrate-swaption-vol`, `/calibrate-swaption-model`, `/sample-vol-surfaces` | raw request bodies, validated against the spec and forwarded (see the `vol` examples); uniform result |
 
 Inflation tools require `fixings` (the CPI / YoY history) as an explicit
 argument: the engine prices the inflation leg off the fixing at start minus the
@@ -100,10 +101,15 @@ clean prices, FX points and `quote_id` pillars are refused by name. A DV01 is
 a finite difference of engine NPVs and `method` says which: `centered`
 (default) = `(NPV(+bp) - NPV(-bp)) / 2` from three engine calls, `up` =
 `NPV(+bp) - NPV(base)`, `down` = `NPV(base) - NPV(-bp)`; every per-call NPV is
-reported next to it with a `dv01_definition`. Every result carries `calls`,
-the complete uniform pricing result of each reprice (base, up / down, one per
-pillar and side, one per scenario) with its echoed `request`, so each number
-can be replayed with curl and each difference redone by hand. `spot` / tenor
+reported next to it with a `dv01_definition`. By default (`include_calls=false`)
+a result carries `base_request` (the base call's endpoint and echoed request,
+once) and `reprices` = `[{label, npv, edits, request_diff}]`, the diff against
+the base in the `reprice_with` format, so each reprice can be replayed by
+applying its diff; `include_calls=true` returns `calls`, the complete uniform
+pricing result of each reprice (base, up / down, one per pillar and side, one
+per scenario) with its echoed `request`. Sizes on the 5Y EUR fixture
+(`irs_eur_5y_payer_ois_discounted_multicurve`, 4-pillar ladder): compact
+under 25 KB, full several times larger (a test pins both). `spot` / tenor
 dates are resolved by the engine once in the base call and pinned for the
 reprices, so bumped requests differ from the base only in the quotes that
 moved. Reprices fan out concurrently, bounded by `QUANTRA_MAX_CONCURRENCY`
@@ -119,8 +125,8 @@ economics (`swap_type`, `notional`, `fixed_rate`, `effective_date`, `tenor` |
 
 | Tool | Does |
 |---|---|
-| `swap_dv01(market, market_data_source, trade, bump_bp=1.0, method=centered\|up\|down, scope=all\|discounting\|forwarding)` | Reprices with every pillar of the selected curve(s) bumped on each side the method needs. `base_npv`, `npvs` (base / up / down), `dv01`, `dv01_definition`, `bumped_quotes` (from/to per pillar and side), `calls` = the complete pricing results (3 for centered, 2 one-sided). |
-| `key_rate_ladder(market, market_data_source, trade, bump_bp=1.0, method=centered\|up\|down, curve?)` | Buckets = the curve's actual pillars in wire order (default: the discounting curve). `ladder` = `[{pillar, quote_from, quote_up / quote_down, npv_up / npv_down, dv01}]`, `parallel` (all pillars together), `sum_of_buckets`, `definitions`; `calls` = base + parallel per side + one per pillar and side. |
+| `swap_dv01(market, market_data_source, trade, bump_bp=1.0, method=centered\|up\|down, scope=all\|discounting\|forwarding)` | Reprices with every pillar of the selected curve(s) bumped on each side the method needs. `base_npv`, `npvs` (base / up / down), `dv01`, `dv01_definition`, `bumped_quotes` (from/to per pillar and side), `calls` (with `include_calls`) = the complete pricing results (3 for centered, 2 one-sided), else `base_request` + `reprices`. |
+| `key_rate_ladder(market, market_data_source, trade, bump_bp=1.0, method=centered\|up\|down, curve?)` | Buckets = the curve's actual pillars in wire order (default: the discounting curve). `ladder` = `[{pillar, quote_from, quote_up / quote_down, npv_up / npv_down, dv01}]`, `parallel` (all pillars together), `sum_of_buckets`, `definitions`; `calls` (with `include_calls`) = base + parallel per side + one per pillar and side, else `base_request` + `reprices`. |
 | `scenario(market, market_data_source, trade, scenarios)` | `[{name, bumps: [{curve, bp, pillar?}], replace_quotes: [{curve, pillar, value}]}]`; `pillar` is a label (`5Y`, `3x6`, `FUT 2025-03-19`, a value-point date) or a 0-based index, omitted = the whole curve. `table` = `[{name, npv, change = npv - base_npv, edits}]` starting with `base`. |
 | `fair_rate(market, market_data_source, trade)` | The engine's `fair_rate` / `fair_spread` from the pricing response; `provided_by_engine` false + a message when the product's response has neither (nothing is solved locally). |
 
@@ -160,8 +166,8 @@ NPV (`tests/live/test_live_analytics.py`).
 
 | Prompt | Guides the agent through |
 |---|---|
-| `price-a-swap(currency, kind)` | `quantra_meta` -> `list_presets` / `get_preset` -> `build_curve` -> `session_put` -> `price_vanilla_swap` / `price_ois_swap`, reading `request`, `summary`, `notes` and the 400 / 422 distinction. |
-| `bootstrap-from-strip(preset)` | `get_preset` -> `build_curve` -> `build_query` -> `bootstrap_curve`; the grid lives in `response`. |
+| `price-a-swap(currency, kind)` | `quantra_meta` -> `preset` -> `build_curve` -> `session_put` -> `price_vanilla_swap` / `price_ois_swap`, reading `request`, `summary`, `notes` and the 400 / 422 distinction. |
+| `bootstrap-from-strip(preset)` | `preset(id)` -> `build_curve` -> `build_query` -> `bootstrap_curve`; the grid lives in `response`. |
 | `holiday-check` | `calendar_holidays` -> diff with the user's list -> `calendar_overrides` -> verify with `calendar_advance` -> pass to every pricing tool. |
 | `price-from-screen(product?)` | Screenshot / ticket (any vendor) -> can it be priced -> missing market data in paste-able form -> confirm conventions -> `curve_from_pasted_table` -> `price_*` -> reconcile against the screen (spot premium), business voice. |
 | `explore-examples` | `list_examples` -> `get_example` -> `engine_request`; or reuse an example's `pricing` block as the `market` of a pricing tool. |

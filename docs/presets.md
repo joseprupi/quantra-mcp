@@ -6,14 +6,17 @@ day counter / interpolator / trait and one convention block per helper type;
 the builder adds only the quote and the tenor. Every field has a provenance;
 fields whose source is not an in-repo file are marked
 `market standard (ISDA/CCP), not from an in-repo source` in `field_provenance`.
+Index definitions cite the QuantLib index class at the engine's QuantLib version
+(1.41) with a GitHub permalink to the header and the constructor; nothing cites a
+private repository or a filesystem path (a test enforces it).
 
 | Preset | Index | Helpers | Conventions | Provenance |
 |---|---|---|---|---|
-| `USD_SOFR_OIS` | `USD_SOFR` (Overnight, UnitedStatesGovernmentBond, Act/360, fixing 0) | ois | T+2, Annual, ModifiedFollowing, payment lag 2, Compound, no lookback/lockout; curve Act/365F LogLinear Discount | SOFR post conventions table + the byte-verified gold example (50Y DF 0.262755579831) |
-| `EUR_ESTR_OIS` | `EUR_ESTR` (Overnight, TARGET, Act/360, fixing 0) | ois | T+2, Annual, ModifiedFollowing, payment lag 1, Compound | index: orchestrator `_KNOWN_OVERNIGHT_INDICES`; OIS block: market standard (ISDA/CCP), not from an in-repo source |
-| `GBP_SONIA_OIS` | `GBP_SONIA` (Overnight, UnitedKingdom, Act/365F, fixing 0) | ois | T+0, Annual, ModifiedFollowing, payment lag 0, Compound | index: seeded SONIA; OIS block: market standard (ISDA/CCP), not from an in-repo source |
-| `GBP_SONIA_SWAP` | `GBP_SONIA` | deposit, swap | deposit fixing 0 / UK / MF / Act/365F; swap Annual / MF / Act/365F on UK, float index SONIA | the platform's seeded "GBP SONIA OIS (BoE, daily public)" curve (`seed_demo_entities.py`) |
-| `EUR_EURIBOR_6M` | `EURIBOR_6M` (Ibor 6M, TARGET, Act/360, MF, fixing 2) | deposit, fra, swap | deposits/FRAs with the Euribor conventions; swap Annual / 30/360 / MF on TARGET | index: orchestrator `_KNOWN_IBOR_INDICES`; swap fixed leg: market standard (ISDA/CCP), not from an in-repo source |
+| `USD_SOFR_OIS` | `USD_SOFR` (Overnight, UnitedStatesGovernmentBond, Act/360, fixing 0) | ois | T+2, Annual, ModifiedFollowing, payment lag 2, Compound, no lookback/lockout; curve Act/365F LogLinear Discount | SOFR post conventions table + the byte-verified gold example (50Y DF 0.262755579831); index: `QuantLib::Sofr` (`ql/indexes/ibor/sofr.hpp` at v1.41) |
+| `EUR_ESTR_OIS` | `EUR_ESTR` (Overnight, TARGET, Act/360, fixing 0) | ois | T+2, Annual, ModifiedFollowing, payment lag 1, Compound | index: `QuantLib::Estr` (`ql/indexes/ibor/estr.hpp` at v1.41, permalink in the file); OIS block: market standard (ISDA/CCP), not from an in-repo source |
+| `GBP_SONIA_OIS` | `GBP_SONIA` (Overnight, UnitedKingdom, Act/365F, fixing 0) | ois | T+0, Annual, ModifiedFollowing, payment lag 0, Compound | index: `QuantLib::Sonia` (`ql/indexes/ibor/sonia.hpp` at v1.41); OIS block: market standard (ISDA/CCP), not from an in-repo source |
+| `GBP_SONIA_SWAP` | `GBP_SONIA` | deposit, swap | deposit fixing 0 / UK / MF / Act/365F; swap Annual / MF / Act/365F on UK, float index SONIA | index: `QuantLib::Sonia`; deposit / swap helper conventions: market standard (ISDA/CCP), not from an in-repo source |
+| `EUR_EURIBOR_6M` | `EURIBOR_6M` (Ibor 6M, TARGET, Act/360, MF, fixing 2) | deposit, fra, swap | deposits/FRAs with the Euribor conventions; swap Annual / 30/360 / MF on TARGET | index: `QuantLib::Euribor6M` (`ql/indexes/ibor/euribor.hpp` / `.cpp` at v1.41: 2 fixing days, TARGET, Act/360, MF and end-of-month for month tenors); swap fixed leg: market standard (ISDA/CCP), not from an in-repo source |
 | `EUR_EURIBOR_3M` | `EURIBOR_3M` (Ibor 3M, TARGET, Act/360, MF, fixing 2) | deposit, fra, future, swap | as above plus 3M futures (`future_months` 3, convexity adjustment stated) | as above; `future_months`: market standard (ISDA/CCP), not from an in-repo source |
 
 Bond presets (`UST_BOND`, `GILT_BOND`) are deferred: the `BondHelper`

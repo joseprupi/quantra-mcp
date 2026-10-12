@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import contextvars
 import datetime as dt
+import hashlib
 import json
 from collections import OrderedDict
 from collections.abc import Iterator
@@ -48,6 +49,12 @@ SESSIONLESS_ERROR = (
     'Pass the built objects inline instead of {"session": name}: a build_curve result '
     "goes directly into `curves` / `market`, an IndexDef into `indices`."
 )
+
+
+def _digest(value: Any) -> str:
+    data = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return "sha256:" + hashlib.sha256(data.encode()).hexdigest()
+
 
 _current_session: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "quantra_mcp_session", default=None
@@ -88,6 +95,9 @@ class SessionItem:
     #: the caller's declaration of where the numbers came from (user_pasted / user_file /
     #: engine_example / session); None only for items stored without one (direct API use)
     market_data_source: str | None = None
+    #: sha256 of the canonical JSON of ``value`` (a curve item's digest equals the
+    #: ``curve_digest`` of the build result it came from)
+    digest: str | None = None
 
     def summary(self) -> dict[str, Any]:
         row: dict[str, Any] = {
@@ -96,6 +106,7 @@ class SessionItem:
             "stored_at": self.stored_at,
             "size_bytes": self.size_bytes,
             "market_data_source": self.market_data_source,
+            "digest": self.digest,
         }
         v = self.value
         if self.kind == "curve":
@@ -209,6 +220,7 @@ class SessionStore:
             stored_at=now,
             size_bytes=size,
             market_data_source=market_data_source,
+            digest=_digest(value),
         )
         if name in self._items:
             del self._items[name]
