@@ -1,7 +1,7 @@
 {
   "engine_tag": "v0.7.0",
   "engine_sha": "ab4dd9b50fcaae15eb11abe034ee80f972a8590c",
-  "connector_sha": "a74265f",
+  "connector_sha": "ef26400",
   "repos": {
     "engine": "https://github.com/joseprupi/quantraserver",
     "connector": "https://github.com/joseprupi/quantra-mcp"
@@ -1335,8 +1335,8 @@
           "end": 9,
           "sha256": "0632e0894fb50513b09911e52a851b1d6996a517e9938245addf2225d4d4b2d3",
           "kind": "statement",
-          "ref": "src/quantra_mcp/builders/bumps.py@a74265f:L1-L9",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/builders/bumps.py#L1-L9"
+          "ref": "src/quantra_mcp/builders/bumps.py@ef26400:L1-L9",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/builders/bumps.py#L1-L9"
         },
         {
           "source": "connector",
@@ -1345,8 +1345,8 @@
           "end": 37,
           "sha256": "bda6cc26f5c7b2ab73eb0ebf16c97d0321a667a4f4b86b281090de685f612583",
           "kind": "statement",
-          "ref": "src/quantra_mcp/builders/bumps.py@a74265f:L25-L37",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/builders/bumps.py#L25-L37"
+          "ref": "src/quantra_mcp/builders/bumps.py@ef26400:L25-L37",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/builders/bumps.py#L25-L37"
         },
         {
           "source": "connector",
@@ -1355,8 +1355,8 @@
           "end": 43,
           "sha256": "01da58033ca3f27d2ee1a6fad371978ff52b68f11436d53bd7e9749a4ddc2e31",
           "kind": "statement",
-          "ref": "src/quantra_mcp/builders/bumps.py@a74265f:L39-L43",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/builders/bumps.py#L39-L43"
+          "ref": "src/quantra_mcp/builders/bumps.py@ef26400:L39-L43",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/builders/bumps.py#L39-L43"
         },
         {
           "source": "connector",
@@ -1365,8 +1365,8 @@
           "end": 197,
           "sha256": "fec01aa423f3be7c768ed8d8f128723e204562fc0e0c06443e148fc37c352a79",
           "kind": "statement",
-          "ref": "src/quantra_mcp/builders/bumps.py@a74265f:L184-L197",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/builders/bumps.py#L184-L197"
+          "ref": "src/quantra_mcp/builders/bumps.py@ef26400:L184-L197",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/builders/bumps.py#L184-L197"
         },
         {
           "source": "connector",
@@ -1375,8 +1375,8 @@
           "end": 218,
           "sha256": "fa07a3248f0195c18cbea4c34485d8ca8289ac7a442fb9cdd4386dddecd9fcd2",
           "kind": "statement",
-          "ref": "src/quantra_mcp/builders/bumps.py@a74265f:L203-L218",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/builders/bumps.py#L203-L218"
+          "ref": "src/quantra_mcp/builders/bumps.py@ef26400:L203-L218",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/builders/bumps.py#L203-L218"
         },
         {
           "source": "connector",
@@ -1385,8 +1385,8 @@
           "end": 173,
           "sha256": "c4a1f449c1d442b2b7dff3b294709aae9b34cac31c0678645577c989c0c0e987",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@a74265f:L166-L173",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/analytics.py#L166-L173"
+          "ref": "src/quantra_mcp/tools/analytics.py@ef26400:L166-L173",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/analytics.py#L166-L173"
         },
         {
           "source": "connector",
@@ -1395,8 +1395,8 @@
           "end": 240,
           "sha256": "db15046ef5b054ded2befdf781e1fc5cc4da963afed6f17473f4bd86b7f0af66",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@a74265f:L236-L240",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/analytics.py#L236-L240"
+          "ref": "src/quantra_mcp/tools/analytics.py@ef26400:L236-L240",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/analytics.py#L236-L240"
         },
         {
           "source": "connector",
@@ -1405,8 +1405,8 @@
           "end": 258,
           "sha256": "f940bd1a337a0c2494bd3b5c1d720a1d71c6294d37023d920467c60e3bd6647e",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@a74265f:L243-L258",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/analytics.py#L243-L258"
+          "ref": "src/quantra_mcp/tools/analytics.py@ef26400:L243-L258",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/analytics.py#L243-L258"
         },
         {
           "source": "connector",
@@ -1415,8 +1415,8 @@
           "end": 271,
           "sha256": "17be651244d7238f236924661ab260401f67556ca2a41a36b59bea31cc82e84d",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@a74265f:L265-L271",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/analytics.py#L265-L271"
+          "ref": "src/quantra_mcp/tools/analytics.py@ef26400:L265-L271",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/analytics.py#L265-L271"
         },
         {
           "source": "connector",
@@ -1425,8 +1425,8 @@
           "end": 284,
           "sha256": "5d767494f740606ef4bc2fcbe8589e143ea11c92f66c028c1434ecfcef0c1f91",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@a74265f:L274-L284",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/analytics.py#L274-L284"
+          "ref": "src/quantra_mcp/tools/analytics.py@ef26400:L274-L284",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/analytics.py#L274-L284"
         },
         {
           "source": "connector",
@@ -1435,8 +1435,8 @@
           "end": 503,
           "sha256": "4ebcbe80e2e934233e075eac6acb1fe8590cb1fb495eed438a91126b32a530a9",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@a74265f:L476-L503",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/analytics.py#L476-L503"
+          "ref": "src/quantra_mcp/tools/analytics.py@ef26400:L476-L503",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/analytics.py#L476-L503"
         },
         {
           "source": "connector",
@@ -1445,8 +1445,8 @@
           "end": 545,
           "sha256": "2261743a697ffd1ee17e98905ab880103d48aa13c3cb2834033298074b900111",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@a74265f:L537-L545",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/analytics.py#L537-L545"
+          "ref": "src/quantra_mcp/tools/analytics.py@ef26400:L537-L545",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/analytics.py#L537-L545"
         },
         {
           "source": "connector",
@@ -1455,8 +1455,8 @@
           "end": 574,
           "sha256": "d1e4ca92b0c5c41c22a10d66dc4644cc21b001f1c7f0307583ec639b6191e1c6",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@a74265f:L557-L574",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/analytics.py#L557-L574"
+          "ref": "src/quantra_mcp/tools/analytics.py@ef26400:L557-L574",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/analytics.py#L557-L574"
         },
         {
           "source": "connector",
@@ -1465,8 +1465,8 @@
           "end": 663,
           "sha256": "670c14ebd95af6833e73fef30267415dc6c0ef7aeac403427f13e1dd47119cbc",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@a74265f:L647-L663",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/analytics.py#L647-L663"
+          "ref": "src/quantra_mcp/tools/analytics.py@ef26400:L647-L663",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/analytics.py#L647-L663"
         },
         {
           "source": "connector",
@@ -1475,8 +1475,8 @@
           "end": 698,
           "sha256": "2d57d2d144bab47b425cb8c6a82d4f92e9a7b1360f718077d7653d0a89d70131",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@a74265f:L686-L698",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/analytics.py#L686-L698"
+          "ref": "src/quantra_mcp/tools/analytics.py@ef26400:L686-L698",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/analytics.py#L686-L698"
         },
         {
           "source": "connector",
@@ -1485,8 +1485,8 @@
           "end": 402,
           "sha256": "0824788fc973dbb1aa608e12455182a740bebd98e17364c02f99bb57371f19de",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@a74265f:L392-L402",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/analytics.py#L392-L402"
+          "ref": "src/quantra_mcp/tools/analytics.py@ef26400:L392-L402",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/analytics.py#L392-L402"
         },
         {
           "source": "connector",
@@ -1495,8 +1495,8 @@
           "end": 373,
           "sha256": "3e30bf6b9a4e12c977398a1998d862a9300a08738fe1a99cbeda3c7ee40920f8",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/reconcile.py@a74265f:L345-L373",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/reconcile.py#L345-L373"
+          "ref": "src/quantra_mcp/tools/reconcile.py@ef26400:L345-L373",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/reconcile.py#L345-L373"
         },
         {
           "source": "connector",
@@ -1505,8 +1505,8 @@
           "end": 378,
           "sha256": "b587360486a65ef0e6ec369751d3bc3a80b084e748a4d294b42e9838d45543b9",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/reconcile.py@a74265f:L377-L378",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/reconcile.py#L377-L378"
+          "ref": "src/quantra_mcp/tools/reconcile.py@ef26400:L377-L378",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/reconcile.py#L377-L378"
         },
         {
           "source": "connector",
@@ -1515,8 +1515,8 @@
           "end": 421,
           "sha256": "9f2c3eb87d73734297af0607336537ad442fdbdf5672d432f8daa603982ccd22",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/reconcile.py@a74265f:L401-L421",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/reconcile.py#L401-L421"
+          "ref": "src/quantra_mcp/tools/reconcile.py@ef26400:L401-L421",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/reconcile.py#L401-L421"
         },
         {
           "source": "connector",
@@ -1525,8 +1525,8 @@
           "end": 215,
           "sha256": "0ae96d44c1e03ae39460be9125d20c8e1ff1c744c39d30ef8ab11263c98bf3d8",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/reconcile.py@a74265f:L214-L215",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/a74265f/src/quantra_mcp/tools/reconcile.py#L214-L215"
+          "ref": "src/quantra_mcp/tools/reconcile.py@ef26400:L214-L215",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/ef26400/src/quantra_mcp/tools/reconcile.py#L214-L215"
         }
       ],
       "gaps": [
