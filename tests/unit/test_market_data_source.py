@@ -199,9 +199,9 @@ async def test_session_put_stores_the_source_and_refs_carry_it_forward(app: Any)
         )
         assert put["ok"] and put["market_data_source"] == "user_file"
         assert put["item"]["market_data_source"] == "user_file"
-        got = _s(await c.call_tool("session_get", {"name": "sofr"}))
+        got = _s(await c.call_tool("session", {"action": "get", "name": "sofr"}))
         assert got["market_data_source"] == "user_file"
-        listed = _s(await c.call_tool("session_list", {}))
+        listed = _s(await c.call_tool("session", {"action": "list"}))
         assert listed["items"][0]["market_data_source"] == "user_file"
         # the declaration carried by a build result must agree with the argument
         clash = _s(

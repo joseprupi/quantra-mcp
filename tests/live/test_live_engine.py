@@ -60,7 +60,7 @@ async def _call(client: Client, name: str, args: dict[str, Any]) -> dict[str, An
 async def test_meta_and_health() -> None:
     async with live_client() as client:
         meta = await _call(client, "quantra_meta", {})
-        health = await _call(client, "quantra_health", {})
+        health = await _call(client, "quantra_meta", {})
     assert meta["ok"] and meta["request"] is None
     # X-Quantra-Api-Version is stamped on POST responses only; GET /meta carries it in the body
     assert meta["response"]["openapi_version"] == "0.7.0"

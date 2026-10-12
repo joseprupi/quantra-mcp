@@ -32,6 +32,7 @@ from quantra_mcp.tools import (
     reconcile,
 )
 from quantra_mcp.tools import session as session_tools
+from quantra_mcp.tools._meta import strip_schema_titles
 
 log = logging.getLogger("quantra_mcp")
 
@@ -180,6 +181,7 @@ def build_server(
     session_tools.register(app, the_store)
     resources.register(app)
     prompts.register(app)
+    strip_schema_titles(app)
     return app
 
 

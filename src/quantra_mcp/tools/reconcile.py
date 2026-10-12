@@ -37,6 +37,7 @@ from quantra_mcp.tools._market_source import (
     check_source,
     stamp,
 )
+from quantra_mcp.tools._meta import tool
 from quantra_mcp.tools._result import ToolResult, local_error_result, new_request_id, run_post
 
 # --------------------------------------------------------------------------
@@ -585,7 +586,7 @@ async def reprice_with_impl(
 
 
 def register(app: MCPServer, backend: Backend) -> None:
-    @app.tool()
+    @tool(app, "Compare an external number with a result", engine=False)
     def compare_results(external: dict[str, Any], quantra: dict[str, Any]) -> dict[str, Any]:
         """Put the user's numbers next to the engine's (no engine call, no modelling).
 
@@ -608,7 +609,7 @@ def register(app: MCPServer, backend: Backend) -> None:
         """
         return compare_results_impl(external, quantra)
 
-    @app.tool()
+    @tool(app, "Edit an echoed request and reprice", engine=True)
     async def reprice_with(
         result_or_request: dict[str, Any],
         changes: list[FieldChange],

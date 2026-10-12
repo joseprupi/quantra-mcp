@@ -56,8 +56,7 @@ OVERRIDE = {
 
 TOOL_CALLS: list[tuple[str, dict[str, Any]]] = [
     ("quantra_meta", {}),
-    ("quantra_health", {}),
-    ("list_endpoints", {}),
+    ("engine_schema", {}),
     ("engine_schema", {"endpoint": "/price-ois-swap", "depth": 2}),
     ("list_enums", {"name": "Calendar"}),
     (
@@ -188,7 +187,7 @@ async def m2_checks(client: Client, http: httpx.AsyncClient, rows: list[Row]) ->
     failed = False
     strips = _strips()
 
-    lst = await _tool(client, "list_presets", {})
+    lst = await _tool(client, "preset", {})
     rows.append(
         Row(
             "list_presets",
@@ -199,7 +198,7 @@ async def m2_checks(client: Client, http: httpx.AsyncClient, rows: list[Row]) ->
         )
     )
     failed |= not lst.get("ok")
-    one = await _tool(client, "get_preset", {"id": "USD_SOFR_OIS"})
+    one = await _tool(client, "preset", {"id": "USD_SOFR_OIS"})
     rows.append(
         Row(
             "get_preset USD_SOFR_OIS",

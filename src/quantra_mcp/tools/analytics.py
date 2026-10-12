@@ -42,6 +42,7 @@ from quantra_mcp.presets.registry import PresetError
 from quantra_mcp.schema.enums_generated import RateAveragingType, SwapType
 from quantra_mcp.session import ScratchStore
 from quantra_mcp.tools._market_source import MarketDataSource, stamp
+from quantra_mcp.tools._meta import tool
 from quantra_mcp.tools._result import ToolResult, new_request_id
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
 from quantra_mcp.tools.pricing import Market, price_ois_swap_impl, price_vanilla_swap_impl
@@ -742,7 +743,7 @@ async def fair_rate_impl(
 
 
 def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurrency: int) -> None:
-    @app.tool()
+    @tool(app, "Swap DV01 by bump and reprice", engine=True)
     async def swap_dv01(
         market: Market,
         market_data_source: MarketDataSource,
@@ -804,7 +805,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Key-rate DV01 ladder by bump and reprice", engine=True)
     async def key_rate_ladder(
         market: Market,
         market_data_source: MarketDataSource,
@@ -857,7 +858,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Scenario reprices of a swap", engine=True)
     async def scenario(
         market: Market,
         market_data_source: MarketDataSource,
@@ -904,7 +905,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Fair rate of a swap (engine output)", engine=True)
     async def fair_rate(
         market: Market,
         market_data_source: MarketDataSource,

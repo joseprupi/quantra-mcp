@@ -450,10 +450,25 @@ async def test_raw_shaped_tools_validate_and_forward(
     sabr = fixture_body("sabrcal_eur_2x2_beta_fixed_exact_fit")
     vs = fixture_body("volsample_swaption_constant_cube")
     async with Client(pricing_app) as c:
-        r1 = _s(await c.call_tool("calibrate_swaption_model", {"body": hw}))
-        r2 = _s(await c.call_tool("calibrate_swaption_vol", {"body": sabr}))
-        r3 = _s(await c.call_tool("sample_vol_surface", {"body": vs}))
-        bad = _s(await c.call_tool("sample_vol_surface", {"body": {"pricing": {}, "queries": []}}))
+        r1 = _s(
+            await c.call_tool(
+                "engine_request", {"endpoint": "/calibrate-swaption-model", "body": hw}
+            )
+        )
+        r2 = _s(
+            await c.call_tool(
+                "engine_request", {"endpoint": "/calibrate-swaption-vol", "body": sabr}
+            )
+        )
+        r3 = _s(
+            await c.call_tool("engine_request", {"endpoint": "/sample-vol-surfaces", "body": vs})
+        )
+        bad = _s(
+            await c.call_tool(
+                "engine_request",
+                {"endpoint": "/sample-vol-surfaces", "body": {"pricing": {}, "queries": []}},
+            )
+        )
     assert r1["ok"] and r1["request"] == hw and r1["summary"]["hw_sigma"] == 0.0087
     assert (
         r2["ok"] and r2["request"] == sabr and r2["summary"]["calibration"] == {"overall_rmse": 0.0}

@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from quantra_mcp.backend.base import Backend
 from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.schema.enums_generated import BusinessDayConvention, Calendar, TimeUnit
+from quantra_mcp.tools._meta import tool
 from quantra_mcp.tools._result import ToolResult, local_error_result, run_post
 
 HOLIDAYS = "/calendar-holidays"
@@ -168,7 +169,7 @@ def advance_summary(response: Any) -> dict[str, Any] | None:
 
 
 def register(app: MCPServer, backend: Backend) -> None:
-    @app.tool()
+    @tool(app, "Engine calendar: holidays", engine=True)
     async def calendar_holidays(
         calendar: Calendar,
         start_date: str,
@@ -196,7 +197,7 @@ def register(app: MCPServer, backend: Backend) -> None:
             return local_error_result(HOLIDAYS, None, exc.error, exc.problems)
         return await run_post(backend, HOLIDAYS, body, summarize=dates_summary)
 
-    @app.tool()
+    @tool(app, "Engine calendar: business days", engine=True)
     async def calendar_business_days(
         calendar: Calendar,
         start_date: str,
@@ -225,7 +226,7 @@ def register(app: MCPServer, backend: Backend) -> None:
             return local_error_result(BUSINESS_DAYS, None, exc.error, exc.problems)
         return await run_post(backend, BUSINESS_DAYS, body, summarize=dates_summary)
 
-    @app.tool()
+    @tool(app, "Engine calendar: advance a date", engine=True)
     async def calendar_advance(
         calendar: Calendar,
         date: str,

@@ -29,10 +29,12 @@ DEVELOPER_GUIDE = """\
 # quantra-mcp for developers: the technical map
 
 quantra_meta reports the engine version and
-products; list_endpoints / engine_schema / list_enums describe request shapes;
+products; engine_schema (no argument: every endpoint) / list_enums describe request shapes;
 quantra://examples/* and list_examples / get_example give 222 complete verified
 engine requests (an example's `pricing` block is a valid `market`); engine_request
-POSTs any endpoint. Curves: list_presets / get_preset -> build_curve(preset, quotes)
+POSTs any endpoint, including the four without a builder (/calibrate-swaption-vol,
+/calibrate-swaption-model, /sample-vol-surfaces, /bootstrap-inflation-curves).
+Curves: preset(id?) -> build_curve(preset, quotes)
 or curve_from_pasted_table(text, kind=discount|zero|par) or build_value_curve ->
 build_query -> bootstrap_curve; session_put stores a built curve so later calls pass
 {"session": "<name>"}. Pricing: one price_<product> tool per product takes a `market`
@@ -40,7 +42,8 @@ build_query -> bootstrap_curve; session_put stores a built curve so later calls 
 whose trade block supplies every convention, and the trade economics; "spot" and
 tenor dates are resolved by the engine's /calendar-advance and reported in
 `date_resolution`. Analytics by composition: swap_dv01, key_rate_ladder, scenario,
-fair_rate (each reprice's full result is in `calls`; DV01 `method` centered | up | down,
+fair_rate (compact by default: the base request once plus each reprice's NPV and
+request_diff; include_calls=true carries every complete result; DV01 `method` centered | up | down,
 centered by default = (NPV(+bp) - NPV(-bp)) / 2). Reconciliation: compare_results
 (external {label: number} vs a result; abs / rel differences; topic per metric),
 explain_method(topic) (the cited methodology page) and reprice_with(result, changes)
@@ -61,9 +64,19 @@ builder applies is listed in `notes` with its preset source.
 Failures are tool errors: every result whose `ok` is false (an engine error, a local
 validation rejection, a provenance refusal, a hosted-mode rate or concurrency refusal)
 is returned with the MCP `isError` flag set, with the same JSON body as content and as
-`structuredContent`; a refusal carries `retry_after_s`. Session scratch (session_put /
-session_get / session_list / session_delete and `{"session": name}` references) is
-private to the MCP session, in memory, bounded, never persisted.
+`structuredContent`; a refusal carries `retry_after_s`. Session scratch (session_put,
+session(action=get|list|delete) and `{"session": name}` references) is private to the
+MCP session, in memory, bounded, never persisted.
+
+market_data_source, required by every tool that takes market numbers: user_pasted (the
+user pasted or typed the numbers in this conversation), user_file (the user attached a
+file or screenshot the numbers were read from), engine_example (an engine example's
+pricing block, only when the user explicitly asked to run an example), session (a
+market stored earlier in this session, which itself came from one of the above). There
+is no value for estimated, recalled or placeholder data: a caller that would have to
+invent numbers must not call the tool and asks the user instead. Builder results carry
+a `digest` (sha256 of the canonical curve + indices JSON); a pricing tool notes whether
+each market curve matches a digest produced by a builder in this session.
 """
 
 

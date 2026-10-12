@@ -14,6 +14,7 @@ from mcp.server.mcpserver import MCPServer
 
 from quantra_mcp import examples_catalog as cat
 from quantra_mcp.errors import LocalValidationError
+from quantra_mcp.tools._meta import tool
 
 UNFILTERED_NAMES = 20
 
@@ -88,7 +89,7 @@ def get_example_impl(name: str) -> dict[str, Any]:
 
 
 def register(app: MCPServer) -> None:
-    @app.tool()
+    @tool(app, "Vendored engine examples (list)", engine=False)
     def list_examples(
         category: str | None = None, product: str | None = None, limit: int | None = None
     ) -> dict[str, Any]:
@@ -110,7 +111,7 @@ def register(app: MCPServer) -> None:
         """
         return list_examples_impl(category, product, limit)
 
-    @app.tool()
+    @tool(app, "Vendored engine example (one body)", engine=False)
     def get_example(name: str) -> dict[str, Any]:
         """One vendored example: endpoint, catalog description, reference value and the
         complete request ``body`` (no engine call).

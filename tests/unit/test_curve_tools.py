@@ -65,9 +65,9 @@ async def _sofr_query(c: Client) -> dict[str, Any]:
 
 async def test_presets_tools_and_resources(app: Any) -> None:
     async with Client(app) as c:
-        lst = _s(await c.call_tool("list_presets", {}))
-        one = _s(await c.call_tool("get_preset", {"id": "EUR_ESTR_OIS"}))
-        bad = _s(await c.call_tool("get_preset", {"id": "NOPE"}))
+        lst = _s(await c.call_tool("preset", {}))
+        one = _s(await c.call_tool("preset", {"id": "EUR_ESTR_OIS"}))
+        bad = _s(await c.call_tool("preset", {"id": "NOPE"}))
         idx = await c.read_resource("quantra://presets")
         res = await c.read_resource("quantra://presets/USD_SOFR_OIS")
         with pytest.raises(Exception, match="unknown preset"):
@@ -149,8 +149,8 @@ async def test_bootstrap_curve_echoes_resolved_request_and_summarizes(
                 },
             )
         )
-        listed = _s(await c.call_tool("session_list", {}))
-        got = _s(await c.call_tool("session_get", {"name": "sofr"}))
+        listed = _s(await c.call_tool("session", {"action": "list"}))
+        got = _s(await c.call_tool("session", {"action": "get", "name": "sofr"}))
         via_session = _s(
             await c.call_tool(
                 "bootstrap_curve",
@@ -161,7 +161,7 @@ async def test_bootstrap_curve_echoes_resolved_request_and_summarizes(
                 },
             )
         )
-        gone = _s(await c.call_tool("session_delete", {"name": "sofr"}))
+        gone = _s(await c.call_tool("session", {"action": "delete", "name": "sofr"}))
         missing = _s(
             await c.call_tool(
                 "bootstrap_curve",
@@ -243,7 +243,7 @@ async def test_session_put_rejects_schema_mismatch(app: Any) -> None:
                 },
             )
         )
-        lst = _s(await c.call_tool("session_list", {}))
+        lst = _s(await c.call_tool("session", {"action": "list"}))
     assert r["ok"] is False and r["problems"][0]["path"] == "/day_counter"
     assert lst["items"] == []
 
@@ -314,7 +314,10 @@ async def test_build_value_curve_and_inflation_passthrough(
             )
         )
         infl = _s(
-            await c.call_tool("bootstrap_inflation_curve", {"body": {"pricing": {}, "queries": []}})
+            await c.call_tool(
+                "engine_request",
+                {"endpoint": "/bootstrap-inflation-curves", "body": {"pricing": {}, "queries": []}},
+            )
         )
     assert (
         vc["ok"]

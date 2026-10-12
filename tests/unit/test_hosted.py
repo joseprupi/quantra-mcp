@@ -500,8 +500,8 @@ def test_two_http_sessions_have_separate_scratch_and_separate_buckets(
         )
         assert put["ok"] is True
         # B does not see A's item and a miss lists only B's own (empty) names
-        assert _call(c, b, "session_list", {})["items"] == []
-        miss = _call(c, b, "session_get", {"name": "sofr"})
+        assert _call(c, b, "session", {"action": "list"})["items"] == []
+        miss = _call(c, b, "session", {"action": "get", "name": "sofr"})
         assert (
             miss["ok"] is False
             and "(none)" in miss["error"]
@@ -515,15 +515,15 @@ def test_two_http_sessions_have_separate_scratch_and_separate_buckets(
             "session_put",
             {"market_data_source": "user_pasted", "name": "sofr", "kind": "curve", "value": other},
         )["ok"]
-        assert _call(c, a, "session_get", {"name": "sofr"})["curve_id"] == curve["id"]
-        assert _call(c, b, "session_get", {"name": "sofr"})["curve_id"] == "B_CURVE"
+        assert _call(c, a, "session", {"action": "get", "name": "sofr"})["curve_id"] == curve["id"]
+        assert _call(c, b, "session", {"action": "get", "name": "sofr"})["curve_id"] == "B_CURVE"
         # A spends its 6 tokens (put, get, four lists) -> its 7th call is a tool error;
         # B (5 spent, same client address) is untouched
         for _ in range(4):
-            assert _call(c, a, "session_list", {})["ok"] is True
-        refused = _call(c, a, "session_list", {})
+            assert _call(c, a, "session", {"action": "list"})["ok"] is True
+        refused = _call(c, a, "session", {"action": "list"})
         assert refused["ok"] is False and refused["status"] == 429 and refused["retry_after_s"] >= 1
-        assert _call(c, b, "session_list", {})["ok"] is True
+        assert _call(c, b, "session", {"action": "list"})["ok"] is True
         # listings stay free for A even when its bucket is empty
         r = c.post("/mcp", json={"jsonrpc": "2.0", "id": 9, "method": "tools/list"}, headers=a)
         assert r.status_code == 200 and "tools" in _sse_result(r.text)["result"]

@@ -14,7 +14,6 @@ same request (the engine prices a list and answers per item).
 
 from __future__ import annotations
 
-import copy
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -77,12 +76,9 @@ from quantra_mcp.schema.validate import validate_request
 from quantra_mcp.session import ScratchStore
 from quantra_mcp.tools._dates import DateResolutionFailed, DateResolver
 from quantra_mcp.tools._market_source import MarketDataSource, stamp
+from quantra_mcp.tools._meta import tool
 from quantra_mcp.tools._result import ToolResult, local_error_result, new_request_id, run_post
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
-
-CALIBRATE_SWAPTION_VOL = "/calibrate-swaption-vol"
-CALIBRATE_SWAPTION_MODEL = "/calibrate-swaption-model"
-SAMPLE_VOL_SURFACES = "/sample-vol-surfaces"
 
 Builder = Callable[[dict[str, Any], DateResolver], Awaitable[list[BuiltTrade]]]
 Summarizer = Callable[[Any], dict[str, Any] | None]
@@ -1219,69 +1215,8 @@ async def price_yoy_inflation_cap_floor_impl(
 # --------------------------------------------------------------------------
 
 
-def _calibration_summary(response: Any) -> dict[str, Any] | None:
-    if not isinstance(response, dict):
-        return None
-    keys = ("model_id", "vol_id", "hw_a", "hw_sigma", "rmse", "num_helpers", "grid_points")
-    out = {k: response[k] for k in keys if k in response}
-    diag = response.get("diagnostics")
-    if isinstance(diag, dict):
-        out["diagnostics_keys"] = sorted(diag)
-        if isinstance(diag.get("calibration"), dict):
-            out["calibration"] = diag["calibration"]
-    return out or None
-
-
-def _vol_sample_summary(response: Any) -> dict[str, Any] | None:
-    if not isinstance(response, dict) or not isinstance(response.get("results"), list):
-        return None
-    rows = []
-    for r in response["results"]:
-        if isinstance(r, dict):
-            row = {
-                k: r[k]
-                for k in ("vol_id", "ql_vol_type", "n_expiries", "n_tenors", "n_strikes", "error")
-                if k in r
-            }
-            vols = r.get("vols")
-            if isinstance(vols, list):
-                row["n_vols"] = len(vols)
-            rows.append(row)
-    return {"results": rows}
-
-
-async def raw_impl(
-    backend: Backend, endpoint: str, body: Any, summarize: Summarizer, request_id: str | None
-) -> ToolResult:
-    rid = request_id or new_request_id()
-    if not isinstance(body, dict):
-        return local_error_result(endpoint, body, "body must be a JSON object", request_id=rid)
-    problems = validate_request(endpoint, body)
-    if problems:
-        return local_error_result(
-            endpoint,
-            body,
-            f"request does not match the vendored schema for {endpoint} "
-            f"({len(problems)} problem{'s' if len(problems) != 1 else ''}); nothing was sent",
-            [p.as_dict() for p in problems],
-            request_id=rid,
-        )
-    return await run_post(
-        backend, endpoint, copy.deepcopy(body), request_id=rid, summarize=summarize
-    )
-
-
-# --------------------------------------------------------------------------
-# registration
-# --------------------------------------------------------------------------
-
-_MARKET_DOC = """market: ``{"session": name}`` (a stored market or curve), an engine
-            ``pricing`` block (e.g. a vendored example's ``pricing``; used verbatim)
-            or ``{curves: [...], indices: [...], ...}`` from build_curve results."""
-
-
 def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
-    @app.tool()
+    @tool(app, "Price a vanilla swap", engine=True)
     async def price_vanilla_swap(
         market: Market,
         market_data_source: MarketDataSource,
@@ -1368,7 +1303,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Price an OIS swap", engine=True)
     async def price_ois_swap(
         market: Market,
         market_data_source: MarketDataSource,
@@ -1455,7 +1390,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Price a fixed-rate bond", engine=True)
     async def price_fixed_rate_bond(
         market: Market,
         market_data_source: MarketDataSource,
@@ -1529,7 +1464,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Price a floating-rate bond", engine=True)
     async def price_floating_rate_bond(
         market: Market,
         market_data_source: MarketDataSource,
@@ -1604,7 +1539,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Price a zero-coupon bond", engine=True)
     async def price_zero_coupon_bond(
         market: Market,
         market_data_source: MarketDataSource,
@@ -1667,7 +1602,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Price a callable fixed-rate bond", engine=True)
     async def price_callable_fixed_rate_bond(
         market: Market,
         market_data_source: MarketDataSource,
@@ -1735,7 +1670,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Price a FRA", engine=True)
     async def price_fra(
         market: Market,
         market_data_source: MarketDataSource,
@@ -1808,7 +1743,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Price a cap / floor", engine=True)
     async def price_cap_floor(
         market: Market,
         market_data_source: MarketDataSource,
@@ -1892,7 +1827,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Price a swaption", engine=True)
     async def price_swaption(
         market: Market,
         market_data_source: MarketDataSource,
@@ -1975,7 +1910,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Price a CDS", engine=True)
     async def price_cds(
         market: Market,
         market_data_source: MarketDataSource,
@@ -2069,7 +2004,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Price an equity option", engine=True)
     async def price_equity_option(
         spot: float | str,
         market_data_source: MarketDataSource,
@@ -2155,7 +2090,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Price a zero-coupon inflation swap", engine=True)
     async def price_zc_inflation_swap(
         market: Market,
         market_data_source: MarketDataSource,
@@ -2226,7 +2161,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Price a year-on-year inflation swap", engine=True)
     async def price_yoy_inflation_swap(
         market: Market,
         market_data_source: MarketDataSource,
@@ -2297,7 +2232,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Price a year-on-year inflation cap / floor", engine=True)
     async def price_yoy_inflation_cap_floor(
         market: Market,
         market_data_source: MarketDataSource,
@@ -2372,40 +2307,3 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             ),
             market_data_source,
         )
-
-    @app.tool()
-    async def calibrate_swaption_vol(
-        body: dict[str, Any], request_id: str | None = None
-    ) -> ToolResult:
-        """Calibrate a SABR swaption cube (POST /calibrate-swaption-vol) from a raw
-        ``CalibrateSwaptionVolRequest`` body (``pricing`` with a SwaptionSabrCalibrateSpec
-        surface, ``vol_id``, ``discounting_curve_id``, ``forwarding_curve_id``). Validated
-        against the vendored spec, then forwarded; see the ``vol`` examples
-        (``sabrcal_*``) for complete bodies. ``summary`` selects the calibration block.
-        """
-        return await raw_impl(
-            backend, CALIBRATE_SWAPTION_VOL, body, _calibration_summary, request_id
-        )
-
-    @app.tool()
-    async def calibrate_swaption_model(
-        body: dict[str, Any], request_id: str | None = None
-    ) -> ToolResult:
-        """Calibrate a Hull-White model to swaption vols (POST /calibrate-swaption-model)
-        from a raw ``CalibrateSwaptionModelRequest`` body (``pricing`` with a
-        SwaptionModelSpec in ``Calibrate`` mode and its ``hw_calibration`` block,
-        ``model_id``). Validated, then forwarded; see the ``hwcal_*`` examples.
-        ``summary``: hw_a, hw_sigma, rmse, num_helpers.
-        """
-        return await raw_impl(
-            backend, CALIBRATE_SWAPTION_MODEL, body, _calibration_summary, request_id
-        )
-
-    @app.tool()
-    async def sample_vol_surface(body: dict[str, Any], request_id: str | None = None) -> ToolResult:
-        """Sample volatility surfaces on a grid (POST /sample-vol-surfaces) from a raw
-        ``SampleVolSurfacesRequest`` body (``pricing`` with the surfaces, ``queries``).
-        Validated, then forwarded; see the ``volsample_*`` examples. ``summary``: per
-        result vol_id, vol type, grid sizes.
-        """
-        return await raw_impl(backend, SAMPLE_VOL_SURFACES, body, _vol_sample_summary, request_id)

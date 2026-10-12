@@ -114,18 +114,18 @@ async def test_handshake_era_sessions_are_isolated_and_rate_limited_separately(
             )
         )
         assert put["ok"] is True
-        assert structured(await b.call_tool("session_list", {}))["items"] == []
-        miss = await b.call_tool("session_get", {"name": "sofr"})
+        assert structured(await b.call_tool("session", {"action": "list"}))["items"] == []
+        miss = await b.call_tool("session", {"action": "get", "name": "sofr"})
         assert miss.is_error and "(none)" in structured(miss)["error"]
         # A: put + 3 lists = 4 tokens; the 5th call is a tool error naming the session bucket
         for _ in range(3):
-            assert structured(await a.call_tool("session_list", {}))["ok"] is True
-        refused = await a.call_tool("session_list", {})
+            assert structured(await a.call_tool("session", {"action": "list"}))["ok"] is True
+        refused = await a.call_tool("session", {"action": "list"})
         body = structured(refused)
         assert refused.is_error and body["status"] == 429 and body["retry_after_s"] >= 1
         assert "session" in body["error"] and "retry" in body["retry_hint"]
         # B, from the same address, is untouched (2 spent of 4)
-        assert structured(await b.call_tool("session_list", {}))["ok"] is True
+        assert structured(await b.call_tool("session", {"action": "list"}))["ok"] is True
 
 
 async def test_modern_era_refuses_scratch_instead_of_sharing_it(
@@ -149,9 +149,9 @@ async def test_modern_era_refuses_scratch_instead_of_sharing_it(
         assert put.is_error and structured(put)["error"] == SESSIONLESS_ERROR
         assert "inline" in structured(put)["error"]
         for name, args in (
-            ("session_list", {}),
-            ("session_get", {"name": "x"}),
-            ("session_delete", {"name": "x"}),
+            ("session", {"action": "list"}),
+            ("session", {"action": "get", "name": "x"}),
+            ("session", {"action": "delete", "name": "x"}),
         ):
             r = await a.call_tool(name, args)
             assert r.is_error and structured(r)["error"] == SESSIONLESS_ERROR, name
@@ -175,4 +175,4 @@ async def test_modern_era_refuses_scratch_instead_of_sharing_it(
         assert ref.is_error and SESSIONLESS_ERROR[:40] in structured(ref)["error"]
         # the inline form works, as does everything without scratch
         assert structured(await a.call_tool("quantra_meta", {}))["ok"] is True
-        assert not (await a.call_tool("list_presets", {})).is_error
+        assert not (await a.call_tool("preset", {})).is_error

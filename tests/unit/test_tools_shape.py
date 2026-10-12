@@ -28,29 +28,25 @@ def _structured(result: Any) -> dict[str, Any]:
 
 async def test_lists_tools_and_resources(app: Any) -> None:
     async with Client(app) as c:
-        tools = {t.name for t in (await c.list_tools()).tools}
+        listed = (await c.list_tools()).tools
+        tools = {t.name for t in listed}
+        assert len(listed) == 38
         assert tools == {
             "quantra_meta",
-            "quantra_health",
-            "list_endpoints",
             "engine_schema",
             "list_enums",
             "calendar_holidays",
             "calendar_business_days",
             "calendar_advance",
             "engine_request",
-            "list_presets",
-            "get_preset",
+            "preset",
             "build_curve",
             "build_value_curve",
             "curve_from_pasted_table",
             "build_query",
             "bootstrap_curve",
-            "bootstrap_inflation_curve",
             "session_put",
-            "session_get",
-            "session_list",
-            "session_delete",
+            "session",
             "price_vanilla_swap",
             "price_ois_swap",
             "price_fixed_rate_bond",
@@ -65,9 +61,6 @@ async def test_lists_tools_and_resources(app: Any) -> None:
             "price_zc_inflation_swap",
             "price_yoy_inflation_swap",
             "price_yoy_inflation_cap_floor",
-            "calibrate_swaption_vol",
-            "calibrate_swaption_model",
-            "sample_vol_surface",
             "list_examples",
             "get_example",
             "swap_dv01",
@@ -210,7 +203,7 @@ async def test_engine_error_passes_through_verbatim(app: Any, fake_backend: Fake
 async def test_transport_error_is_reported_not_raised(app: Any, fake_backend: FakeBackend) -> None:
     fake_backend.fail_with = TransportError("ConnectError: refused")
     async with Client(app) as c:
-        r = _structured(await c.call_tool("quantra_health", {}))
+        r = _structured(await c.call_tool("quantra_meta", {}))
         r2 = _structured(
             await c.call_tool(
                 "calendar_holidays",
@@ -279,7 +272,7 @@ async def test_engine_request_unknown_endpoint(app: Any) -> None:
 
 async def test_discovery_tools(app: Any) -> None:
     async with Client(app) as c:
-        eps = _structured(await c.call_tool("list_endpoints", {}))
+        eps = _structured(await c.call_tool("engine_schema", {}))
         schema = _structured(
             await c.call_tool("engine_schema", {"endpoint": "calendar-advance", "depth": 1})
         )

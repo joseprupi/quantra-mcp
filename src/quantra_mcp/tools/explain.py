@@ -12,6 +12,7 @@ from mcp.server.mcpserver import MCPServer
 
 from quantra_mcp import methodology
 from quantra_mcp.errors import LocalValidationError
+from quantra_mcp.tools._meta import tool
 
 
 def explain_method_impl(topic: str) -> dict[str, Any]:
@@ -33,7 +34,7 @@ def explain_method_impl(topic: str) -> dict[str, Any]:
 
 
 def register(app: MCPServer) -> None:
-    @app.tool()
+    @tool(app, "Methodology, cited to engine and connector source", engine=False)
     def explain_method(topic: str) -> dict[str, Any]:
         """How the engine computes something, cited to its own docs and source at the
         pinned tag; or how this server derives its analytics (no engine call).

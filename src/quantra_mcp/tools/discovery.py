@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
 from mcp.server.mcpserver import MCPServer
+from pydantic import Field
 
 from quantra_mcp.backend.base import Backend
 from quantra_mcp.schema.loader import Spec, SpecError, load_spec, normalize_endpoint, pin
+from quantra_mcp.tools._meta import tool
 from quantra_mcp.tools._result import ToolResult, run_get
 
 MAX_DEPTH = 8
@@ -20,6 +22,7 @@ def endpoint_schema(endpoint: str, depth: int = 3, spec: Spec | None = None) -> 
     info = spec.endpoint(endpoint)
     request = spec.request_schema(endpoint)
     return {
+        "ok": True,
         "endpoint": info.path,
         "summary": info.summary,
         "description": info.description,
@@ -42,6 +45,7 @@ def endpoint_schema(endpoint: str, depth: int = 3, spec: Spec | None = None) -> 
 def endpoints_listing(spec: Spec | None = None) -> dict[str, Any]:
     spec = spec or load_spec()
     return {
+        "ok": True,
         "api_version": spec.api_version,
         "pin": pin().tag,
         "count": len(spec.endpoints),
@@ -50,6 +54,7 @@ def endpoints_listing(spec: Spec | None = None) -> dict[str, Any]:
             for e in spec.endpoints
         ],
         "system": ["GET /health", "GET /status", "GET /meta"],
+        "hint": "engine_schema(endpoint) returns one endpoint's request and response schema",
     }
 
 
@@ -57,63 +62,77 @@ def enum_listing(name: str, spec: Spec | None = None) -> dict[str, Any]:
     spec = spec or load_spec()
     values = spec.enum_values(name)  # raises SpecError with the available names
     short = name.removeprefix("quantra_enums_")
-    return {"enum": short, "count": len(values), "values": values, "api_version": spec.api_version}
+    return {
+        "ok": True,
+        "enum": short,
+        "count": len(values),
+        "values": values,
+        "api_version": spec.api_version,
+    }
+
+
+def engine_schema_impl(endpoint: str | None, depth: int = 3) -> dict[str, Any]:
+    if endpoint is None:
+        return endpoints_listing()
+    try:
+        return endpoint_schema(endpoint, depth)
+    except SpecError as exc:
+        return {"ok": False, "error": str(exc), "endpoint": normalize_endpoint(endpoint)}
 
 
 def register(app: MCPServer, backend: Backend) -> None:
-    @app.tool()
+    @tool(app, "Engine metadata (GET /meta)", engine=True)
     async def quantra_meta() -> ToolResult:
-        """Engine metadata, verbatim from GET /meta.
-
-        Call this first: it tells you the engine's API version, QuantLib
-        version, product list and endpoint list. The ``response`` field is the
-        engine body unchanged.
+        """Engine metadata verbatim from GET /meta: API version, QuantLib version, product
+        and endpoint lists. Call it first; it also proves the engine is reachable (the
+        server's own /readyz covers liveness for operators). ``response`` is the engine
+        body unchanged; ``engine.api_version`` comes from the response header, or from
+        the body's ``openapi_version`` when the header is absent.
         """
         return await run_get(backend, "/meta")
 
-    @app.tool()
-    async def quantra_health() -> ToolResult:
-        """Engine liveness, verbatim from GET /health."""
-        return await run_get(backend, "/health")
-
-    @app.tool()
-    def list_endpoints() -> dict[str, Any]:
-        """The engine's POST endpoints (24 at the pinned version) with one-line descriptions.
-
-        Taken from the vendored OpenAPI spec, not from the live engine; compare
-        with ``quantra_meta`` to detect a version mismatch.
+    @tool(app, "Engine endpoints and schemas", engine=False)
+    def engine_schema(
+        endpoint: Annotated[
+            str | None,
+            Field(
+                description="One of the engine's POST paths, e.g. /price-ois-swap (leading "
+                "slash optional). Omit it to list every endpoint with a one-line summary; an "
+                "unknown name answers with the valid endpoints.",
+            ),
+        ] = None,
+        depth: Annotated[
+            int,
+            Field(
+                ge=0,
+                le=MAX_DEPTH,
+                description="How many levels of $ref to inline (0..8). Deeper refs are left "
+                "as {'$ref': '<Name>', 'unresolved': true}.",
+            ),
+        ] = 3,
+    ) -> dict[str, Any]:
+        """Request and response JSON schema of one engine endpoint, or (without
+        ``endpoint``) the list of the 24 POST endpoints, from the vendored OpenAPI spec
+        (no engine call; compare ``api_version`` with ``quantra_meta`` to detect a version
+        mismatch). For one endpoint: the spec's top-level ``required`` list, the top-level
+        field names and both schemas. The engine's rule: a field the product needs that
+        is omitted is an error, never a default.
         """
-        return endpoints_listing()
+        return engine_schema_impl(endpoint, depth)
 
-    @app.tool()
-    def engine_schema(endpoint: str, depth: int = 3) -> dict[str, Any]:
-        """Request and response JSON schema for one engine endpoint.
-
-        Args:
-            endpoint: one of the 24 POST paths, e.g. ``/price-ois-swap``
-                (leading slash optional). Unknown names return an error that
-                lists the valid endpoints.
-            depth: how many levels of ``$ref`` to inline (0..8, default 3).
-                Deeper refs are left as ``{"$ref": "<Name>", "unresolved": true}``.
-
-        Returns the spec's top-level ``required`` list, the top-level field
-        names, and both schemas. Remember the engine's rule: a field the
-        product needs that is omitted is an error, never a default.
-        """
-        try:
-            return endpoint_schema(endpoint, depth)
-        except SpecError as exc:
-            return {"ok": False, "error": str(exc), "endpoint": normalize_endpoint(endpoint)}
-
-    @app.tool()
-    def list_enums(name: str) -> dict[str, Any]:
-        """Values of an engine enum from the vendored spec.
-
-        Args:
-            name: e.g. ``Calendar``, ``DayCounter``, ``Frequency``,
-                ``BusinessDayConvention``, ``TimeUnit``, ``Compounding``,
-                ``Interpolator``, ``BootstrapTrait``. An unknown name returns
-                an error listing every available enum.
+    @tool(app, "Engine enum values", engine=False)
+    def list_enums(
+        name: Annotated[
+            str,
+            Field(
+                description="An engine enum name: Calendar, DayCounter, Frequency, "
+                "BusinessDayConvention, TimeUnit, Compounding, Interpolator, BootstrapTrait, "
+                "... An unknown name answers with every available enum.",
+            ),
+        ],
+    ) -> dict[str, Any]:
+        """Values of an engine enum from the vendored spec (no engine call). Use it for any
+        field typed as an enum (calendars, day counters, conventions, frequencies, ...).
         """
         try:
             return enum_listing(name)

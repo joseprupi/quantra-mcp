@@ -1,18 +1,19 @@
 """Tier 3: market construction — presets, curve builders, bootstrap.
 
-``list_presets`` / ``get_preset`` / ``build_curve`` / ``build_value_curve`` /
-``build_query`` never call the engine; they return explicit request fragments
-plus ``notes`` listing every convention applied and where it came from.
-``bootstrap_curve`` and ``bootstrap_inflation_curve`` POST to the engine and
-return the uniform result shape; ``summary`` is a selection of response
-fields, never a computation.
+``preset`` / ``build_curve`` / ``build_value_curve`` / ``build_query`` never call
+the engine; they return explicit request fragments plus ``notes`` listing every
+convention applied and where it came from. ``bootstrap_curve`` POSTs to the
+engine and returns the uniform result shape; ``summary`` is a selection of
+response fields, never a computation. (``/bootstrap-inflation-curves`` has no
+builder: ``engine_request`` takes its raw body.)
 """
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from mcp.server.mcpserver import MCPServer
+from pydantic import Field
 
 from quantra_mcp.backend.base import Backend
 from quantra_mcp.builders import curves as cb
@@ -32,11 +33,11 @@ from quantra_mcp.schema.enums_generated import (
 from quantra_mcp.schema.validate import validate_component, validate_request
 from quantra_mcp.session import ScratchStore, resolve_refs
 from quantra_mcp.tools._market_source import MarketDataSource, stamp
+from quantra_mcp.tools._meta import tool
 from quantra_mcp.tools._result import ToolResult, local_error_result, new_request_id, run_post
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
 
 BOOTSTRAP_CURVES = "/bootstrap-curves"
-BOOTSTRAP_INFLATION = "/bootstrap-inflation-curves"
 
 
 def _check_built(built: cb.BuiltCurve) -> ToolResult:
@@ -308,60 +309,27 @@ async def bootstrap_curve_impl(
     return result
 
 
-def _inflation_summary(response: Any) -> dict[str, Any] | None:
-    return cb.bootstrap_summary(response)
-
-
-async def bootstrap_inflation_curve_impl(
-    backend: Backend, body: dict[str, Any], request_id: str | None = None
-) -> ToolResult:
-    rid = request_id or new_request_id()
-    if not isinstance(body, dict):
-        return local_error_result(
-            BOOTSTRAP_INFLATION, body, "body must be a JSON object", request_id=rid
-        )
-    problems = validate_request(BOOTSTRAP_INFLATION, body)
-    if problems:
-        return local_error_result(
-            BOOTSTRAP_INFLATION,
-            body,
-            f"request does not match the vendored schema for {BOOTSTRAP_INFLATION} "
-            f"({len(problems)} problem{'s' if len(problems) != 1 else ''}); nothing was sent",
-            [p.as_dict() for p in problems],
-            request_id=rid,
-        )
-    return await run_post(
-        backend, BOOTSTRAP_INFLATION, body, request_id=rid, summarize=_inflation_summary
-    )
-
-
 def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
-    @app.tool()
-    def list_presets() -> dict[str, Any]:
-        """Market-convention presets available to build_curve / build_value_curve.
-
-        Each row: ``id``, ``currency``, ``index`` (the engine index id the
-        preset registers), ``helpers`` (quote types it supports: deposit, fra,
-        future, swap, ois), ``curve`` (day counter / interpolator / trait) and
-        the ``provenance`` of the conventions. ``get_preset`` returns the data.
+    @tool(app, "Market-convention presets", engine=False)
+    def preset(
+        id: Annotated[
+            str | None,
+            Field(
+                description="A preset id (USD_SOFR_OIS, EUR_ESTR_OIS, GBP_SONIA_OIS, "
+                "GBP_SONIA_SWAP, EUR_EURIBOR_6M, EUR_EURIBOR_3M, EUR_FIXED_BOND, EUR_CDS, "
+                "EUR_EQUITY, EUR_HICP). Omit it to list every preset.",
+            ),
+        ] = None,
+    ) -> dict[str, Any]:
+        """The market-convention presets (no engine call). Without ``id``: one row per preset
+        (id, currency, the engine index it registers, the quote types its curve helpers
+        support, curve day counter / interpolator / trait, trade blocks, provenance). With
+        ``id``: the preset as data: index definition, curve settings, every helper and trade
+        convention block, and the provenance of each field (``field_provenance``).
         """
-        return {"ok": True, "presets": _list_presets()}
+        return preset_impl(id)
 
-    @app.tool()
-    def get_preset(id: str) -> dict[str, Any]:
-        """One preset as data: index definition, curve settings, every helper
-        convention block and the provenance of each field.
-
-        Args:
-            id: e.g. ``USD_SOFR_OIS``, ``EUR_ESTR_OIS``, ``GBP_SONIA_OIS``,
-                ``GBP_SONIA_SWAP``, ``EUR_EURIBOR_6M``, ``EUR_EURIBOR_3M``.
-        """
-        try:
-            return {"ok": True, "preset": get_preset_data(id)}
-        except PresetError as exc:
-            return {"ok": False, "error": str(exc)}
-
-    @app.tool()
+    @tool(app, "Curve spec from a quote strip (no engine call)", engine=False)
     def build_curve(
         id: str,
         preset: str,
@@ -406,7 +374,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Curve spec from explicit values (no engine call)", engine=False)
     def build_value_curve(
         id: str,
         kind: cb.ValueKind,
@@ -462,7 +430,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Curve spec from a pasted table (no engine call)", engine=False)
     def curve_from_pasted_table(
         text: str,
         id: str,
@@ -538,7 +506,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             market_data_source,
         )
 
-    @app.tool()
+    @tool(app, "Curve query spec (no engine call)", engine=False)
     def build_query(
         curve_id: str,
         measures: list[cb.Measure],
@@ -568,7 +536,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             curve_id, measures, tenors, range_grid, calendar, business_day_convention, zero, fwd
         )
 
-    @app.tool()
+    @tool(app, "Bootstrap and sample curves (POST /bootstrap-curves)", engine=True)
     async def bootstrap_curve(
         curves: list[dict[str, Any]],
         as_of: str,
@@ -599,20 +567,15 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             backend, store, curves, as_of, queries, indices, calendar_overrides, request_id
         )
 
-    @app.tool()
-    async def bootstrap_inflation_curve(
-        body: dict[str, Any], request_id: str | None = None
-    ) -> ToolResult:
-        """POST /bootstrap-inflation-curves with a raw request body (validated first).
-
-        Args:
-            body: the engine's ``BootstrapInflationCurvesRequest`` (see
-                ``engine_schema('/bootstrap-inflation-curves')``); no preset
-                support yet, the body is sent as given once it validates.
-            request_id: optional ``X-Request-Id``.
-        """
-        return await bootstrap_inflation_curve_impl(backend, body, request_id)
-
 
 def get_preset_data(preset_id: str) -> dict[str, Any]:
     return get_preset(preset_id).as_data()
+
+
+def preset_impl(preset_id: str | None) -> dict[str, Any]:
+    if preset_id is None:
+        return {"ok": True, "presets": _list_presets()}
+    try:
+        return {"ok": True, "preset": get_preset_data(preset_id)}
+    except PresetError as exc:
+        return {"ok": False, "error": str(exc)}

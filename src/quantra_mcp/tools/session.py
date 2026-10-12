@@ -1,17 +1,24 @@
-"""Tier 3: in-memory, per-MCP-session scratch tools (invariant 6: never persisted)."""
+"""Tier 3: in-memory, per-MCP-session scratch tools (invariant 6: never persisted).
+
+``session_put`` is the writer; ``session`` reads (``get`` / ``list``) and deletes.
+"""
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any, Literal
 
 from mcp.server.mcpserver import MCPServer
+from pydantic import Field
 
 from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.schema.validate import validate_component
 from quantra_mcp.session import ScratchStore, SessionKind
-from quantra_mcp.tools._market_source import MarketDataSource, check_source
+from quantra_mcp.tools._market_source import SOURCE_DESCRIPTION, MarketDataSource, check_source
+from quantra_mcp.tools._meta import tool
 
 _COMPONENT = {"curve": "TermStructure", "index": "IndexDef", "market": "RatesMarketData"}
+
+SessionAction = Literal["get", "list", "delete"]
 
 
 def session_put_impl(
@@ -70,50 +77,70 @@ def session_delete_impl(store: ScratchStore, name: str) -> dict[str, Any]:
     return {"ok": True, "name": name, "deleted": deleted, "size": len(store)}
 
 
+def session_impl(store: ScratchStore, action: str, name: str | None) -> dict[str, Any]:
+    if action == "list":
+        return session_list_impl(store)
+    if name is None:
+        return {
+            "ok": False,
+            "error": f"action {action!r} needs the item's name",
+            "problems": [{"path": "/name", "message": "required for get / delete"}],
+        }
+    if action == "get":
+        return session_get_impl(store, name)
+    if action == "delete":
+        return session_delete_impl(store, name)
+    return {
+        "ok": False,
+        "error": f"action must be get, list or delete, got {action!r}",
+        "problems": [{"path": "/action", "message": "unknown action"}],
+    }
+
+
 def register(app: MCPServer, store: ScratchStore) -> None:
-    @app.tool()
+    @tool(app, "Store a curve / index / market in session scratch", engine=False, writes=True)
     def session_put(
-        name: str, kind: SessionKind, value: dict[str, Any], market_data_source: MarketDataSource
+        name: Annotated[str, Field(description="Free-form handle, e.g. sofr.")],
+        kind: Annotated[
+            SessionKind,
+            Field(
+                description="curve (an engine TermStructure or a build_curve result, whose "
+                "indices are kept alongside), index (an IndexDef) or market ({curves: [...], "
+                "indices: [...]}).",
+            ),
+        ],
+        value: Annotated[
+            dict[str, Any],
+            Field(description="The object; validated against the engine schema."),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
     ) -> dict[str, Any]:
-        """Store a curve, index or market block under a name for later calls.
-
-        Args:
-            name: free-form handle, e.g. ``sofr``.
-            kind: ``curve`` (an engine TermStructure or a build_curve result,
-                whose indices are kept alongside), ``index`` (an IndexDef) or
-                ``market`` (``{curves: [...], indices: [...]}``).
-            value: the object; it is validated against the engine schema.
-            market_data_source: where the numbers in ``value`` come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file``
-                (the user attached a file/screenshot the numbers were read from),
-                ``engine_example`` (an engine example's pricing block, only when the user
-                explicitly asked to run an example), ``session`` (a market previously
-                stored in this session, which itself came from one of the above). There is
-                no value for estimated, recalled or placeholder data. If you would have to
-                invent numbers, do not call this tool: ask the user for the data. A
-                build_curve result already carries its declaration; the two must agree.
-
-        In-memory only, private to this MCP session (another client of the same server
-        never sees it), least-recently-used eviction at ``QUANTRA_SESSION_MAX_ITEMS``
-        (default 64), never persisted. On a transport without a session id (single-exchange
-        streamable HTTP, protocol 2026-07-28) the tool answers ``ok: false``: pass the built
-        objects inline instead. Reference it later as
-        ``{"session": "<name>"}`` in ``bootstrap_curve`` (and pricing tools); the stored
-        ``market_data_source`` is reported in their ``notes``.
+        """Store a curve, index or market block under a name and reference it later as
+        ``{"session": "<name>"}`` in bootstrap_curve and the pricing tools (the stored
+        ``market_data_source`` is reported in their ``notes``). In-memory only, private to
+        this MCP session (another client of the same server never sees it), least-recently-
+        used eviction at QUANTRA_SESSION_MAX_ITEMS (default 64), never persisted. A
+        build_curve result carries its own declaration; the two must agree. On a transport
+        without a session id (single-exchange streamable HTTP, protocol 2026-07-28) the tool
+        answers ``ok: false``: pass the built objects inline instead.
         """
         return session_put_impl(store, name, kind, value, market_data_source)
 
-    @app.tool()
-    def session_get(name: str) -> dict[str, Any]:
-        """Return a stored session item (``value`` plus a summary)."""
-        return session_get_impl(store, name)
-
-    @app.tool()
-    def session_list() -> dict[str, Any]:
-        """List stored session items (name, kind, stored_at, a short summary)."""
-        return session_list_impl(store)
-
-    @app.tool()
-    def session_delete(name: str) -> dict[str, Any]:
-        """Delete a stored session item; ``deleted`` is false if it did not exist."""
-        return session_delete_impl(store, name)
+    @tool(app, "Read, list or delete session scratch", engine=False, writes=True)
+    def session(
+        action: Annotated[
+            SessionAction,
+            Field(
+                description="get (one item: value plus a summary), list (every item's "
+                "summary) or delete (deleted is false if it did not exist).",
+            ),
+        ],
+        name: Annotated[
+            str | None,
+            Field(description="The item's name; required for get and delete."),
+        ] = None,
+    ) -> dict[str, Any]:
+        """Read, list or delete items stored with session_put. Private to this MCP session,
+        in memory, never persisted; a ``get`` miss lists only the caller's own names.
+        """
+        return session_impl(store, action, name)

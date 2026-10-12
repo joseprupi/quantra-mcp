@@ -34,9 +34,9 @@ show the user exactly what was priced, in their terms.
 {VOICE}
 Do this, in order:
 1. quantra_meta -> confirm the engine is up (tell the user only if it is not).
-2. list_presets -> pick the convention set for the currency/index ({currency}): one with
+2. preset() -> pick the convention set for the currency/index ({currency}): one with
    curve helpers (deposit/swap or ois) that also carries a `trades.{block}` block
-   (EUR_EURIBOR_6M, EUR_ESTR_OIS, USD_SOFR_OIS, ...). get_preset(id) shows every
+   (EUR_EURIBOR_6M, EUR_ESTR_OIS, USD_SOFR_OIS, ...). preset(id) shows every
    convention and where it comes from; tell the user the conventions you will assume
    (fixed leg frequency and day count, floating index, calendar, settlement lag).
 3. Market data: ask for (or take from the conversation) the valuation date and the par
@@ -68,7 +68,7 @@ Goal: turn the user's par quotes into a discount curve (discount factors and zer
 rates) and show them the grid.
 
 {VOICE}
-1. get_preset("{preset}") -> the conventions the curve will assume (calendar, day
+1. preset("{preset}") -> the conventions the curve will assume (calendar, day
    counts, fixed leg frequency, payment lag); tell the user which ones apply.
 2. build_curve(id="{preset}", preset="{preset}", quotes=[{{type: "ois"|"deposit"|"swap"|
    "fra"|"future", tenor: "1Y", rate: 0.03}}, ...], reference_date=<valuation date>), or
@@ -170,7 +170,7 @@ shipped example (the absolute rule above): without the user's market data, stop 
 Step 3, confirm the conventions before pricing: list every convention you will assume
 (fixed and floating leg frequency and day count, business day rule, calendar,
 settlement lag, payment lag, compounding of the overnight index, vol type and shift,
-cash settlement method) and where they come from (get_preset(id) gives the source of
+cash settlement method) and where they come from (preset(id) gives the source of
 each). Ask the user to confirm or correct the ones the screen shows.
 
 Step 4, build the market from what was pasted:
@@ -237,7 +237,7 @@ Step 2, list the inputs Quantra needs and the simplest form to paste each:
   settlement method, fixing lag, calendar).
 
 Step 3, confirm conventions before pricing: list every one you will assume and its
-source (get_preset(id) gives the source of each field); ask the user to confirm or
+source (preset(id) gives the source of each field); ask the user to confirm or
 correct the ones the screen shows.
 
 Step 4, build the market from the pasted data: curve_from_pasted_table(text, id,
@@ -308,7 +308,7 @@ def register(app: MCPServer) -> None:
         ),
     )
     def bootstrap_from_strip(preset: str = "USD_SOFR_OIS") -> str:
-        """Args: preset id (list_presets)."""
+        """Args: preset id (preset() lists them)."""
         return _bootstrap_from_strip(preset)
 
     @app.prompt(

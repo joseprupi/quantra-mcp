@@ -83,10 +83,10 @@ async def test_every_failure_kind_is_a_tool_error_through_the_server(
 ) -> None:
     async with Client(app) as c:
         # local rejection (unknown preset)
-        local = structured(await c.call_tool("get_preset", {"id": "NOPE"}))
+        local = structured(await c.call_tool("preset", {"id": "NOPE"}))
         assert local["ok"] is False
         # session miss (per-session scratch; the in-memory client is the implicit session)
-        miss = await c.call_tool("session_get", {"name": "never"})
+        miss = await c.call_tool("session", {"action": "get", "name": "never"})
         assert miss.is_error and structured(miss)["ok"] is False
         # engine error passes through verbatim, flagged
         fake_backend.responses.pop("/calendar-holidays")

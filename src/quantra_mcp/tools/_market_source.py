@@ -22,6 +22,15 @@ MARKET_DATA_SOURCES: tuple[MarketDataSource, ...] = (
     "session",
 )
 
+#: the one-line argument description every tool carries (the full rule and the meaning of
+#: each value live in the developers guide, ``quantra://guide/developers``)
+SOURCE_DESCRIPTION = (
+    "Where the market numbers in this call come from: user_pasted | user_file | "
+    "engine_example | session (meanings and the full rule: quantra://guide/developers). "
+    "There is no value for estimated, recalled or placeholder data; if you would have to "
+    "invent numbers, do not call this tool: ask the user for the data."
+)
+
 MEANING: dict[str, str] = {
     "user_pasted": "the user pasted or typed the numbers in this conversation",
     "user_file": "the user attached a file or screenshot the numbers were read from",
