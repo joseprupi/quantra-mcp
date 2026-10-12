@@ -45,6 +45,7 @@ from quantra_mcp.tools._market_source import MarketDataSource, stamp
 from quantra_mcp.tools._result import ToolResult, new_request_id
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
 from quantra_mcp.tools.pricing import Market, price_ois_swap_impl, price_vanilla_swap_impl
+from quantra_mcp.tools.reconcile import request_diff
 
 Product = Literal["vanilla_swap", "ois_swap"]
 Scope = Literal["all", "discounting", "forwarding"]
@@ -314,6 +315,7 @@ class _Runner:
         store: ScratchStore,
         max_concurrency: int,
         request_id: str | None,
+        include_calls: bool = True,
     ) -> None:
         self.tool = tool
         self.backend = backend
@@ -321,6 +323,7 @@ class _Runner:
         self.sem = asyncio.Semaphore(max(1, max_concurrency))
         self.max_concurrency = max_concurrency
         self.rid = request_id or new_request_id()
+        self.include_calls = include_calls
         self.notes: list[str] = []
         self.pricing: dict[str, Any] = {}
         self.spec: SwapSpec | None = None
@@ -401,11 +404,40 @@ class _Runner:
                 return self.failure("reprice failed", call)
         return None
 
+    def compact_calls(self) -> dict[str, Any]:
+        """The replay information without the per-call bodies: the base call's echoed
+        request once, then per reprice its label, engine NPV, the quotes moved and the
+        ``request_diff`` against the base request (same format as ``reprice_with``)."""
+        base = self.calls[0]
+        base_req = base["result"].get("request")
+        reprices = [
+            {
+                "label": c["label"],
+                "npv": c["npv"],
+                "edits": c["edits"],
+                "request_diff": request_diff(base_req, c["result"].get("request")),
+            }
+            for c in self.calls[1:]
+        ]
+        return {
+            "base_request": {"endpoint": base["result"].get("endpoint"), "request": base_req},
+            "reprices": reprices,
+        }
+
     def done(self, **fields: Any) -> ToolResult:
         assert self.spec is not None
         out: ToolResult = {"ok": True, "tool": self.tool, "product": self.spec.product}
         out.update(fields)
-        out["calls"] = self.calls
+        if self.include_calls:
+            out["calls"] = self.calls
+        else:
+            out.update(self.compact_calls())
+            self.notes.append(
+                "calls omitted (include_calls=false): base_request is the base call's echoed "
+                "request, reprices[*].request_diff lists every leaf each reprice changed "
+                "against it (apply the diff to replay); include_calls=true returns every "
+                "complete pricing result"
+            )
         out["notes"] = self.notes
         out["engine"] = {
             "api_version": self.calls[0]["result"].get("engine", {}).get("api_version"),
@@ -457,9 +489,10 @@ async def swap_dv01_impl(
     calendar_overrides: list[CalendarOverride] | None,
     request_id: str | None,
     method: DvMethod = "centered",
+    include_calls: bool = False,
 ) -> ToolResult:
     tool = "swap_dv01"
-    r = _Runner(tool, backend, store, max_concurrency, request_id)
+    r = _Runner(tool, backend, store, max_concurrency, request_id, include_calls)
 
     async def go() -> ToolResult:
         if bump_bp <= 0:
@@ -518,9 +551,10 @@ async def key_rate_ladder_impl(
     calendar_overrides: list[CalendarOverride] | None,
     request_id: str | None,
     method: DvMethod = "centered",
+    include_calls: bool = False,
 ) -> ToolResult:
     tool = "key_rate_ladder"
-    r = _Runner(tool, backend, store, max_concurrency, request_id)
+    r = _Runner(tool, backend, store, max_concurrency, request_id, include_calls)
 
     async def go() -> ToolResult:
         if bump_bp <= 0:
@@ -603,9 +637,10 @@ async def scenario_impl(
     as_of: str | None,
     calendar_overrides: list[CalendarOverride] | None,
     request_id: str | None,
+    include_calls: bool = False,
 ) -> ToolResult:
     tool = "scenario"
-    r = _Runner(tool, backend, store, max_concurrency, request_id)
+    r = _Runner(tool, backend, store, max_concurrency, request_id, include_calls)
 
     async def go() -> ToolResult:
         if not scenarios:
@@ -718,6 +753,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
         as_of: str | None = None,
         calendar_overrides: list[CalendarOverride] | None = None,
         request_id: str | None = None,
+        include_calls: bool = False,
     ) -> ToolResult:
         """Parallel DV01 of a swap: reprice with every quote of the selected curve(s) bumped.
 
@@ -763,6 +799,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
                 calendar_overrides,
                 request_id,
                 method,
+                include_calls,
             ),
             market_data_source,
         )
@@ -778,6 +815,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
         as_of: str | None = None,
         calendar_overrides: list[CalendarOverride] | None = None,
         request_id: str | None = None,
+        include_calls: bool = False,
     ) -> ToolResult:
         """Key-rate DV01 ladder: one bump per pillar of a curve, plus a parallel bump.
 
@@ -814,6 +852,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
                 calendar_overrides,
                 request_id,
                 method,
+                include_calls,
             ),
             market_data_source,
         )
@@ -827,6 +866,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
         as_of: str | None = None,
         calendar_overrides: list[CalendarOverride] | None = None,
         request_id: str | None = None,
+        include_calls: bool = False,
     ) -> ToolResult:
         """Reprice a swap under named market variants and tabulate NPV vs base.
 
@@ -859,6 +899,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
                 as_of,
                 calendar_overrides,
                 request_id,
+                include_calls,
             ),
             market_data_source,
         )

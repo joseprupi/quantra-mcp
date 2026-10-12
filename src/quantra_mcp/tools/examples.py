@@ -15,8 +15,12 @@ from mcp.server.mcpserver import MCPServer
 from quantra_mcp import examples_catalog as cat
 from quantra_mcp.errors import LocalValidationError
 
+UNFILTERED_NAMES = 20
 
-def list_examples_impl(category: str | None = None, product: str | None = None) -> dict[str, Any]:
+
+def list_examples_impl(
+    category: str | None = None, product: str | None = None, limit: int | None = None
+) -> dict[str, Any]:
     if category is not None and category not in cat.categories():
         return {
             "ok": False,
@@ -24,16 +28,41 @@ def list_examples_impl(category: str | None = None, product: str | None = None) 
         }
     if product is not None and product not in cat.products():
         return {"ok": False, "error": f"unknown product {product!r}; products: {cat.products()}"}
+    if limit is not None and limit < 1:
+        return {"ok": False, "error": f"limit must be >= 1, got {limit}"}
     items = cat.list_examples(category, product)
     index = cat.load_index()
-    return {
+    out: dict[str, Any] = {
         "ok": True,
         "engine_tag": index["engine_tag"],
         "count": len(items),
         "categories": cat.categories(),
         "products": cat.products(),
-        "examples": items,
     }
+    shown = items
+    if category is None and product is None and limit is None:
+        # the whole catalog is 222 rows (~60 KB): counts per category / product and the
+        # first names only; a filter or a limit returns rows
+        by_cat: dict[str, int] = {}
+        by_prod: dict[str, int] = {}
+        for r in items:
+            by_cat[str(r["category"])] = by_cat.get(str(r["category"]), 0) + 1
+            prod = str(r.get("product"))
+            by_prod[prod] = by_prod.get(prod, 0) + 1
+        shown = items[:UNFILTERED_NAMES]
+        out["by_category"] = by_cat
+        out["by_product"] = by_prod
+        out["names"] = [str(r["name"]) for r in shown]
+        out["hint"] = (
+            f"unfiltered: {len(items)} examples; only the first {len(shown)} rows are shown. "
+            "Pass category=<folder> or product=<product> for the full rows of one group, "
+            "or limit=<n> for the first n rows of everything."
+        )
+    elif limit is not None:
+        shown = items[:limit]
+    out["shown"] = len(shown)
+    out["examples"] = shown
+    return out
 
 
 def get_example_impl(name: str) -> dict[str, Any]:
@@ -60,7 +89,9 @@ def get_example_impl(name: str) -> dict[str, Any]:
 
 def register(app: MCPServer) -> None:
     @app.tool()
-    def list_examples(category: str | None = None, product: str | None = None) -> dict[str, Any]:
+    def list_examples(
+        category: str | None = None, product: str | None = None, limit: int | None = None
+    ) -> dict[str, Any]:
         """List the vendored engine example requests (no engine call).
 
         Args:
@@ -70,12 +101,14 @@ def register(app: MCPServer) -> None:
                 ``callable_bonds``, ``zero_coupon_swap``, ``misc``, ``blog``).
             product: filter by endpoint product instead (``vanilla_swap``, ``ois_swap``,
                 ``fixed_rate_bond``, ``swaption``, ``cds``, ``equity_option``, ...).
+            limit: at most this many rows. Without a filter and without ``limit`` the
+                answer is compact: counts per category and product plus the first 20 names.
 
         Each row: ``name``, ``category``, ``endpoint``, ``product``, ``title``,
         ``reference_text`` (the QuantLib value the engine is asserted to match, when
         cataloged) and the resource ``uri``. ``get_example(name)`` returns the body.
         """
-        return list_examples_impl(category, product)
+        return list_examples_impl(category, product, limit)
 
     @app.tool()
     def get_example(name: str) -> dict[str, Any]:

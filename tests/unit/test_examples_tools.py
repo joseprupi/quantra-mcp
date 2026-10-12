@@ -97,6 +97,12 @@ async def test_list_and_get_example_tools(app: Any) -> None:
         one = _s(await c.call_tool("get_example", {"name": "frb_eur_5y_at_par_annual_30360"}))
         missing = _s(await c.call_tool("get_example", {"name": "nope"}))
     assert all_["ok"] and all_["count"] == 222 and "ir_swaps" in all_["categories"]
+    # unfiltered = compact: counts per group, the first 20 names, a hint; filtered = rows
+    assert all_["shown"] == 20 == len(all_["examples"]) == len(all_["names"])
+    assert sum(all_["by_category"].values()) == 222 and all_["by_category"]["bonds"] == 24
+    assert sum(all_["by_product"].values()) == 222 and "category=" in all_["hint"]
+    assert len(json.dumps(all_)) < 12_000
+    assert "by_category" not in bonds and bonds["shown"] == 24 == len(bonds["examples"])
     assert bonds["count"] == 24 and all(r["category"] == "bonds" for r in bonds["examples"])
     assert swaptions["count"] == 13 + 6  # swaption/ folder + 6 misc swaption requests
     assert all(r["endpoint"] == "/price-swaption" for r in swaptions["examples"])

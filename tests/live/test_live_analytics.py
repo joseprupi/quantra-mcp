@@ -58,12 +58,18 @@ async def _replay_all(result: dict[str, Any]) -> None:
 async def test_swap_dv01_payer_centered_brackets_the_one_sided_numbers() -> None:
     market = load_example(FIXTURE)["pricing"]
     async with live_client() as client:
-        r = await _call(client, "swap_dv01", {"market": market, **SRC, "trade": _trade()})
+        r = await _call(
+            client, "swap_dv01", {"market": market, **SRC, "trade": _trade(), "include_calls": True}
+        )
         up = await _call(
-            client, "swap_dv01", {"market": market, **SRC, "trade": _trade(), "method": "up"}
+            client,
+            "swap_dv01",
+            {"market": market, **SRC, "trade": _trade(), "method": "up", "include_calls": True},
         )
         down = await _call(
-            client, "swap_dv01", {"market": market, **SRC, "trade": _trade(), "method": "down"}
+            client,
+            "swap_dv01",
+            {"market": market, **SRC, "trade": _trade(), "method": "down", "include_calls": True},
         )
     for x in (r, up, down):
         assert x["ok"], x
@@ -97,12 +103,24 @@ async def test_key_rate_ladder_sums_to_parallel_within_2pct_and_receiver_shape()
         payer = await _call(
             client,
             "key_rate_ladder",
-            {"market": market, **SRC, "trade": _trade(), "curve": "EUR_6M_CURVE"},
+            {
+                "market": market,
+                **SRC,
+                "trade": _trade(),
+                "curve": "EUR_6M_CURVE",
+                "include_calls": True,
+            },
         )
         receiver = await _call(
             client,
             "key_rate_ladder",
-            {"market": market, **SRC, "trade": _trade("Receiver"), "curve": "EUR_6M_CURVE"},
+            {
+                "market": market,
+                **SRC,
+                "trade": _trade("Receiver"),
+                "curve": "EUR_6M_CURVE",
+                "include_calls": True,
+            },
         )
     for r in (payer, receiver):
         assert r["ok"], r
@@ -138,6 +156,7 @@ async def test_scenario_zero_bump_reproduces_base() -> None:
                 "market": market,
                 **SRC,
                 "trade": _trade(),
+                "include_calls": True,
                 "scenarios": [
                     {
                         "name": "zero",

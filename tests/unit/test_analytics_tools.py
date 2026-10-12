@@ -74,10 +74,61 @@ def _market() -> dict[str, Any]:
 
 
 async def _call(backend: FakeBackend, name: str, args: dict[str, Any]) -> dict[str, Any]:
+    """The tests below read every reprice's complete result, so they opt into
+    ``include_calls`` (the default is the compact form, tested separately)."""
+    if name in ("swap_dv01", "key_rate_ladder", "scenario"):
+        args = {"include_calls": True, **args}
     app = build_server(Settings(engine_url="http://fake"), backend=backend)
     async with Client(app) as c:
         r = await c.call_tool(name, args)
     return structured(r)  # also checks is_error == (ok is False)
+
+
+async def _call_default(backend: FakeBackend, name: str, args: dict[str, Any]) -> dict[str, Any]:
+    app = build_server(Settings(engine_url="http://fake"), backend=backend)
+    async with Client(app) as c:
+        r = await c.call_tool(name, args)
+    return structured(r)
+
+
+async def test_default_result_is_compact_with_base_request_and_diffs() -> None:
+    """include_calls defaults to false: the base request once, every reprice as its
+    label, engine NPV, moved quotes and a request_diff against the base; the ladder
+    on the 5Y EUR fixture stays under 25 KB, the full form is several times larger."""
+    args = {"market": _market(), "market_data_source": "engine_example", "trade": _trade()}
+    compact = await _call_default(QuoteSensitiveBackend(), "key_rate_ladder", args)
+    full = await _call_default(
+        QuoteSensitiveBackend(), "key_rate_ladder", {**args, "include_calls": True}
+    )
+    assert compact["ok"] and full["ok"]
+    assert "calls" not in compact and "calls" in full
+    assert compact["ladder"] == full["ladder"] and compact["parallel"] == full["parallel"]
+    assert compact["base_request"] == {
+        "endpoint": full["calls"][0]["result"]["endpoint"],
+        "request": full["calls"][0]["result"]["request"],
+    }
+    assert [r["label"] for r in compact["reprices"]] == [c["label"] for c in full["calls"][1:]]
+    for row, call in zip(compact["reprices"], full["calls"][1:], strict=True):
+        assert row["npv"] == call["npv"] and row["edits"] == call["edits"]
+        # one pillar bumped on one curve -> one differing leaf, a quote
+        diff = row["request_diff"]
+        assert len(diff) == len(call["edits"]) and all(".point." in d["path"] for d in diff)
+        assert all("before" in d and "after" in d for d in diff)
+    assert any("include_calls=false" in n for n in compact["notes"])
+    size_compact = len(json.dumps(compact))
+    size_full = len(json.dumps(full))
+    assert size_compact < 25_000, size_compact
+    assert size_full > 3 * size_compact, (size_compact, size_full)
+    # the other two tools share the shape
+    dv = await _call_default(QuoteSensitiveBackend(), "swap_dv01", args)
+    sc = await _call_default(
+        QuoteSensitiveBackend(),
+        "scenario",
+        {**args, "scenarios": [{"name": "par+1", "bumps": [{"curve": "EUR_OIS", "bp": 1.0}]}]},
+    )
+    assert "calls" not in dv and [r["label"] for r in dv["reprices"]] == ["up", "down"]
+    assert "calls" not in sc and sc["reprices"][0]["label"] == "par+1"
+    assert sc["reprices"][0]["npv"] == sc["table"][1]["npv"]
 
 
 async def test_swap_dv01_default_is_centered_and_reports_every_call() -> None:
