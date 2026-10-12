@@ -137,8 +137,11 @@ def _df_values(result: dict[str, Any], curve_id: str) -> list[float]:
 
 
 async def _tool(client: Client, name: str, args: dict[str, Any]) -> dict[str, Any]:
+    """The structured body of a tool result. Since 0.1.5 a failed body (``ok`` false,
+    e.g. the engine's own 422 fixture) also carries ``isError``; the JSON is the same,
+    so it is returned as is and the caller reads ``status``."""
     result = await client.call_tool(name, args)
-    if result.is_error or result.structured_content is None:
+    if result.structured_content is None:
         return {"ok": False, "error": str(result.content)[:120]}
     return dict(result.structured_content)
 
