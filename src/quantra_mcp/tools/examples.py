@@ -8,9 +8,10 @@ and catalog metadata) ready for ``engine_request`` or to be taken apart (its
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
 from mcp.server.mcpserver import MCPServer
+from pydantic import Field
 
 from quantra_mcp import examples_catalog as cat
 from quantra_mcp.errors import LocalValidationError
@@ -91,32 +92,49 @@ def get_example_impl(name: str) -> dict[str, Any]:
 def register(app: MCPServer) -> None:
     @tool(app, "Vendored engine examples (list)", engine=False)
     def list_examples(
-        category: str | None = None, product: str | None = None, limit: int | None = None
+        category: Annotated[
+            str | None,
+            Field(
+                description="One of the fixture folders: ir_swaps, bonds, swaption, cds, fra, "
+                "cap_floor, equity, inflation, inflation_cap_floor, curves, calendar, vol, "
+                "callable_bonds, zero_coupon_swap, misc, blog."
+            ),
+        ] = None,
+        product: Annotated[
+            str | None,
+            Field(
+                description="Filter by endpoint product instead: vanilla_swap, ois_swap, "
+                "fixed_rate_bond, swaption, cds, equity_option, ..."
+            ),
+        ] = None,
+        limit: Annotated[
+            int | None,
+            Field(
+                ge=1,
+                description="At most this many rows. Without a filter and without limit the "
+                "answer is compact: counts per category and product plus the first 20 names.",
+            ),
+        ] = None,
     ) -> dict[str, Any]:
-        """List the vendored engine example requests (no engine call).
-
-        Args:
-            category: one of the fixture folders (``ir_swaps``, ``bonds``, ``swaption``,
-                ``cds``, ``fra``, ``cap_floor``, ``equity``, ``inflation``,
-                ``inflation_cap_floor``, ``curves``, ``calendar``, ``vol``,
-                ``callable_bonds``, ``zero_coupon_swap``, ``misc``, ``blog``).
-            product: filter by endpoint product instead (``vanilla_swap``, ``ois_swap``,
-                ``fixed_rate_bond``, ``swaption``, ``cds``, ``equity_option``, ...).
-            limit: at most this many rows. Without a filter and without ``limit`` the
-                answer is compact: counts per category and product plus the first 20 names.
-
-        Each row: ``name``, ``category``, ``endpoint``, ``product``, ``title``,
-        ``reference_text`` (the QuantLib value the engine is asserted to match, when
-        cataloged) and the resource ``uri``. ``get_example(name)`` returns the body.
+        """List the vendored engine example requests (no engine call). Each row: name, category,
+        endpoint, product, title, reference_text (the QuantLib value the engine is asserted to
+        match, when cataloged) and the resource uri; get_example(name) returns the body.
         """
         return list_examples_impl(category, product, limit)
 
     @tool(app, "Vendored engine example (one body)", engine=False)
-    def get_example(name: str) -> dict[str, Any]:
-        """One vendored example: endpoint, catalog description, reference value and the
-        complete request ``body`` (no engine call).
-
-        Use it as ``engine_request(endpoint, body)``; or pass ``body["pricing"]`` as the
-        ``market`` of a pricing tool and let the tool rebuild the trade from a preset.
+    def get_example(
+        name: Annotated[
+            str,
+            Field(
+                description="The example name (list_examples lists them), e.g. "
+                "irs_eur_5y_payer_ois_discounted_multicurve."
+            ),
+        ],
+    ) -> dict[str, Any]:
+        """One vendored example: endpoint, catalog description, reference value and the complete
+        request ``body`` (no engine call). Run it with engine_request(endpoint, body), or pass
+        body['pricing'] as the market of a pricing tool and rebuild the trade from a preset.
+        Examples are request-shape references: never reuse their market data for a user's trade.
         """
         return get_example_impl(name)

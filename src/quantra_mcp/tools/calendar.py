@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
-from typing import Any
+from typing import Annotated, Any
 
 from mcp.server.mcpserver import MCPServer
 from pydantic import BaseModel, ConfigDict, Field
@@ -171,23 +171,37 @@ def advance_summary(response: Any) -> dict[str, Any] | None:
 def register(app: MCPServer, backend: Backend) -> None:
     @tool(app, "Engine calendar: holidays", engine=True)
     async def calendar_holidays(
-        calendar: Calendar,
-        start_date: str,
-        end_date: str,
-        include_weekends: bool = False,
-        calendar_overrides: list[CalendarOverride] | None = None,
+        calendar: Annotated[
+            Calendar, Field(description="Engine Calendar enum value, e.g. TARGET, UnitedStates.")
+        ],
+        start_date: Annotated[
+            str,
+            Field(
+                description="First date YYYY-MM-DD (inclusive).", pattern="^\\d{4}-\\d{2}-\\d{2}$"
+            ),
+        ],
+        end_date: Annotated[
+            str,
+            Field(
+                description="Last date YYYY-MM-DD (inclusive).", pattern="^\\d{4}-\\d{2}-\\d{2}$"
+            ),
+        ],
+        include_weekends: Annotated[
+            bool, Field(description="Also list Saturdays and Sundays.")
+        ] = False,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Holidays of a QuantLib calendar between two dates (POST /calendar-holidays).
-
-        Args:
-            calendar: engine ``Calendar`` enum value, e.g. ``TARGET``, ``UnitedStates``.
-            start_date: ``YYYY-MM-DD`` (inclusive).
-            end_date: ``YYYY-MM-DD`` (inclusive).
-            include_weekends: also list Saturdays/Sundays (default False).
-            calendar_overrides: optional per-request holiday corrections
-                (``added_holidays`` / ``removed_holidays`` per calendar).
-
-        ``summary`` = ``{count, first, last}`` taken from the engine's response.
+        """Holidays of a QuantLib calendar between two dates (POST /calendar-holidays). ``summary``
+        = {count, first, last} taken from the engine's response.
         """
         try:
             body = holidays_request(
@@ -199,24 +213,32 @@ def register(app: MCPServer, backend: Backend) -> None:
 
     @tool(app, "Engine calendar: business days", engine=True)
     async def calendar_business_days(
-        calendar: Calendar,
-        start_date: str,
-        end_date: str,
-        include_start: bool = True,
-        include_end: bool = True,
-        calendar_overrides: list[CalendarOverride] | None = None,
+        calendar: Annotated[Calendar, Field(description="Engine Calendar enum value.")],
+        start_date: Annotated[
+            str, Field(description="First date YYYY-MM-DD.", pattern="^\\d{4}-\\d{2}-\\d{2}$")
+        ],
+        end_date: Annotated[
+            str, Field(description="Last date YYYY-MM-DD.", pattern="^\\d{4}-\\d{2}-\\d{2}$")
+        ],
+        include_start: Annotated[
+            bool, Field(description="Whether start_date itself may be listed.")
+        ] = True,
+        include_end: Annotated[
+            bool, Field(description="Whether end_date itself may be listed.")
+        ] = True,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
         """Business days of a QuantLib calendar between two dates (POST /calendar-business-days).
-
-        Args:
-            calendar: engine ``Calendar`` enum value.
-            start_date: ``YYYY-MM-DD``.
-            end_date: ``YYYY-MM-DD``.
-            include_start: whether ``start_date`` itself may be listed (default True).
-            include_end: whether ``end_date`` itself may be listed (default True).
-            calendar_overrides: optional per-request holiday corrections.
-
-        ``summary`` = ``{count, first, last}`` taken from the engine's response.
+        ``summary`` = {count, first, last} taken from the engine's response.
         """
         try:
             body = business_days_request(
@@ -228,27 +250,34 @@ def register(app: MCPServer, backend: Backend) -> None:
 
     @tool(app, "Engine calendar: advance a date", engine=True)
     async def calendar_advance(
-        calendar: Calendar,
-        date: str,
-        tenor_number: int,
-        tenor_unit: TimeUnit,
-        convention: BusinessDayConvention,
-        end_of_month: bool = False,
-        calendar_overrides: list[CalendarOverride] | None = None,
+        calendar: Annotated[Calendar, Field(description="Engine Calendar enum value.")],
+        date: Annotated[
+            str, Field(description="Start date YYYY-MM-DD.", pattern="^\\d{4}-\\d{2}-\\d{2}$")
+        ],
+        tenor_number: Annotated[
+            int, Field(description="Number of units; negative shifts backwards.")
+        ],
+        tenor_unit: Annotated[
+            TimeUnit, Field(description="Engine TimeUnit: Days, Weeks, Months, Years.")
+        ],
+        convention: Annotated[
+            BusinessDayConvention,
+            Field(description="Engine BusinessDayConvention applied to the result."),
+        ],
+        end_of_month: Annotated[bool, Field(description="Apply the end-of-month rule.")] = False,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Advance a date by a tenor on a QuantLib calendar (POST /calendar-advance).
-
-        Args:
-            calendar: engine ``Calendar`` enum value.
-            date: ``YYYY-MM-DD`` start date.
-            tenor_number: number of units; negative shifts backwards.
-            tenor_unit: engine ``TimeUnit`` (``Days``, ``Weeks``, ``Months``, ``Years``, ...).
-            convention: engine ``BusinessDayConvention`` (``Following``,
-                ``ModifiedFollowing``, ``Preceding``, ``Unadjusted``, ...).
-            end_of_month: apply the end-of-month rule (default False).
-            calendar_overrides: optional per-request holiday corrections.
-
-        ``summary`` = ``{input_date, advanced_date}`` taken from the engine's response.
+        """Advance a date by a tenor on a QuantLib calendar (POST /calendar-advance). ``summary`` =
+        {input_date, advanced_date} taken from the engine's response.
         """
         try:
             body = advance_request(

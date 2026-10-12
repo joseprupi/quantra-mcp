@@ -15,9 +15,10 @@ same request (the engine prices a list and answers per item).
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Annotated, Any, Literal
 
 from mcp.server.mcpserver import MCPServer
+from pydantic import Field
 
 from quantra_mcp.backend.base import Backend
 from quantra_mcp.builders import market as mk
@@ -61,11 +62,13 @@ from quantra_mcp.presets.registry import (
 from quantra_mcp.schema.enums_generated import (
     BusinessDayConvention,
     CapFloorType,
+    CdsEngineType,
     DayCounter,
     EquityOptionType,
     ExerciseType,
     FRAType,
     Frequency,
+    IrModelType,
     ProtectionSide,
     RateAveragingType,
     SettlementMethod,
@@ -75,7 +78,7 @@ from quantra_mcp.schema.enums_generated import (
 from quantra_mcp.schema.validate import validate_request
 from quantra_mcp.session import ScratchStore
 from quantra_mcp.tools._dates import DateResolutionFailed, DateResolver
-from quantra_mcp.tools._market_source import MarketDataSource, stamp
+from quantra_mcp.tools._market_source import SOURCE_DESCRIPTION, MarketDataSource, stamp
 from quantra_mcp.tools._meta import tool
 from quantra_mcp.tools._result import ToolResult, local_error_result, new_request_id, run_post
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
@@ -1218,61 +1221,147 @@ async def price_yoy_inflation_cap_floor_impl(
 def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
     @tool(app, "Price a vanilla swap", engine=True)
     async def price_vanilla_swap(
-        market: Market,
-        market_data_source: MarketDataSource,
-        preset: str,
-        swap_type: SwapType,
-        notional: float,
-        fixed_rate: float,
-        effective_date: str,
-        discounting_curve: str,
-        forwarding_curve: str,
-        termination_date: str | None = None,
-        tenor: str | None = None,
-        spread: float = 0.0,
-        index_id: str | None = None,
-        fixed_leg_overrides: FixedLegOverrides | None = None,
-        floating_leg_overrides: FloatingLegOverrides | None = None,
-        additional_trades: list[ps.VanillaSwapTrade] | None = None,
-        as_of: str | None = None,
-        include_flows: bool = False,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        preset: Annotated[
+            str,
+            Field(
+                description=(
+                    "A preset with a vanilla_swap block (EUR_EURIBOR_6M, EUR_EURIBOR_3M, "
+                    "GBP_SONIA_SWAP)."
+                )
+            ),
+        ],
+        swap_type: Annotated[
+            SwapType, Field(description="Payer (pay fixed, receive floating) or Receiver.")
+        ],
+        notional: Annotated[
+            float, Field(description="Notional amount, > 0, in the preset's currency.")
+        ],
+        fixed_rate: Annotated[float, Field(description="Fixed rate as a decimal (0.032 = 3.2%).")],
+        effective_date: Annotated[
+            str,
+            Field(
+                description=(
+                    "YYYY-MM-DD, or 'spot' = as_of + the preset's settlement days (resolved by "
+                    "the engine's /calendar-advance and reported in date_resolution)."
+                ),
+                pattern="^(\\d{4}-\\d{2}-\\d{2}|spot)$",
+            ),
+        ],
+        discounting_curve: Annotated[
+            str, Field(description="Id of the discounting curve in the market.")
+        ],
+        forwarding_curve: Annotated[
+            str,
+            Field(
+                description=(
+                    "Id of the curve projecting the floating index (may equal the discounting "
+                    "curve)."
+                )
+            ),
+        ],
+        termination_date: Annotated[
+            str | None,
+            Field(
+                description="Maturity YYYY-MM-DD; alternative to tenor.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        tenor: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Tenor from the start date, e.g. 5Y (resolved by the engine, Unadjusted; the "
+                    "schedule applies its own conventions); alternative to the explicit end date."
+                ),
+                pattern="^\\d+[DWMY]$",
+            ),
+        ] = None,
+        spread: Annotated[
+            float, Field(description="Spread added to the floating rate, decimal (0.001 = 10bp).")
+        ] = 0.0,
+        index_id: Annotated[
+            str | None,
+            Field(
+                description="Id of the floating index in the market; default: the preset's index."
+            ),
+        ] = None,
+        fixed_leg_overrides: Annotated[
+            FixedLegOverrides | None,
+            Field(
+                description=(
+                    "Overrides of the preset's fixed leg: frequency, day_counter, "
+                    "payment_convention, schedule rules."
+                )
+            ),
+        ] = None,
+        floating_leg_overrides: Annotated[
+            FloatingLegOverrides | None,
+            Field(
+                description=(
+                    "Overrides of the preset's floating leg: frequency, day_counter, "
+                    "payment_convention, schedule rules."
+                )
+            ),
+        ] = None,
+        additional_trades: Annotated[
+            list[ps.VanillaSwapTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        include_flows: Annotated[
+            bool, Field(description="Also return the cash flows (pricing.options.*_flows).")
+        ] = False,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price a fixed-vs-IBOR swap (POST /price-vanilla-swap).
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            market: ``{"session": name}``, an engine ``pricing`` block (used verbatim)
-                or ``{curves: [...], indices: [...]}`` (build_curve results allowed).
-            preset: a preset with a ``vanilla_swap`` block (``EUR_EURIBOR_6M``,
-                ``EUR_EURIBOR_3M``): schedule, fixed and floating leg conventions.
-            swap_type: ``Payer`` (pay fixed) or ``Receiver``.
-            notional: constant notional (> 0).
-            fixed_rate: decimal, e.g. 0.032.
-            effective_date: ``YYYY-MM-DD`` or ``spot`` (as_of + the preset's settlement
-                days, resolved by the engine's /calendar-advance).
-            discounting_curve, forwarding_curve: curve ids in the market.
-            termination_date: ``YYYY-MM-DD``; or give ``tenor`` (``5Y``, resolved by the
-                engine from the effective date, Unadjusted).
-            spread: floating-leg spread (decimal, default 0.0).
-            index_id: floating index id in the market (default: the preset's index id).
-            fixed_leg_overrides, floating_leg_overrides: replace conventions
-                (frequency, day_counter, payment_convention, notionals, schedule rules).
-            additional_trades: more swaps for the same request (same preset/market).
-            as_of: ``YYYY-MM-DD``; required unless ``market`` is a pricing block.
-            include_flows: ask the engine for per-leg cash flows.
-
-        Result: uniform shape + ``notes`` (every convention with its source),
-        ``date_resolution`` (the /calendar-advance calls) and ``summary.swaps``
-        (npv, fair_rate, leg npvs selected from the response).
+        """Price a fixed-vs-IBOR swap (POST /price-vanilla-swap). The preset's vanilla_swap block
+        supplies both legs' schedules, frequencies, day counters and payment conventions; every
+        default applied is in ``notes`` with its source, the engine-resolved dates in
+        ``date_resolution``. ``summary.swaps``: npv, fair_rate, fair_spread, leg npvs.
         """
         first = ps.VanillaSwapTrade(
             swap_type=swap_type,
@@ -1305,55 +1394,177 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Price an OIS swap", engine=True)
     async def price_ois_swap(
-        market: Market,
-        market_data_source: MarketDataSource,
-        preset: str,
-        swap_type: SwapType,
-        notional: float,
-        fixed_rate: float,
-        effective_date: str,
-        discounting_curve: str,
-        forwarding_curve: str,
-        termination_date: str | None = None,
-        tenor: str | None = None,
-        spread: float = 0.0,
-        index_id: str | None = None,
-        payment_lag: int | None = None,
-        averaging_method: RateAveragingType | None = None,
-        lookback_days: int | None = None,
-        lockout_days: int | None = None,
-        apply_observation_shift: bool | None = None,
-        telescopic_value_dates: bool | None = None,
-        fixed_leg_overrides: FixedLegOverrides | None = None,
-        overnight_leg_overrides: FloatingLegOverrides | None = None,
-        additional_trades: list[ps.OisSwapTrade] | None = None,
-        as_of: str | None = None,
-        include_flows: bool = False,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        preset: Annotated[
+            str,
+            Field(
+                description=(
+                    "A preset with an ois_swap block (USD_SOFR_OIS: payment lag 2; EUR_ESTR_OIS: "
+                    "payment lag 0; GBP_SONIA_OIS)."
+                )
+            ),
+        ],
+        swap_type: Annotated[
+            SwapType, Field(description="Payer (pay fixed, receive floating) or Receiver.")
+        ],
+        notional: Annotated[
+            float, Field(description="Notional amount, > 0, in the preset's currency.")
+        ],
+        fixed_rate: Annotated[float, Field(description="Fixed rate as a decimal (0.032 = 3.2%).")],
+        effective_date: Annotated[
+            str,
+            Field(
+                description=(
+                    "YYYY-MM-DD, or 'spot' = as_of + the preset's settlement days (resolved by "
+                    "the engine's /calendar-advance and reported in date_resolution)."
+                ),
+                pattern="^(\\d{4}-\\d{2}-\\d{2}|spot)$",
+            ),
+        ],
+        discounting_curve: Annotated[
+            str, Field(description="Id of the discounting curve in the market.")
+        ],
+        forwarding_curve: Annotated[
+            str,
+            Field(
+                description=(
+                    "Id of the curve projecting the floating index (may equal the discounting "
+                    "curve)."
+                )
+            ),
+        ],
+        termination_date: Annotated[
+            str | None,
+            Field(
+                description="Maturity YYYY-MM-DD; alternative to tenor.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        tenor: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Tenor from the start date, e.g. 5Y (resolved by the engine, Unadjusted; the "
+                    "schedule applies its own conventions); alternative to the explicit end date."
+                ),
+                pattern="^\\d+[DWMY]$",
+            ),
+        ] = None,
+        spread: Annotated[
+            float, Field(description="Spread added to the floating rate, decimal (0.001 = 10bp).")
+        ] = 0.0,
+        index_id: Annotated[
+            str | None,
+            Field(description="Id of the overnight index in the market; default: the preset's."),
+        ] = None,
+        payment_lag: Annotated[
+            int | None,
+            Field(
+                description=(
+                    "Overnight-leg payment lag in business days; default: the preset's (noted)."
+                )
+            ),
+        ] = None,
+        averaging_method: Annotated[
+            RateAveragingType | None,
+            Field(
+                description=(
+                    "Compound or Simple averaging of the overnight rate; default: the preset's."
+                )
+            ),
+        ] = None,
+        lookback_days: Annotated[
+            int | None, Field(description="Observation lookback in days; default: the preset's.")
+        ] = None,
+        lockout_days: Annotated[
+            int | None, Field(description="Rate lockout in days; default: the preset's.")
+        ] = None,
+        apply_observation_shift: Annotated[
+            bool | None,
+            Field(description="Observation shift with the lookback; default: the preset's."),
+        ] = None,
+        telescopic_value_dates: Annotated[
+            bool | None,
+            Field(
+                description="Telescopic value dates on the overnight leg; default: the preset's."
+            ),
+        ] = None,
+        fixed_leg_overrides: Annotated[
+            FixedLegOverrides | None,
+            Field(
+                description=(
+                    "Overrides of the preset's fixed leg: frequency, day_counter, "
+                    "payment_convention, schedule rules."
+                )
+            ),
+        ] = None,
+        overnight_leg_overrides: Annotated[
+            FloatingLegOverrides | None,
+            Field(
+                description=(
+                    "Overrides of the preset's overnight leg: frequency, day_counter, "
+                    "payment_convention, schedule rules."
+                )
+            ),
+        ] = None,
+        additional_trades: Annotated[
+            list[ps.OisSwapTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        include_flows: Annotated[
+            bool, Field(description="Also return the cash flows (pricing.options.*_flows).")
+        ] = False,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price an OIS (fixed vs compounded overnight) swap (POST /price-ois-swap).
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            market: as in price_vanilla_swap.
-            preset: a preset with an ``ois_swap`` block (``USD_SOFR_OIS``: payment lag 2;
-                ``EUR_ESTR_OIS``: payment lag 0).
-            swap_type, notional, fixed_rate, effective_date, termination_date | tenor,
-                spread, index_id, discounting_curve, forwarding_curve: as in
-                price_vanilla_swap (the overnight index id defaults to the preset's).
-            payment_lag, averaging_method, lookback_days, lockout_days,
-                apply_observation_shift, telescopic_value_dates: overnight-leg
-                parameters; each defaults to the preset's value (noted).
-            fixed_leg_overrides, overnight_leg_overrides, additional_trades, as_of,
-                include_flows: as in price_vanilla_swap.
+        """Price an OIS (fixed vs compounded overnight) swap (POST /price-ois-swap). The preset's
+        ois_swap block supplies the schedules, day counters, payment conventions and the
+        overnight-leg parameters (each overridable). ``notes`` lists every default with its
+        source; ``summary.swaps``: npv, fair_rate, leg npvs.
         """
         first = ps.OisSwapTrade(
             swap_type=swap_type,
@@ -1392,50 +1603,125 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Price a fixed-rate bond", engine=True)
     async def price_fixed_rate_bond(
-        market: Market,
-        market_data_source: MarketDataSource,
-        preset: str,
-        face_amount: float,
-        coupon_rate: float,
-        issue_date: str,
-        discounting_curve: str,
-        maturity_date: str | None = None,
-        tenor: str | None = None,
-        effective_date: str | None = None,
-        overrides: pb.BondOverrides | None = None,
-        yield_overrides: pb.YieldOverrides | None = None,
-        additional_trades: list[pb.FixedRateBondTrade] | None = None,
-        as_of: str | None = None,
-        include_details: bool = False,
-        include_flows: bool = False,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        preset: Annotated[
+            str, Field(description="A preset with a fixed_rate_bond block (EUR_FIXED_BOND).")
+        ],
+        face_amount: Annotated[float, Field(description="Face amount, > 0.")],
+        coupon_rate: Annotated[float, Field(description="Annual coupon rate as a decimal.")],
+        issue_date: Annotated[
+            str,
+            Field(
+                description=(
+                    "Issue date YYYY-MM-DD, or 'spot' = as_of + the preset's settlement days "
+                    "(engine-resolved)."
+                ),
+                pattern="^(\\d{4}-\\d{2}-\\d{2}|spot)$",
+            ),
+        ],
+        discounting_curve: Annotated[
+            str, Field(description="Id of the discounting curve in the market.")
+        ],
+        maturity_date: Annotated[
+            str | None,
+            Field(
+                description="Maturity YYYY-MM-DD; alternative to tenor.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        tenor: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Tenor from the effective date, e.g. 10Y (engine-resolved, Unadjusted); "
+                    "alternative to maturity_date."
+                ),
+                pattern="^\\d+[DWMY]$",
+            ),
+        ] = None,
+        effective_date: Annotated[
+            str | None, Field(description="First accrual date YYYY-MM-DD; default = issue_date.")
+        ] = None,
+        overrides: Annotated[
+            pb.BondOverrides | None,
+            Field(
+                description=(
+                    "Overrides of the preset's bond conventions: settlement_days, frequency, "
+                    "accrual_day_counter, payment_convention, redemption, notionals, schedule "
+                    "rules."
+                )
+            ),
+        ] = None,
+        yield_overrides: Annotated[
+            pb.YieldOverrides | None,
+            Field(
+                description=(
+                    "How the yield is quoted back: day_counter, compounding, frequency (default: "
+                    "the preset's)."
+                )
+            ),
+        ] = None,
+        additional_trades: Annotated[
+            list[pb.FixedRateBondTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        include_details: Annotated[
+            bool,
+            Field(description="pricing.options.bond_pricing_details (duration, convexity, ...)."),
+        ] = False,
+        include_flows: Annotated[
+            bool, Field(description="Also return the cash flows (pricing.options.*_flows).")
+        ] = False,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price a fixed-rate bond (POST /price-fixed-rate-bond).
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            market: as in price_vanilla_swap.
-            preset: a preset with a ``fixed_rate_bond`` block (``EUR_FIXED_BOND``).
-            face_amount: > 0. coupon_rate: annual decimal coupon.
-            issue_date: ``YYYY-MM-DD`` or ``spot`` (as_of + preset settlement days).
-            maturity_date: ``YYYY-MM-DD``, or ``tenor`` (engine-resolved from the
-                effective date, Unadjusted).
-            effective_date: first accrual date (default: = issue_date).
-            discounting_curve: curve id in the market.
-            overrides: settlement_days, frequency, accrual_day_counter,
-                payment_convention, redemption, notionals, schedule rules.
-            yield_overrides: how the yield is quoted (day_counter/compounding/frequency).
-            include_details / include_flows: pricing.options.bond_pricing_details / _flows.
-
-        ``summary.bonds``: npv, clean/dirty price, accrued, yield, durations.
+        """Price a fixed-rate bond (POST /price-fixed-rate-bond). The preset's fixed_rate_bond
+        block supplies settlement days, schedule, accrual day counter, redemption and the yield
+        quotation. ``summary.bonds``: npv, clean / dirty price, accrued, yield, durations.
         """
         first = pb.FixedRateBondTrade(
             face_amount=face_amount,
@@ -1466,47 +1752,148 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Price a floating-rate bond", engine=True)
     async def price_floating_rate_bond(
-        market: Market,
-        market_data_source: MarketDataSource,
-        preset: str,
-        face_amount: float,
-        issue_date: str,
-        discounting_curve: str,
-        forwarding_curve: str,
-        maturity_date: str | None = None,
-        tenor: str | None = None,
-        effective_date: str | None = None,
-        spread: float = 0.0,
-        index_id: str | None = None,
-        fixing_days: int | None = None,
-        in_arrears: bool | None = None,
-        coupon_pricer: str | None = None,
-        overrides: pb.BondOverrides | None = None,
-        additional_trades: list[pb.FloatingRateBondTrade] | None = None,
-        as_of: str | None = None,
-        include_details: bool = False,
-        include_flows: bool = False,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        preset: Annotated[
+            str, Field(description="A preset with a floating_rate_bond block (EUR_EURIBOR_6M).")
+        ],
+        face_amount: Annotated[float, Field(description="Face amount, > 0.")],
+        issue_date: Annotated[
+            str,
+            Field(
+                description=(
+                    "Issue date YYYY-MM-DD, or 'spot' = as_of + the preset's settlement days "
+                    "(engine-resolved)."
+                ),
+                pattern="^(\\d{4}-\\d{2}-\\d{2}|spot)$",
+            ),
+        ],
+        discounting_curve: Annotated[
+            str, Field(description="Id of the discounting curve in the market.")
+        ],
+        forwarding_curve: Annotated[
+            str,
+            Field(
+                description=(
+                    "Id of the curve projecting the floating index (may equal the discounting "
+                    "curve)."
+                )
+            ),
+        ],
+        maturity_date: Annotated[
+            str | None,
+            Field(
+                description="Maturity YYYY-MM-DD; alternative to tenor.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        tenor: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Tenor from the effective date (engine-resolved, Unadjusted); alternative to "
+                    "maturity_date."
+                ),
+                pattern="^\\d+[DWMY]$",
+            ),
+        ] = None,
+        effective_date: Annotated[
+            str | None, Field(description="First accrual date YYYY-MM-DD; default = issue_date.")
+        ] = None,
+        spread: Annotated[float, Field(description="Coupon spread over the index, decimal.")] = 0.0,
+        index_id: Annotated[
+            str | None,
+            Field(
+                description="Id of the floating index in the market; default: the preset's index."
+            ),
+        ] = None,
+        fixing_days: Annotated[
+            int | None, Field(description="Index fixing days; default: the preset's (noted).")
+        ] = None,
+        in_arrears: Annotated[
+            bool | None, Field(description="Fix in arrears; default: the preset's (noted).")
+        ] = None,
+        coupon_pricer: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Id of a coupon pricer in the market; when omitted the tool adds the preset's "
+                    "zero-vol BlackIborCouponPricer (an Ibor coupon needs one)."
+                )
+            ),
+        ] = None,
+        overrides: Annotated[
+            pb.BondOverrides | None,
+            Field(
+                description=(
+                    "Overrides of the preset's bond conventions: settlement_days, frequency, "
+                    "accrual_day_counter, payment_convention, redemption, notionals, schedule "
+                    "rules."
+                )
+            ),
+        ] = None,
+        additional_trades: Annotated[
+            list[pb.FloatingRateBondTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        include_details: Annotated[
+            bool,
+            Field(description="pricing.options.bond_pricing_details (duration, convexity, ...)."),
+        ] = False,
+        include_flows: Annotated[
+            bool, Field(description="Also return the cash flows (pricing.options.*_flows).")
+        ] = False,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price a floating-rate note (POST /price-floating-rate-bond).
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            preset: a preset with a ``floating_rate_bond`` block (``EUR_EURIBOR_6M``).
-            face_amount, issue_date, maturity_date | tenor, effective_date, overrides,
-                include_details, include_flows: as in price_fixed_rate_bond.
-            spread: coupon spread over the index (decimal). index_id: default preset's.
-            fixing_days, in_arrears: default from the preset (noted).
-            coupon_pricer: id of a coupon pricer in the market; when omitted the tool
-                adds the preset's zero-vol BlackIborCouponPricer (an Ibor coupon needs one).
+        """Price a floating-rate note (POST /price-floating-rate-bond). As price_fixed_rate_bond,
+        plus the index spread, fixing days and in-arrears flag from the preset; an Ibor coupon
+        needs a coupon pricer, so the preset's zero-vol BlackIborCouponPricer is added unless
+        ``coupon_pricer`` names one. ``summary.bonds``: npv, clean / dirty price, accrued,
+        yield.
         """
         first = pb.FloatingRateBondTrade(
             face_amount=face_amount,
@@ -1541,41 +1928,117 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Price a zero-coupon bond", engine=True)
     async def price_zero_coupon_bond(
-        market: Market,
-        market_data_source: MarketDataSource,
-        preset: str,
-        face_amount: float,
-        discounting_curve: str,
-        maturity_date: str | None = None,
-        tenor: str | None = None,
-        issue_date: str | None = None,
-        settlement_days: int | None = None,
-        redemption: float | None = None,
-        yield_overrides: pb.YieldOverrides | None = None,
-        additional_trades: list[pb.ZeroCouponBondTrade] | None = None,
-        as_of: str | None = None,
-        include_details: bool = False,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        preset: Annotated[
+            str,
+            Field(
+                description=(
+                    "A preset with a zero_coupon_bond block (EUR_FIXED_BOND: settlement T+3 on "
+                    "TARGET)."
+                )
+            ),
+        ],
+        face_amount: Annotated[float, Field(description="Face amount, > 0.")],
+        discounting_curve: Annotated[
+            str, Field(description="Id of the discounting curve in the market.")
+        ],
+        maturity_date: Annotated[
+            str | None,
+            Field(
+                description="Maturity YYYY-MM-DD; alternative to tenor.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        tenor: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Tenor counted by the engine (Unadjusted) from issue_date when given, else "
+                    "from as_of; alternative to maturity_date."
+                ),
+                pattern="^\\d+[DWMY]$",
+            ),
+        ] = None,
+        issue_date: Annotated[
+            str | None,
+            Field(
+                description="YYYY-MM-DD, 'as_of', or omitted (engine: null date).",
+                pattern="^(\\d{4}-\\d{2}-\\d{2}|as_of)$",
+            ),
+        ] = None,
+        settlement_days: Annotated[
+            int | None, Field(description="Settlement days; default: the preset's (noted).")
+        ] = None,
+        redemption: Annotated[
+            float | None, Field(description="Redemption per 100; default: the preset's (noted).")
+        ] = None,
+        yield_overrides: Annotated[
+            pb.YieldOverrides | None,
+            Field(
+                description=(
+                    "How the yield is quoted back: day_counter, compounding, frequency (default: "
+                    "the preset's)."
+                )
+            ),
+        ] = None,
+        additional_trades: Annotated[
+            list[pb.ZeroCouponBondTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        include_details: Annotated[
+            bool,
+            Field(description="pricing.options.bond_pricing_details (duration, convexity, ...)."),
+        ] = False,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price a zero-coupon bond (POST /price-zero-coupon-bond).
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            preset: a preset with a ``zero_coupon_bond`` block (``EUR_FIXED_BOND``,
-                settlement T+3 on TARGET).
-            maturity_date: ``YYYY-MM-DD``, or ``tenor`` counted (by the engine, Unadjusted)
-                from ``issue_date`` when given else from as_of.
-            issue_date: ``YYYY-MM-DD``, ``as_of`` or omitted (engine: null date).
-            settlement_days, redemption: default from the preset (noted).
-            include_details: pricing.options.bond_pricing_details (duration, convexity).
+        """Price a zero-coupon bond (POST /price-zero-coupon-bond). The preset's zero_coupon_bond
+        block supplies settlement days, calendar, redemption and the yield quotation.
+        ``summary.bonds``: npv, clean / dirty price, yield.
         """
         first = pb.ZeroCouponBondTrade(
             face_amount=face_amount,
@@ -1604,44 +2067,133 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Price a callable fixed-rate bond", engine=True)
     async def price_callable_fixed_rate_bond(
-        market: Market,
-        market_data_source: MarketDataSource,
-        preset: str,
-        face_amount: float,
-        coupon_rate: float,
-        issue_date: str,
-        discounting_curve: str,
-        call_schedule: list[pb.Callability],
-        model: str | HullWhiteModel,
-        maturity_date: str | None = None,
-        tenor: str | None = None,
-        effective_date: str | None = None,
-        tree_steps: int | None = None,
-        overrides: pb.BondOverrides | None = None,
-        additional_trades: list[pb.CallableBondTrade] | None = None,
-        as_of: str | None = None,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        preset: Annotated[
+            str,
+            Field(description="A preset with a callable_fixed_rate_bond block (EUR_FIXED_BOND)."),
+        ],
+        face_amount: Annotated[float, Field(description="Face amount, > 0.")],
+        coupon_rate: Annotated[float, Field(description="Annual coupon rate as a decimal.")],
+        issue_date: Annotated[
+            str,
+            Field(
+                description=(
+                    "Issue date YYYY-MM-DD, or 'spot' = as_of + the preset's settlement days "
+                    "(engine-resolved)."
+                ),
+                pattern="^(\\d{4}-\\d{2}-\\d{2}|spot)$",
+            ),
+        ],
+        discounting_curve: Annotated[
+            str, Field(description="Id of the discounting curve in the market.")
+        ],
+        call_schedule: Annotated[
+            list[pb.Callability],
+            Field(
+                description=(
+                    "[{date, price, type: Call|Put}] with increasing dates; clean price per 100 "
+                    "of face."
+                )
+            ),
+        ],
+        model: Annotated[
+            str | HullWhiteModel,
+            Field(
+                description=(
+                    "{a, sigma, lattice_steps?, id?} (explicit Hull-White; lattice_steps default "
+                    "from the preset) or the id of a SwaptionModelSpec in the market."
+                )
+            ),
+        ],
+        maturity_date: Annotated[
+            str | None,
+            Field(
+                description="Maturity YYYY-MM-DD; alternative to tenor.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        tenor: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Tenor from the effective date (engine-resolved, Unadjusted); alternative to "
+                    "maturity_date."
+                ),
+                pattern="^\\d+[DWMY]$",
+            ),
+        ] = None,
+        effective_date: Annotated[
+            str | None, Field(description="First accrual date YYYY-MM-DD; default = issue_date.")
+        ] = None,
+        tree_steps: Annotated[
+            int | None,
+            Field(description="Engine lattice steps for the bond; default: the preset's."),
+        ] = None,
+        overrides: Annotated[
+            pb.BondOverrides | None,
+            Field(
+                description=(
+                    "Overrides of the preset's bond conventions: settlement_days, frequency, "
+                    "accrual_day_counter, payment_convention, redemption, notionals, schedule "
+                    "rules."
+                )
+            ),
+        ] = None,
+        additional_trades: Annotated[
+            list[pb.CallableBondTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price a callable / puttable fixed-rate bond on a Hull-White lattice
-        (POST /price-callable-fixed-rate-bond).
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            preset: a preset with a ``callable_fixed_rate_bond`` block (``EUR_FIXED_BOND``).
-            call_schedule: ``[{date, price, type: Call|Put}]`` with increasing dates
-                (clean price per 100 of face).
-            model: ``{a, sigma, lattice_steps?, id?}`` (explicit Hull-White, lattice_steps
-                default from the preset) or the id of a SwaptionModelSpec in the market.
-            tree_steps: engine lattice steps for the bond (default from the preset).
-            Other arguments: as in price_fixed_rate_bond.
+        """Price a callable / puttable fixed-rate bond on a Hull-White lattice (POST
+        /price-callable-fixed-rate-bond). Bond conventions, lattice and tree steps from the
+        preset's callable_fixed_rate_bond block; the Hull-White a / sigma are explicit.
+        ``summary.bonds``: npv, clean / dirty price, yield.
         """
         first = pb.CallableBondTrade(
             face_amount=face_amount,
@@ -1672,46 +2224,119 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Price a FRA", engine=True)
     async def price_fra(
-        market: Market,
-        market_data_source: MarketDataSource,
-        preset: str,
-        notional: float,
-        strike: float,
-        side: FRAType,
-        discounting_curve: str,
-        forwarding_curve: str,
-        months_to_start: int | None = None,
-        months_to_end: int | None = None,
-        start_date: str | None = None,
-        maturity_date: str | None = None,
-        index_id: str | None = None,
-        day_counter: DayCounter | None = None,
-        business_day_convention: BusinessDayConvention | None = None,
-        additional_trades: list[pr.FraTrade] | None = None,
-        as_of: str | None = None,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        preset: Annotated[
+            str, Field(description="A preset with a fra block (EUR_EURIBOR_3M, EUR_EURIBOR_6M).")
+        ],
+        notional: Annotated[
+            float, Field(description="Notional amount, > 0, in the preset's currency.")
+        ],
+        strike: Annotated[float, Field(description="Agreed forward rate, decimal.")],
+        side: Annotated[FRAType, Field(description="Long (pay fixed) or Short.")],
+        discounting_curve: Annotated[
+            str, Field(description="Id of the discounting curve in the market.")
+        ],
+        forwarding_curve: Annotated[
+            str,
+            Field(
+                description=(
+                    "Id of the curve projecting the floating index (may equal the discounting "
+                    "curve)."
+                )
+            ),
+        ],
+        months_to_start: Annotated[
+            int | None,
+            Field(
+                description=(
+                    "e.g. 3 for a 3x6: the engine resolves spot = as_of + settlement days, then "
+                    "spot + 3M with the preset's calendar and convention (echoed)."
+                )
+            ),
+        ] = None,
+        months_to_end: Annotated[
+            int | None, Field(description="e.g. 6 for a 3x6 (engine-resolved as months_to_start).")
+        ] = None,
+        start_date: Annotated[
+            str | None,
+            Field(
+                description="Explicit start YYYY-MM-DD; alternative to the months.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        maturity_date: Annotated[
+            str | None,
+            Field(
+                description="Explicit maturity YYYY-MM-DD; alternative to the months.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        index_id: Annotated[
+            str | None,
+            Field(
+                description="Id of the floating index in the market; default: the preset's index."
+            ),
+        ] = None,
+        day_counter: Annotated[
+            DayCounter | None, Field(description="Day counter; default: the preset's.")
+        ] = None,
+        business_day_convention: Annotated[
+            BusinessDayConvention | None,
+            Field(description="Business day convention; default: the preset's."),
+        ] = None,
+        additional_trades: Annotated[
+            list[pr.FraTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price a forward rate agreement (POST /price-fra).
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            preset: a preset with a ``fra`` block (``EUR_EURIBOR_3M``, ``EUR_EURIBOR_6M``).
-            notional: > 0. strike: agreed forward rate (decimal).
-            side: ``Long`` (pay fixed) or ``Short``.
-            months_to_start, months_to_end: e.g. 3, 6 for a 3x6; the engine resolves
-                spot = as_of + settlement days, then spot + 3M / 6M with the preset's
-                calendar and convention (three /calendar-advance calls, all echoed).
-            start_date, maturity_date: explicit alternative to the months.
-            index_id, day_counter, business_day_convention: default from the preset.
-
+        """Price a forward rate agreement (POST /price-fra). Dates are resolved by the engine from
+        spot with the preset's calendar and convention (echoed in ``date_resolution``).
         ``summary.fras``: npv, forward_rate, spot_value, settlement_date.
         """
         first = pr.FraTrade(
@@ -1745,55 +2370,163 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Price a cap / floor", engine=True)
     async def price_cap_floor(
-        market: Market,
-        market_data_source: MarketDataSource,
-        preset: str,
-        cap_floor_type: CapFloorType,
-        notional: float,
-        strike: float,
-        effective_date: str,
-        discounting_curve: str,
-        forwarding_curve: str,
-        vol: str | ConstantVol,
-        model: str,
-        termination_date: str | None = None,
-        tenor: str | None = None,
-        index_id: str | None = None,
-        frequency: Frequency | None = None,
-        day_counter: DayCounter | None = None,
-        business_day_convention: BusinessDayConvention | None = None,
-        schedule_overrides: ScheduleOverrides | None = None,
-        include_details: bool = False,
-        additional_trades: list[pr.CapFloorTrade] | None = None,
-        as_of: str | None = None,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        preset: Annotated[
+            str,
+            Field(
+                description=(
+                    "A preset with a cap_floor block (EUR_EURIBOR_3M quarterly, EUR_EURIBOR_6M "
+                    "semiannual)."
+                )
+            ),
+        ],
+        cap_floor_type: Annotated[CapFloorType, Field(description="Cap, Floor or Collar.")],
+        notional: Annotated[
+            float, Field(description="Notional amount, > 0, in the preset's currency.")
+        ],
+        strike: Annotated[float, Field(description="Strike as a decimal.")],
+        effective_date: Annotated[
+            str,
+            Field(
+                description=(
+                    "YYYY-MM-DD, or 'spot' = as_of + the preset's settlement days (resolved by "
+                    "the engine's /calendar-advance and reported in date_resolution)."
+                ),
+                pattern="^(\\d{4}-\\d{2}-\\d{2}|spot)$",
+            ),
+        ],
+        discounting_curve: Annotated[
+            str, Field(description="Id of the discounting curve in the market.")
+        ],
+        forwarding_curve: Annotated[
+            str,
+            Field(
+                description=(
+                    "Id of the curve projecting the floating index (may equal the discounting "
+                    "curve)."
+                )
+            ),
+        ],
+        vol: Annotated[
+            str | ConstantVol,
+            Field(
+                description=(
+                    "{constant: 0.2, type: Lognormal|Normal|ShiftedLognormal, displacement?, id?} "
+                    "(an OptionletVolSpec the tool adds with the preset's base conventions) or "
+                    "the id of a surface already in the market."
+                )
+            ),
+        ],
+        model: Annotated[
+            IrModelType | str,
+            Field(
+                description=(
+                    "Black, Bachelier, ShiftedBlack or HullWhiteLattice (a CapFloorModelSpec the "
+                    "tool adds, id <type>_model), or the id of a model in the market."
+                )
+            ),
+        ],
+        termination_date: Annotated[
+            str | None,
+            Field(
+                description="Maturity YYYY-MM-DD; alternative to tenor.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        tenor: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Tenor from the start date, e.g. 5Y (resolved by the engine, Unadjusted; the "
+                    "schedule applies its own conventions); alternative to the explicit end date."
+                ),
+                pattern="^\\d+[DWMY]$",
+            ),
+        ] = None,
+        index_id: Annotated[
+            str | None,
+            Field(
+                description="Id of the floating index in the market; default: the preset's index."
+            ),
+        ] = None,
+        frequency: Annotated[
+            Frequency | None, Field(description="Coupon frequency; default: the preset's.")
+        ] = None,
+        day_counter: Annotated[
+            DayCounter | None, Field(description="Day counter; default: the preset's.")
+        ] = None,
+        business_day_convention: Annotated[
+            BusinessDayConvention | None,
+            Field(description="Business day convention; default: the preset's."),
+        ] = None,
+        schedule_overrides: Annotated[
+            ScheduleOverrides | None,
+            Field(
+                description=(
+                    "Overrides of the preset's schedule rules (calendar, convention, termination "
+                    "convention, date generation, end of month)."
+                )
+            ),
+        ] = None,
+        include_details: Annotated[
+            bool, Field(description="Per-caplet breakdown in the response.")
+        ] = False,
+        additional_trades: Annotated[
+            list[pr.CapFloorTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price an interest-rate cap, floor or collar (POST /price-cap-floor).
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            preset: a preset with a ``cap_floor`` block (``EUR_EURIBOR_3M`` quarterly,
-                ``EUR_EURIBOR_6M`` semiannual).
-            cap_floor_type: ``Cap`` | ``Floor`` | ``Collar``. strike: decimal.
-            effective_date, termination_date | tenor: as in price_vanilla_swap.
-            vol: ``{constant: 0.2, type: Lognormal|Normal|ShiftedLognormal, displacement?,
-                id?}`` (an OptionletVolSpec the tool adds to the market, base conventions
-                from the preset) or the id of a surface already in the market.
-            model: ``Black`` | ``Bachelier`` | ``ShiftedBlack`` | ``HullWhiteLattice`` (a
-                CapFloorModelSpec the tool adds, id ``<type>_model``) or a model id.
-            include_details: per-caplet breakdown.
-            frequency, day_counter, business_day_convention, schedule_overrides:
-                default from the preset (noted).
-
-        ``summary.cap_floors``: npv, atm_rate, implied_volatility.
+        """Price an interest-rate cap, floor or collar (POST /price-cap-floor). The preset's
+        cap_floor block supplies the schedule, frequency, day counter and the OptionletVolSpec
+        base conventions; the vol surface and model the tool builds are added to the market
+        under explicit or default ids (noted). ``summary.cap_floors``: npv, atm_rate,
+        implied_volatility.
         """
         first = pr.CapFloorTrade(
             cap_floor_type=cap_floor_type,
@@ -1829,57 +2562,161 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Price a swaption", engine=True)
     async def price_swaption(
-        market: Market,
-        market_data_source: MarketDataSource,
-        preset: str,
-        underlying: ps.VanillaSwapTrade | ps.OisSwapTrade,
-        discounting_curve: str,
-        forwarding_curve: str,
-        vol: str | ConstantVol | AtmMatrixVol | RawSwaptionVol,
-        model: str | HullWhiteModel,
-        exercise_date: str | None = None,
-        exercise_dates: list[str] | None = None,
-        exercise_type: ExerciseType = ExerciseType.European,
-        settlement_type: SettlementType = SettlementType.Physical,
-        settlement_method: SettlementMethod | None = None,
-        underlying_type: str = "VanillaSwap",
-        additional_trades: list[pw.SwaptionTrade] | None = None,
-        as_of: str | None = None,
-        include_details: bool = False,
-        include_diagnostics: bool = False,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        preset: Annotated[
+            str,
+            Field(
+                description=(
+                    "A preset with swaption + vanilla_swap (or ois_swap) blocks (EUR_EURIBOR_6M, "
+                    "USD_SOFR_OIS)."
+                )
+            ),
+        ],
+        underlying: Annotated[
+            ps.VanillaSwapTrade | ps.OisSwapTrade,
+            Field(
+                description=(
+                    "The swap exercised into: swap_type, notional, fixed_rate, effective_date "
+                    "('spot' = exercise date + the preset's settlement days, engine-resolved), "
+                    "termination_date | tenor, spread, index_id, overrides."
+                )
+            ),
+        ],
+        discounting_curve: Annotated[
+            str, Field(description="Id of the discounting curve in the market.")
+        ],
+        forwarding_curve: Annotated[
+            str,
+            Field(
+                description=(
+                    "Id of the curve projecting the floating index (may equal the discounting "
+                    "curve)."
+                )
+            ),
+        ],
+        vol: Annotated[
+            str | ConstantVol | AtmMatrixVol | RawSwaptionVol,
+            Field(
+                description=(
+                    "{constant, type, displacement?, id?}, {expiries, tenors, vols, type, id?} "
+                    "(ATM matrix), {payload_type, payload, id?} (SmileCube / SabrParams / "
+                    "SabrCalibrate given raw) or the id of a surface in the market; built "
+                    "surfaces are SwaptionVolSpec with the preset's swap_index_id."
+                )
+            ),
+        ],
+        model: Annotated[
+            IrModelType | HullWhiteModel | str,
+            Field(
+                description=(
+                    "Black, ShiftedBlack or Bachelier (a SwaptionModelSpec the tool adds, id "
+                    "<type>_model), {a, sigma, lattice_steps, id?} (explicit HullWhiteLattice) or "
+                    "the id of a model in the market."
+                )
+            ),
+        ],
+        exercise_date: Annotated[
+            str | None,
+            Field(
+                description="Exercise date YYYY-MM-DD for European / American.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        exercise_dates: Annotated[
+            list[str] | None, Field(description="Exercise dates YYYY-MM-DD for Bermudan.")
+        ] = None,
+        exercise_type: Annotated[
+            ExerciseType, Field(description="European, Bermudan or American.")
+        ] = ExerciseType.European,
+        settlement_type: Annotated[
+            SettlementType,
+            Field(
+                description=(
+                    "Physical (method defaults to the preset's, PhysicalOTC) or Cash (give "
+                    "settlement_method)."
+                )
+            ),
+        ] = SettlementType.Physical,
+        settlement_method: Annotated[
+            SettlementMethod | None,
+            Field(
+                description=(
+                    "PhysicalOTC, PhysicalCleared, CollateralizedCashPrice or ParYieldCurve; "
+                    "default from the preset for Physical."
+                )
+            ),
+        ] = None,
+        underlying_type: Annotated[
+            Literal["VanillaSwap", "OisSwap"],
+            Field(
+                description=(
+                    "VanillaSwap or OisSwap (the preset's matching swap block builds the "
+                    "underlying)."
+                )
+            ),
+        ] = "VanillaSwap",
+        additional_trades: Annotated[
+            list[pw.SwaptionTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        include_details: Annotated[
+            bool, Field(description="pricing.options.swaption_pricing_details (delta, vega, ...).")
+        ] = False,
+        include_diagnostics: Annotated[
+            bool, Field(description="Per-SABR-surface diagnostics in the response.")
+        ] = False,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price a swaption (POST /price-swaption).
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            preset: a preset with ``swaption`` + ``vanilla_swap`` blocks (``EUR_EURIBOR_6M``).
-            underlying: the swap exercised into, as a VanillaSwapTrade (swap_type,
-                notional, fixed_rate, effective_date, termination_date | tenor, ...).
-                ``effective_date: "spot"`` = exercise_date + preset settlement days
-                (engine-resolved). For an OIS underlying set underlying_type ``OisSwap``.
-            exercise_date: European / American. exercise_dates: Bermudan.
-            settlement_type: ``Physical`` (method default from the preset, PhysicalOTC) or
-                ``Cash`` (give settlement_method: CollateralizedCashPrice | ParYieldCurve).
-            vol: ``{constant, type, displacement?, id?}``, ``{expiries, tenors, vols,
-                type, id?}`` (ATM matrix), ``{payload_type, payload, id?}`` (SmileCube /
-                SabrParams / SabrCalibrate given raw) or a surface id in the market. Built
-                surfaces are SwaptionVolSpec with the preset's swap_index_id.
-            model: ``Black`` | ``ShiftedBlack`` | ``Bachelier`` (SwaptionModelSpec added,
-                id ``<type>_model``), ``{a, sigma, lattice_steps, id?}`` (HullWhiteLattice
-                explicit) or a model id in the market.
-            include_details: pricing.options.swaption_pricing_details (delta/vega/...).
-            include_diagnostics: per-SABR-surface diagnostics in the response.
-
-        ``summary.swaptions``: npv, implied_volatility, atm_forward, annuity.
+        """Price a European, Bermudan or American swaption on a vanilla or OIS underlying (POST
+        /price-swaption). The underlying is built from the preset's swap block, the vol surface
+        (SwaptionVolSpec with the preset's swap_index_id) and the model are added to the market
+        under explicit or default ids (noted). ``summary.swaptions``: npv, implied_volatility,
+        atm_forward, annuity.
         """
         first = pw.SwaptionTrade(
             exercise_date=exercise_date,
@@ -1912,61 +2749,173 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Price a CDS", engine=True)
     async def price_cds(
-        market: Market,
-        market_data_source: MarketDataSource,
-        side: ProtectionSide,
-        notional: float,
-        running_coupon: float,
-        discounting_curve: str,
-        credit_curve: str | pc.ParSpreadCurve | pc.FlatHazardCurve,
-        preset: str = "EUR_CDS",
-        start: str = "as_of",
-        maturity: str | None = None,
-        tenor: str | None = None,
-        recovery_rate: float | None = None,
-        model: str = "MidPoint",
-        upfront: float | None = None,
-        upfront_date: str | None = None,
-        protection_start: str | None = None,
-        trade_date: str | None = None,
-        frequency: Frequency | None = None,
-        day_counter: DayCounter | None = None,
-        business_day_convention: BusinessDayConvention | None = None,
-        cash_settlement_days: int | None = None,
-        schedule_overrides: ScheduleOverrides | None = None,
-        additional_trades: list[pc.CdsTrade] | None = None,
-        as_of: str | None = None,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        side: Annotated[ProtectionSide, Field(description="Buyer (buy protection) or Seller.")],
+        notional: Annotated[
+            float, Field(description="Notional amount, > 0, in the preset's currency.")
+        ],
+        running_coupon: Annotated[
+            float, Field(description="Running coupon as a decimal (0.01 = 100bp).")
+        ],
+        discounting_curve: Annotated[
+            str, Field(description="Id of the discounting curve in the market.")
+        ],
+        credit_curve: Annotated[
+            str | pc.ParSpreadCurve | pc.FlatHazardCurve,
+            Field(
+                description=(
+                    "{par_spreads: [{tenor, spread}], recovery_rate?, id?} (bootstrapped by the "
+                    "engine with the preset's helper conventions), {hazard_rate, recovery_rate?, "
+                    "id?} (flat) or the id of a credit curve in the market."
+                )
+            ),
+        ],
+        preset: Annotated[
+            str,
+            Field(
+                description=(
+                    "A preset with a cds block (EUR_CDS: quarterly TwentiethIMM, Following, "
+                    "Actual360, MidPoint)."
+                )
+            ),
+        ] = "EUR_CDS",
+        start: Annotated[
+            str,
+            Field(
+                description="Effective date YYYY-MM-DD or 'as_of'.",
+                pattern="^(\\d{4}-\\d{2}-\\d{2}|as_of)$",
+            ),
+        ] = "as_of",
+        maturity: Annotated[
+            str | None,
+            Field(
+                description="Maturity YYYY-MM-DD; alternative to tenor.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        tenor: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Tenor from start (engine-resolved, Unadjusted); alternative to maturity."
+                ),
+                pattern="^\\d+[DWMY]$",
+            ),
+        ] = None,
+        recovery_rate: Annotated[
+            float | None,
+            Field(
+                description=(
+                    "Recovery rate for a curve the tool builds; default: the preset's (0.4)."
+                )
+            ),
+        ] = None,
+        model: Annotated[
+            CdsEngineType | str,
+            Field(
+                description=(
+                    "MidPoint or ISDA (a CdsModelSpec the tool adds, id cds_<type>) or the id of "
+                    "a model in the market."
+                )
+            ),
+        ] = "MidPoint",
+        upfront: Annotated[
+            float | None, Field(description="Upfront payment as a decimal of notional, if any.")
+        ] = None,
+        upfront_date: Annotated[
+            str | None,
+            Field(description="Upfront payment date YYYY-MM-DD.", pattern="^\\d{4}-\\d{2}-\\d{2}$"),
+        ] = None,
+        protection_start: Annotated[
+            str | None,
+            Field(
+                description="Protection start YYYY-MM-DD; default = start.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        trade_date: Annotated[
+            str | None,
+            Field(
+                description="Trade date YYYY-MM-DD; default = as_of.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        frequency: Annotated[
+            Frequency | None, Field(description="Premium frequency; default: the preset's.")
+        ] = None,
+        day_counter: Annotated[
+            DayCounter | None, Field(description="Day counter; default: the preset's.")
+        ] = None,
+        business_day_convention: Annotated[
+            BusinessDayConvention | None,
+            Field(description="Business day convention; default: the preset's."),
+        ] = None,
+        cash_settlement_days: Annotated[
+            int | None, Field(description="Cash settlement days; default: the preset's.")
+        ] = None,
+        schedule_overrides: Annotated[
+            ScheduleOverrides | None,
+            Field(
+                description=(
+                    "Overrides of the preset's schedule rules (calendar, convention, termination "
+                    "convention, date generation, end of month)."
+                )
+            ),
+        ] = None,
+        additional_trades: Annotated[
+            list[pc.CdsTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price a single-name CDS (POST /price-cds).
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            side: ``Buyer`` (buy protection) or ``Seller``. notional: > 0.
-            running_coupon: decimal (0.01 = 100bp).
-            credit_curve: ``{par_spreads: [{tenor, spread}], recovery_rate?, id?}``
-                (bootstrapped by the engine with the preset's helper conventions),
-                ``{hazard_rate, recovery_rate?, id?}`` (flat) or a credit curve id in
-                the market.
-            preset: a preset with a ``cds`` block (default ``EUR_CDS``: quarterly
-                TwentiethIMM, Following, Actual360, MidPoint).
-            start: effective date ``YYYY-MM-DD`` or ``as_of`` (default).
-            maturity: ``YYYY-MM-DD``; or ``tenor`` (engine-resolved, Unadjusted).
-            recovery_rate: for a curve the tool builds (default: preset, 0.4).
-            model: ``MidPoint`` | ``ISDA`` (CdsModelSpec added, id ``cds_<type>``) or a
-                model id in the market.
-            upfront / upfront_date, protection_start (default = start), trade_date
-                (default = as_of), frequency, day_counter, business_day_convention,
-                cash_settlement_days, schedule_overrides: optional; defaults noted.
-
+        """Price a single-name CDS (POST /price-cds). The preset's cds block supplies the premium
+        schedule (TwentiethIMM), accrual flags, the credit-curve helper conventions and the
+        engine type; a credit curve given as par spreads is bootstrapped by the engine.
         ``summary.cds_list``: npv, fair_spread, fair_upfront, leg npvs.
         """
         first = pc.CdsTrade(
@@ -2006,57 +2955,142 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Price an equity option", engine=True)
     async def price_equity_option(
-        spot: float | str,
-        market_data_source: MarketDataSource,
-        strike: float,
-        expiry: str,
-        option_type: EquityOptionType,
-        vol: str | pe.EquityConstantVol,
-        rate_curve: str | pe.FlatRate,
-        dividend_yield: str | pe.FlatRate,
-        preset: str = "EUR_EQUITY",
-        exercise: str = "European",
-        exercise_start: str | None = None,
-        exercise_dates: list[str] | None = None,
-        quantity: float = 1.0,
-        underlying_id: str = "EQ",
-        trade_id: str | None = None,
-        model: str | pe.EquityModel | None = None,
-        discrete_dividends: list[pe.DiscreteDividend] | None = None,
-        market: Market | None = None,
-        as_of: str | None = None,
-        additional_trades: list[pe.EquityOptionTrade] | None = None,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        spot: Annotated[
+            float | str,
+            Field(
+                description=(
+                    "Spot price (a Price quote the tool adds) or the id of a quote in the market."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        strike: Annotated[float, Field(description="Strike price.")],
+        expiry: Annotated[
+            str, Field(description="Expiry date YYYY-MM-DD.", pattern="^\\d{4}-\\d{2}-\\d{2}$")
+        ],
+        option_type: Annotated[EquityOptionType, Field(description="Call or Put.")],
+        vol: Annotated[
+            str | pe.EquityConstantVol,
+            Field(
+                description=(
+                    "{constant: 0.2, id?} (a constant BlackVolSpec the tool adds) or the id of a "
+                    "surface in the market."
+                )
+            ),
+        ],
+        rate_curve: Annotated[
+            str | pe.FlatRate,
+            Field(
+                description=(
+                    "{rate, end_date, id?} (a flat continuous zero curve from as_of to end_date, "
+                    "added) or the id of a curve in the market."
+                )
+            ),
+        ],
+        dividend_yield: Annotated[
+            str | pe.FlatRate,
+            Field(
+                description=(
+                    "Same shape as rate_curve ({rate: 0.0, end_date} for no dividends); the "
+                    "engine requires a dividend curve on every underlying."
+                )
+            ),
+        ],
+        preset: Annotated[
+            str, Field(description="A preset with an equity_option block (EUR_EQUITY).")
+        ] = "EUR_EQUITY",
+        exercise: Annotated[
+            Literal["European", "American", "Bermudan"],
+            Field(
+                description=(
+                    "European, American (window exercise_start..expiry) or Bermudan "
+                    "(exercise_dates, last = expiry)."
+                )
+            ),
+        ] = "European",
+        exercise_start: Annotated[
+            str | None,
+            Field(
+                description="American: window start YYYY-MM-DD; default = as_of.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        exercise_dates: Annotated[
+            list[str] | None,
+            Field(description="Bermudan exercise dates YYYY-MM-DD, the last = expiry."),
+        ] = None,
+        quantity: Annotated[float, Field(description="Number of options.")] = 1.0,
+        underlying_id: Annotated[
+            str, Field(description="Id of the EquityUnderlying the tool adds.")
+        ] = "EQ",
+        trade_id: Annotated[
+            str | None, Field(description="Id of the option in the request.")
+        ] = None,
+        model: Annotated[
+            str | pe.EquityModel | None,
+            Field(
+                description=(
+                    "{type: BlackScholesAnalytic|BinomialCRR, binomial_steps?, id?} or the id of "
+                    "a model in the market; default BlackScholesAnalytic (id bs_analytic)."
+                )
+            ),
+        ] = None,
+        discrete_dividends: Annotated[
+            list[pe.DiscreteDividend] | None,
+            Field(description="[{ex_date, amount}] cash dividends on the underlying."),
+        ] = None,
+        market: Annotated[
+            Market | None,
+            Field(
+                description=(
+                    "Optional: a pricing block or market with curves, quotes or surfaces to "
+                    "reference by id; as_of is required without it."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        additional_trades: Annotated[
+            list[pe.EquityOptionTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price a vanilla equity option (POST /price-equity-option).
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            spot: spot price (a Price quote the tool adds) or a quote id in the market.
-            strike, expiry (``YYYY-MM-DD``), option_type ``Call`` | ``Put``.
-            vol: ``{constant: 0.2, id?}`` (constant BlackVolSpec added) or a surface id.
-            rate_curve: ``{rate, end_date, id?}`` (flat continuous zero curve from as_of to
-                ``end_date``, added) or a curve id in the market.
-            dividend_yield: same shape (``{rate: 0.0, end_date}`` for no dividends); the
-                engine requires a dividend curve id on every underlying.
-            preset: a preset with an ``equity_option`` block (default ``EUR_EQUITY``).
-            exercise: ``European`` | ``American`` (window exercise_start..expiry;
-                start default = as_of) | ``Bermudan`` (exercise_dates, last = expiry).
-            model: ``{type: BlackScholesAnalytic|BinomialCRR, binomial_steps?, id?}`` or a
-                model id; default BlackScholesAnalytic (id ``bs_analytic``).
-            discrete_dividends: ``[{ex_date, amount}]`` cash dividends on the underlying.
-            market: optional; a pricing block / market with curves, quotes or
-                surfaces to reference by id. ``as_of`` is required without it.
-
-        ``summary.options``: npv, delta, gamma, vega, theta, rho.
+        """Price a vanilla equity option (POST /price-equity-option). Flat rate and dividend curves
+        are added as two-point InterpolatedZero curves, the vol as a constant BlackVolSpec, with
+        the preset's equity_option conventions. ``summary.options``: npv, delta, gamma, vega,
+        theta, rho.
         """
         first = pe.EquityOptionTrade(
             option_type=option_type,
@@ -2092,47 +3126,119 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Price a zero-coupon inflation swap", engine=True)
     async def price_zc_inflation_swap(
-        market: Market,
-        market_data_source: MarketDataSource,
-        inflation_index_id: str,
-        fixings: list[pi.Fixing],
-        swap_type: SwapType,
-        notional: float,
-        fixed_rate: float,
-        discounting_curve: str,
-        inflation_curve: str,
-        preset: str = "EUR_HICP",
-        start_date: str = "as_of",
-        maturity_date: str | None = None,
-        tenor: str | None = None,
-        additional_trades: list[pi.ZcInflationSwapTrade] | None = None,
-        as_of: str | None = None,
-        include_flows: bool = False,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        inflation_index_id: Annotated[
+            str,
+            Field(description="Id of the inflation index in pricing.inflation.inflation_indices."),
+        ],
+        fixings: Annotated[
+            list[pi.Fixing],
+            Field(
+                description=(
+                    "Monthly index fixings [{date, value}]; REQUIRED (the engine needs the fixing "
+                    "at start minus the observation lag and the curve helpers the recent history; "
+                    "this server has no market-data source)."
+                )
+            ),
+        ],
+        swap_type: Annotated[
+            SwapType, Field(description="Payer pays fixed, Receiver receives it.")
+        ],
+        notional: Annotated[
+            float, Field(description="Notional amount, > 0, in the preset's currency.")
+        ],
+        fixed_rate: Annotated[float, Field(description="Fixed zero-coupon rate, decimal.")],
+        discounting_curve: Annotated[
+            str, Field(description="Id of the discounting curve in the market.")
+        ],
+        inflation_curve: Annotated[
+            str,
+            Field(description="Id of the inflation curve in pricing.inflation.inflation_curves."),
+        ],
+        preset: Annotated[
+            str, Field(description="A preset with a zc_inflation_swap block (EUR_HICP).")
+        ] = "EUR_HICP",
+        start_date: Annotated[
+            str,
+            Field(
+                description="Start YYYY-MM-DD or 'as_of'.", pattern="^(\\d{4}-\\d{2}-\\d{2}|as_of)$"
+            ),
+        ] = "as_of",
+        maturity_date: Annotated[
+            str | None,
+            Field(
+                description="Maturity YYYY-MM-DD; alternative to tenor.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        tenor: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Tenor from start_date (engine-resolved); alternative to maturity_date."
+                ),
+                pattern="^\\d+[DWMY]$",
+            ),
+        ] = None,
+        additional_trades: Annotated[
+            list[pi.ZcInflationSwapTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        include_flows: Annotated[
+            bool, Field(description="Also return the cash flows (pricing.options.*_flows).")
+        ] = False,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price a zero-coupon inflation swap (POST /price-zero-coupon-inflation-swap).
-
-        The market must carry the inflation index and a ZeroInflation curve
-        (``pricing.inflation``; see the ``inflation`` examples). ``fixings`` is
-        REQUIRED: the engine needs the CPI fixing at start minus the observation lag
-        (and the curve helpers need the recent history) and this server has no
-        market-data source; the tool sets them on the index and says so in ``notes``.
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            inflation_index_id: id in pricing.inflation.inflation_indices.
-            fixings: ``[{date: "2024-12-01", value: 126.16}, ...]`` monthly CPI levels.
-            swap_type: ``Payer`` pays fixed. notional, fixed_rate: decimal.
-            start_date: ``YYYY-MM-DD`` or ``as_of``. maturity_date | tenor.
-            preset: a preset with a ``zc_inflation_swap`` block (default ``EUR_HICP``).
+        """Price a zero-coupon inflation swap (POST /price-zero-coupon-inflation-swap). The market
+        must carry the inflation index and a ZeroInflation curve (pricing.inflation; see the
+        inflation examples); ``fixings`` are set on the index and said so in ``notes``. The
+        preset's zc_inflation_swap block supplies the observation lag and interpolation,
+        calendars and day counter.
         """
         first = pi.ZcInflationSwapTrade(
             swap_type=swap_type,
@@ -2163,44 +3269,131 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Price a year-on-year inflation swap", engine=True)
     async def price_yoy_inflation_swap(
-        market: Market,
-        market_data_source: MarketDataSource,
-        inflation_index_id: str,
-        fixings: list[pi.Fixing],
-        swap_type: SwapType,
-        notional: float,
-        fixed_rate: float,
-        discounting_curve: str,
-        inflation_curve: str,
-        preset: str = "EUR_HICP",
-        effective_date: str = "as_of",
-        termination_date: str | None = None,
-        tenor: str | None = None,
-        spread: float = 0.0,
-        frequency: Frequency | None = None,
-        schedule_overrides: ScheduleOverrides | None = None,
-        additional_trades: list[pi.YoyInflationSwapTrade] | None = None,
-        as_of: str | None = None,
-        include_flows: bool = False,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        inflation_index_id: Annotated[
+            str,
+            Field(description="Id of the inflation index in pricing.inflation.inflation_indices."),
+        ],
+        fixings: Annotated[
+            list[pi.Fixing],
+            Field(
+                description=(
+                    "Monthly YoY index fixings [{date, value}]; REQUIRED (see "
+                    "price_zc_inflation_swap)."
+                )
+            ),
+        ],
+        swap_type: Annotated[
+            SwapType, Field(description="Payer (pay fixed, receive floating) or Receiver.")
+        ],
+        notional: Annotated[
+            float, Field(description="Notional amount, > 0, in the preset's currency.")
+        ],
+        fixed_rate: Annotated[float, Field(description="Fixed rate as a decimal (0.032 = 3.2%).")],
+        discounting_curve: Annotated[
+            str, Field(description="Id of the discounting curve in the market.")
+        ],
+        inflation_curve: Annotated[
+            str,
+            Field(description="Id of the inflation curve in pricing.inflation.inflation_curves."),
+        ],
+        preset: Annotated[
+            str, Field(description="A preset with a yoy_inflation_swap block (EUR_HICP).")
+        ] = "EUR_HICP",
+        effective_date: Annotated[
+            str,
+            Field(
+                description="Start YYYY-MM-DD or 'as_of'.", pattern="^(\\d{4}-\\d{2}-\\d{2}|as_of)$"
+            ),
+        ] = "as_of",
+        termination_date: Annotated[
+            str | None,
+            Field(
+                description="Maturity YYYY-MM-DD; alternative to tenor.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        tenor: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Tenor from the start date, e.g. 5Y (resolved by the engine, Unadjusted; the "
+                    "schedule applies its own conventions); alternative to the explicit end date."
+                ),
+                pattern="^\\d+[DWMY]$",
+            ),
+        ] = None,
+        spread: Annotated[float, Field(description="Spread added to the YoY rate, decimal.")] = 0.0,
+        frequency: Annotated[
+            Frequency | None,
+            Field(description="Shared fixed / YoY leg frequency; default: the preset's (annual)."),
+        ] = None,
+        schedule_overrides: Annotated[
+            ScheduleOverrides | None,
+            Field(
+                description=(
+                    "Overrides of the preset's schedule rules (calendar, convention, termination "
+                    "convention, date generation, end of month)."
+                )
+            ),
+        ] = None,
+        additional_trades: Annotated[
+            list[pi.YoyInflationSwapTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        include_flows: Annotated[
+            bool, Field(description="Also return the cash flows (pricing.options.*_flows).")
+        ] = False,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price a year-on-year inflation swap (POST /price-year-on-year-inflation-swap).
-
-        The market must carry the YoY inflation index and a YoYInflation curve.
-        ``fixings`` (YoY rates) is REQUIRED for the same reason as in
-        price_zc_inflation_swap. Fixed and YoY legs share the preset's schedule
-        (annual by default); ``spread`` is added to the YoY rate.
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
+        """Price a year-on-year inflation swap (POST /price-year-on-year-inflation-swap). The
+        market must carry the YoY inflation index and a YoYInflation curve; fixed and YoY legs
+        share the preset's schedule (annual by default) and ``spread`` is added to the YoY rate.
         """
         first = pi.YoyInflationSwapTrade(
             swap_type=swap_type,
@@ -2234,47 +3427,147 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Price a year-on-year inflation cap / floor", engine=True)
     async def price_yoy_inflation_cap_floor(
-        market: Market,
-        market_data_source: MarketDataSource,
-        inflation_index_id: str,
-        fixings: list[pi.Fixing],
-        cap_floor_type: CapFloorType,
-        notional: float,
-        discounting_curve: str,
-        inflation_curve: str,
-        vol: str | pi.YoyVol,
-        preset: str = "EUR_HICP",
-        cap_rate: float | None = None,
-        floor_rate: float | None = None,
-        effective_date: str = "as_of",
-        termination_date: str | None = None,
-        tenor: str | None = None,
-        frequency: Frequency | None = None,
-        gearing: float | None = None,
-        spread: float | None = None,
-        schedule_overrides: ScheduleOverrides | None = None,
-        additional_trades: list[pi.YoyInflationCapFloorTrade] | None = None,
-        as_of: str | None = None,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        inflation_index_id: Annotated[
+            str,
+            Field(description="Id of the inflation index in pricing.inflation.inflation_indices."),
+        ],
+        fixings: Annotated[
+            list[pi.Fixing],
+            Field(
+                description=(
+                    "Monthly YoY index fixings [{date, value}]; REQUIRED (see "
+                    "price_zc_inflation_swap)."
+                )
+            ),
+        ],
+        cap_floor_type: Annotated[CapFloorType, Field(description="Cap, Floor or Collar.")],
+        notional: Annotated[
+            float, Field(description="Notional amount, > 0, in the preset's currency.")
+        ],
+        discounting_curve: Annotated[
+            str, Field(description="Id of the discounting curve in the market.")
+        ],
+        inflation_curve: Annotated[
+            str,
+            Field(description="Id of the inflation curve in pricing.inflation.inflation_curves."),
+        ],
+        vol: Annotated[
+            str | pi.YoyVol,
+            Field(
+                description=(
+                    "{constant: 0.01, type: Black|Bachelier|UnitDisplacedBlack, id?} (a "
+                    "YoYOptionletVolSpec the tool adds with the preset's conventions) or the id "
+                    "of a surface in the market."
+                )
+            ),
+        ],
+        preset: Annotated[
+            str, Field(description="A preset with a yoy_inflation_cap_floor block (EUR_HICP).")
+        ] = "EUR_HICP",
+        cap_rate: Annotated[
+            float | None, Field(description="Cap strike, decimal (Cap / Collar).")
+        ] = None,
+        floor_rate: Annotated[
+            float | None, Field(description="Floor strike, decimal (Floor / Collar).")
+        ] = None,
+        effective_date: Annotated[
+            str,
+            Field(
+                description="Start YYYY-MM-DD or 'as_of'.", pattern="^(\\d{4}-\\d{2}-\\d{2}|as_of)$"
+            ),
+        ] = "as_of",
+        termination_date: Annotated[
+            str | None,
+            Field(
+                description="Maturity YYYY-MM-DD; alternative to tenor.",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        tenor: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Tenor from the start date, e.g. 5Y (resolved by the engine, Unadjusted; the "
+                    "schedule applies its own conventions); alternative to the explicit end date."
+                ),
+                pattern="^\\d+[DWMY]$",
+            ),
+        ] = None,
+        frequency: Annotated[
+            Frequency | None, Field(description="Coupon frequency; default: the preset's.")
+        ] = None,
+        gearing: Annotated[
+            float | None, Field(description="Gearing on the YoY rate; default: the preset's.")
+        ] = None,
+        spread: Annotated[
+            float | None,
+            Field(description="Spread on the YoY rate, decimal; default: the preset's."),
+        ] = None,
+        schedule_overrides: Annotated[
+            ScheduleOverrides | None,
+            Field(
+                description=(
+                    "Overrides of the preset's schedule rules (calendar, convention, termination "
+                    "convention, date generation, end of month)."
+                )
+            ),
+        ] = None,
+        additional_trades: Annotated[
+            list[pi.YoyInflationCapFloorTrade] | None,
+            Field(
+                description=(
+                    "More trades of the same product in the same request; the engine answers per "
+                    "item."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Price a year-on-year inflation cap / floor / collar
-        (POST /price-year-on-year-inflation-cap-floor).
-
-        ``fixings`` REQUIRED as in price_yoy_inflation_swap. ``vol``:
-        ``{constant: 0.01, type: Black|Bachelier|UnitDisplacedBlack, id?}`` (a
-        YoYOptionletVolSpec the tool adds with the preset's conventions) or a surface
-        id. ``cap_rate`` for Cap/Collar, ``floor_rate`` for Floor/Collar.
-
-        Args:
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
+        """Price a year-on-year inflation cap, floor or collar (POST
+        /price-year-on-year-inflation-cap-floor). The YoYOptionletVolSpec the tool builds from
+        ``vol`` is added with the preset's conventions; ``cap_rate`` for Cap / Collar,
+        ``floor_rate`` for Floor / Collar.
         """
         first = pi.YoyInflationCapFloorTrade(
             cap_floor_type=cap_floor_type,

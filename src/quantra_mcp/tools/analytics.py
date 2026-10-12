@@ -26,7 +26,7 @@ from __future__ import annotations
 import asyncio
 import copy
 from collections.abc import Awaitable, Callable
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from mcp.server.mcpserver import MCPServer
 from pydantic import BaseModel, ConfigDict, Field
@@ -41,7 +41,7 @@ from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.presets.registry import PresetError
 from quantra_mcp.schema.enums_generated import RateAveragingType, SwapType
 from quantra_mcp.session import ScratchStore
-from quantra_mcp.tools._market_source import MarketDataSource, stamp
+from quantra_mcp.tools._market_source import SOURCE_DESCRIPTION, MarketDataSource, stamp
 from quantra_mcp.tools._meta import tool
 from quantra_mcp.tools._result import ToolResult, new_request_id
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
@@ -745,47 +745,103 @@ async def fair_rate_impl(
 def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurrency: int) -> None:
     @tool(app, "Swap DV01 by bump and reprice", engine=True)
     async def swap_dv01(
-        market: Market,
-        market_data_source: MarketDataSource,
-        trade: SwapSpec,
-        bump_bp: float = 1.0,
-        method: DvMethod = "centered",
-        scope: Scope = "all",
-        as_of: str | None = None,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
-        include_calls: bool = False,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        trade: Annotated[
+            SwapSpec,
+            Field(
+                description=(
+                    "The swap to reprice: product (vanilla_swap | ois_swap), preset, "
+                    "discounting_curve, forwarding_curve and the pricing tool's economics "
+                    "(swap_type, notional, fixed_rate, effective_date 'spot' | date, tenor | "
+                    "termination_date, spread, index_id, overrides, OIS overnight parameters)."
+                )
+            ),
+        ],
+        bump_bp: Annotated[
+            float,
+            Field(
+                description=(
+                    "Bump size in basis points, positive; added to every helper rate / spread (a "
+                    "futures price moves by -bp/100); the method sets the sign."
+                )
+            ),
+        ] = 1.0,
+        method: Annotated[
+            DvMethod,
+            Field(
+                description=(
+                    "centered = (NPV(+bp) - NPV(-bp)) / 2 from three engine calls; up = NPV(+bp) "
+                    "- NPV(base); down = NPV(base) - NPV(-bp)."
+                )
+            ),
+        ] = "centered",
+        scope: Annotated[
+            Scope,
+            Field(
+                description=(
+                    "all (discounting and forwarding curves together), discounting or forwarding."
+                )
+            ),
+        ] = "all",
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
+        include_calls: Annotated[
+            bool,
+            Field(
+                description=(
+                    "true: calls = the complete pricing result of every reprice (replayable "
+                    "requests). false (default): base_request once plus per reprice its NPV, the "
+                    "quotes moved and a request_diff against the base."
+                )
+            ),
+        ] = False,
     ) -> ToolResult:
-        """Parallel DV01 of a swap: reprice with every quote of the selected curve(s) bumped.
-
-        Args:
-            market: as in the pricing tools (session, engine pricing block or build_curve
-                results).
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            trade: the swap: ``product`` (``vanilla_swap`` | ``ois_swap``), ``preset``,
-                ``discounting_curve``, ``forwarding_curve`` and the price_vanilla_swap /
-                price_ois_swap economics (swap_type, notional, fixed_rate, effective_date
-                'spot' | date, tenor | termination_date, spread, index_id, overrides).
-            bump_bp: size of the bump in basis points (default 1, positive; added to every
-                helper rate / spread; futures prices move by -bp/100; the method sets the sign).
-            method: ``centered`` (default) = (NPV(+bp) - NPV(-bp)) / 2, three engine calls;
-                ``up`` = NPV(+bp) - NPV(base); ``down`` = NPV(base) - NPV(-bp).
-            scope: ``all`` (discounting and forwarding curves together), ``discounting``
-                or ``forwarding``.
-            as_of: required unless ``market`` is a pricing block.
-
-        Result: ``base_npv``, ``npvs`` (every per-call NPV: base, up, down), ``dv01``,
-        ``dv01_definition`` (the exact difference taken for the method), ``bumped_quotes``
-        (every quote moved per side, from/to) and ``calls`` = the complete pricing results
-        (each with its echoed request). Nothing else is computed; the arithmetic is cited
-        at quantra://methodology/connector-analytics.
+        """Parallel DV01 of a swap: reprice with every quote of the selected curve(s) bumped,
+        through the same price_vanilla_swap / price_ois_swap path. Result: ``base_npv``,
+        ``npvs`` (base, up, down), ``dv01``, ``dv01_definition`` (the exact difference taken for
+        the method), ``bumped_quotes`` (every quote moved per side, from / to), then either
+        ``calls`` (include_calls) or ``base_request`` + ``reprices`` (label, npv, edits,
+        request_diff). Nothing else is computed; the arithmetic is cited at
+        quantra://methodology/connector-analytics.
         """
         return stamp(
             await swap_dv01_impl(
@@ -807,38 +863,103 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
 
     @tool(app, "Key-rate DV01 ladder by bump and reprice", engine=True)
     async def key_rate_ladder(
-        market: Market,
-        market_data_source: MarketDataSource,
-        trade: SwapSpec,
-        bump_bp: float = 1.0,
-        method: DvMethod = "centered",
-        curve: str | None = None,
-        as_of: str | None = None,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
-        include_calls: bool = False,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        trade: Annotated[
+            SwapSpec,
+            Field(
+                description=(
+                    "The swap to reprice: product (vanilla_swap | ois_swap), preset, "
+                    "discounting_curve, forwarding_curve and the pricing tool's economics "
+                    "(swap_type, notional, fixed_rate, effective_date 'spot' | date, tenor | "
+                    "termination_date, spread, index_id, overrides, OIS overnight parameters)."
+                )
+            ),
+        ],
+        bump_bp: Annotated[
+            float,
+            Field(
+                description=(
+                    "Bump size in basis points, positive; added to every helper rate / spread (a "
+                    "futures price moves by -bp/100); the method sets the sign."
+                )
+            ),
+        ] = 1.0,
+        method: Annotated[
+            DvMethod,
+            Field(
+                description=(
+                    "centered = (NPV(+bp) - NPV(-bp)) / 2 from three engine calls; up = NPV(+bp) "
+                    "- NPV(base); down = NPV(base) - NPV(-bp)."
+                )
+            ),
+        ] = "centered",
+        curve: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Id of the curve whose pillars are the buckets; default: the trade's "
+                    "discounting curve. Buckets are that curve's actual points in wire order."
+                )
+            ),
+        ] = None,
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
+        include_calls: Annotated[
+            bool,
+            Field(
+                description=(
+                    "true: calls = the complete pricing result of every reprice (replayable "
+                    "requests). false (default): base_request once plus per reprice its NPV, the "
+                    "quotes moved and a request_diff against the base."
+                )
+            ),
+        ] = False,
     ) -> ToolResult:
-        """Key-rate DV01 ladder: one bump per pillar of a curve, plus a parallel bump.
-
-        Args:
-            market, trade, bump_bp, method, as_of: as in swap_dv01.
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            curve: id of the curve whose pillars are the buckets (default: the trade's
-                discounting curve). Buckets are that curve's ACTUAL points in wire order.
-
-        Result: ``ladder`` = ordered ``[{pillar, quote_from, quote_up / quote_down,
-        npv_up / npv_down, dv01}]``, ``parallel`` (all pillars bumped together),
-        ``sum_of_buckets`` (sum of the ladder dv01s), ``definitions`` (the exact difference
-        per method) and ``calls`` = base + parallel + one complete pricing result per pillar
-        and side (centered: 1 + 2 + 2 x pillars calls). Reprices run concurrently, bounded by
-        ``QUANTRA_MAX_CONCURRENCY``.
+        """Key-rate DV01 ladder: one bump per pillar of a curve plus a parallel bump, each repriced
+        through the swap's pricing tool. Result: ``ladder`` = [{pillar, quote_from, quote_up /
+        quote_down, npv_up / npv_down, dv01}] in wire order, ``parallel`` (all pillars
+        together), ``sum_of_buckets``, ``definitions`` (the exact difference per method), then
+        ``calls`` (include_calls) or ``base_request`` + ``reprices``. Reprices run concurrently,
+        bounded by QUANTRA_MAX_CONCURRENCY.
         """
         return stamp(
             await key_rate_ladder_impl(
@@ -860,34 +981,85 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
 
     @tool(app, "Scenario reprices of a swap", engine=True)
     async def scenario(
-        market: Market,
-        market_data_source: MarketDataSource,
-        trade: SwapSpec,
-        scenarios: list[Scenario],
-        as_of: str | None = None,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
-        include_calls: bool = False,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        trade: Annotated[
+            SwapSpec,
+            Field(
+                description=(
+                    "The swap to reprice: product (vanilla_swap | ois_swap), preset, "
+                    "discounting_curve, forwarding_curve and the pricing tool's economics "
+                    "(swap_type, notional, fixed_rate, effective_date 'spot' | date, tenor | "
+                    "termination_date, spread, index_id, overrides, OIS overnight parameters)."
+                )
+            ),
+        ],
+        scenarios: Annotated[
+            list[Scenario],
+            Field(
+                description=(
+                    "[{name, bumps: [{curve, bp, pillar?}], replace_quotes: [{curve, pillar, "
+                    "value}]}]; a bump without pillar moves every pillar of that curve; pillar is "
+                    "a label ('5Y', '3x6') or a 0-based index; replace_quotes sets a pillar's "
+                    "quote to an explicit value."
+                )
+            ),
+        ],
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
+        include_calls: Annotated[
+            bool,
+            Field(
+                description=(
+                    "true: calls = the complete pricing result of every reprice (replayable "
+                    "requests). false (default): base_request once plus per reprice its NPV, the "
+                    "quotes moved and a request_diff against the base."
+                )
+            ),
+        ] = False,
     ) -> ToolResult:
-        """Reprice a swap under named market variants and tabulate NPV vs base.
-
-        Args:
-            market, trade, as_of: as in swap_dv01.
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            scenarios: ``[{name, bumps: [{curve, bp, pillar?}], replace_quotes:
-                [{curve, pillar, value}]}]``. A bump without ``pillar`` moves every pillar
-                of that curve; ``pillar`` is a label (``"5Y"``, ``"3x6"``) or a 0-based
-                index; ``replace_quotes`` sets a pillar's quote to an explicit value.
-
-        Result: ``table`` = ``[{name, npv, change = npv - base_npv, edits}]`` starting with
-        ``base``; ``calls`` = one complete pricing result per row with the quotes moved.
+        """Reprice a swap under named market variants and tabulate NPV against the base. Result:
+        ``table`` = [{name, npv, change = npv - base_npv, edits}] starting with base,
+        ``definitions``, then ``calls`` (include_calls) or ``base_request`` + ``reprices`` with
+        each row's request_diff.
         """
         return stamp(
             await scenario_impl(
@@ -907,29 +1079,64 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
 
     @tool(app, "Fair rate of a swap (engine output)", engine=True)
     async def fair_rate(
-        market: Market,
-        market_data_source: MarketDataSource,
-        trade: SwapSpec,
-        as_of: str | None = None,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        market: Annotated[
+            Market,
+            Field(
+                description=(
+                    'The market: {"session": name} (a stored market or curve), an engine pricing '
+                    "block (anything with as_of_date; used verbatim) or {curves: [...], indices: "
+                    "[...]} of build_curve results / TermStructure objects, plus optional "
+                    "swap_indices, coupon_pricers, vol_surfaces, models, credit_curves, quotes, "
+                    "equity_underlyings, inflation_indices, inflation_curves, options."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        trade: Annotated[
+            SwapSpec,
+            Field(
+                description=(
+                    "The swap to reprice: product (vanilla_swap | ois_swap), preset, "
+                    "discounting_curve, forwarding_curve and the pricing tool's economics "
+                    "(swap_type, notional, fixed_rate, effective_date 'spot' | date, tenor | "
+                    "termination_date, spread, index_id, overrides, OIS overnight parameters)."
+                )
+            ),
+        ],
+        as_of: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Valuation date YYYY-MM-DD (pricing.as_of_date); required unless market is a "
+                    "pricing block, which carries its own."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """The engine's fair (par) rate of a swap, read from the pricing response.
-
-        Args:
-            market, trade, as_of: as in swap_dv01.
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-
-        Result: ``fair_rate`` / ``fair_spread`` exactly as the engine returned them (plus
-        ``npv``); when the response carries neither, ``provided_by_engine`` is false and
-        ``message`` says so (nothing is solved locally). ``calls[0]`` is the pricing.
+        """The engine's fair (par) rate of a swap, read from the pricing response: ``fair_rate`` /
+        ``fair_spread`` exactly as returned (plus ``npv``); when the response carries neither,
+        ``provided_by_engine`` is false and ``message`` says so (nothing is solved locally).
+        ``calls[0]`` is the pricing.
         """
         return stamp(
             await fair_rate_impl(

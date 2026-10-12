@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import copy
 import re
-from typing import Any
+from typing import Annotated, Any
 
 from mcp.server.mcpserver import MCPServer
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -587,68 +587,99 @@ async def reprice_with_impl(
 
 def register(app: MCPServer, backend: Backend) -> None:
     @tool(app, "Compare an external number with a result", engine=False)
-    def compare_results(external: dict[str, Any], quantra: dict[str, Any]) -> dict[str, Any]:
-        """Put the user's numbers next to the engine's (no engine call, no modelling).
-
-        Args:
-            external: ``{label: number}`` as the user quoted them, e.g.
-                ``{"NPV": 10359.49, "DV01": 415.5, "fair rate": 0.0337}``. Labels are
-                matched case- and punctuation-insensitively to response fields
-                (``npv`` / ``premium`` / ``PV`` -> ``npv``; ``DV01`` / ``PV01`` -> ``dv01``;
-                ``fair rate`` -> ``fair_rate`` then ``atm_forward``; ``vol`` ->
-                ``implied_volatility``, ...). Give the external numbers in the engine's
-                units (currency amounts; rates and vols as decimals).
-            quantra: a pricing tool result (its ``response`` is used) or the engine
-                response object itself. The first priced item is compared.
-
-        Returns ``rows`` = ``[{label, mapped_to, quantra_path, external, quantra,
-        abs_diff, rel_diff, topic, topic_uri}]`` with ``abs_diff = quantra - external``
-        and ``rel_diff = abs_diff / |external|``; ``unmapped`` for labels with no field;
-        ``mapping`` shows the candidates tried. ``topic`` is the methodology page
-        (``explain_method``) to consult for that metric.
+    def compare_results(
+        external: Annotated[
+            dict[str, Any],
+            Field(
+                description="{label: number} as the user quoted them, e.g. {'NPV': 10359.49, "
+                "'DV01': 415.5, 'fair rate': 0.0337}; labels are matched case- and "
+                "punctuation-insensitively to response fields (npv / premium / PV -> npv; "
+                "DV01 / PV01 -> dv01; fair rate -> fair_rate then atm_forward; vol -> "
+                "implied_volatility). Give the numbers in the engine's units (currency "
+                "amounts; rates and vols as decimals)."
+            ),
+        ],
+        quantra: Annotated[
+            dict[str, Any],
+            Field(
+                description="A pricing tool result (its response is used) or the engine "
+                "response object itself; the first priced item is compared."
+            ),
+        ],
+    ) -> dict[str, Any]:
+        """Put the user's numbers next to the engine's (no engine call, no modelling). Returns
+        ``rows`` = [{label, mapped_to, quantra_path, external, quantra, abs_diff, rel_diff,
+        topic, topic_uri}] with abs_diff = quantra - external and rel_diff = abs_diff /
+        |external|; ``unmapped`` for labels with no field; ``mapping`` shows the candidates
+        tried; ``topic`` is the methodology page (explain_method) to consult for that metric.
         """
         return compare_results_impl(external, quantra)
 
     @tool(app, "Edit an echoed request and reprice", engine=True)
     async def reprice_with(
-        result_or_request: dict[str, Any],
-        changes: list[FieldChange],
-        market_data_source: MarketDataSource | None = None,
-        reprice_base: bool = False,
-        validate: bool = True,
-        request_id: str | None = None,
+        result_or_request: Annotated[
+            dict[str, Any],
+            Field(
+                description=(
+                    "A previous pricing tool result (its endpoint and echoed request are used; "
+                    'its response is the base unless reprice_base) or an explicit {"endpoint": '
+                    '"/price-swaption", "body": {...}}.'
+                )
+            ),
+        ],
+        changes: Annotated[
+            list[FieldChange],
+            Field(
+                description=(
+                    "[{path, value}] or [{path, bump_bp}]; path is dotted / indexed into the "
+                    "request body (swaptions[0].swaption.settlement_method, "
+                    "pricing.rates.curves[0].points[2].point.rate, pricing.as_of_date); bump_bp "
+                    "adds bump_bp / 10000 to a numeric field."
+                )
+            ),
+        ],
+        market_data_source: Annotated[
+            MarketDataSource | None,
+            Field(
+                description=(
+                    "Where the request's market numbers come from (user_pasted | user_file | "
+                    "engine_example | session; rule: quantra://guide/developers). A previous tool "
+                    "result carries its own declaration, reused (the argument may be omitted or "
+                    "must agree); for an explicit {endpoint, body} it is required. There is no "
+                    "value for estimated, recalled or placeholder data; if you would have to "
+                    "invent numbers, do not call this tool: ask the user for the data."
+                )
+            ),
+        ] = None,
+        reprice_base: Annotated[
+            bool,
+            Field(
+                description=(
+                    "Also reprice the unchanged request now (default: reuse the given result's "
+                    "response)."
+                )
+            ),
+        ] = False,
+        validate: Annotated[
+            bool,
+            Field(description="Check the changed body against the vendored schema before sending."),
+        ] = True,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> dict[str, Any]:
-        """Test a hypothesis: change one or more request fields and reprice.
-
-        Args:
-            result_or_request: a previous pricing tool result (its ``endpoint`` and echoed
-                ``request`` are used; its ``response`` is the base unless
-                ``reprice_base``), or an explicit ``{"endpoint": "/price-swaption",
-                "body": {...}}``.
-            market_data_source: where the market numbers in the request come from. A previous
-                tool result carries its own declaration and it is reused (the argument may be
-                omitted or must agree); for an explicit ``{endpoint, body}`` or a result without
-                one it is required: ``user_pasted`` (the user pasted or typed the numbers in
-                this conversation), ``user_file`` (the user attached a file/screenshot the
-                numbers were read from), ``engine_example`` (an engine example's pricing block,
-                only when the user explicitly asked to run an example), ``session`` (a market
-                previously stored in this session, which itself came from one of the above).
-                There is no value for estimated, recalled or placeholder data. If you would have
-                to invent numbers, do not call this tool: ask the user for the data.
-            changes: ``[{path, value}]`` or ``[{path, bump_bp}]``; ``path`` is dotted /
-                indexed into the request body (``swaptions[0].swaption.settlement_method``,
-                ``pricing.rates.curves[0].points[2].point.rate``, ``pricing.as_of_date``,
-                ``pricing.rates.curves[0].interpolator``). ``bump_bp`` adds
-                ``bump_bp / 10000`` to a numeric field.
-            reprice_base: also reprice the unchanged request now (default: reuse the
-                given result's response).
-            validate: check the changed body against the vendored schema before sending.
-
-        Returns ``changes_applied`` (before / after per change), ``request_diff`` (every
-        leaf that differs between the two requests), ``base`` and ``changed`` (complete
-        uniform results, each replayable from its ``request``) and ``differences``: the
-        numeric top-level fields of the first priced item with ``difference = changed -
-        base``. Nothing else is computed. The engine's error, if any, is verbatim.
+        """Test a hypothesis: change one or more fields of an echoed request and reprice. Returns
+        ``changes_applied`` (before / after per change), ``request_diff`` (every leaf that
+        differs between the two requests), ``base`` and ``changed`` (complete uniform results,
+        each replayable from its request) and ``differences``: the numeric top-level fields of
+        the first priced item with difference = changed - base. Nothing else is computed; the
+        engine's error, if any, is verbatim.
         """
         return await reprice_with_impl(
             backend,

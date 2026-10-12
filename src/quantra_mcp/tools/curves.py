@@ -32,7 +32,7 @@ from quantra_mcp.schema.enums_generated import (
 )
 from quantra_mcp.schema.validate import validate_component, validate_request
 from quantra_mcp.session import ScratchStore, resolve_refs
-from quantra_mcp.tools._market_source import MarketDataSource, stamp
+from quantra_mcp.tools._market_source import SOURCE_DESCRIPTION, MarketDataSource, stamp
 from quantra_mcp.tools._meta import tool
 from quantra_mcp.tools._result import ToolResult, local_error_result, new_request_id, run_post
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
@@ -331,43 +331,52 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Curve spec from a quote strip (no engine call)", engine=False)
     def build_curve(
-        id: str,
-        preset: str,
-        quotes: list[cb.CurveQuote],
-        reference_date: str,
-        market_data_source: MarketDataSource,
-        trait: BootstrapTrait | None = None,
-        interpolator: Interpolator | None = None,
-        day_counter: DayCounter | None = None,
+        id: Annotated[str, Field(description="Curve id to register, e.g. USD_SOFR_OIS.")],
+        preset: Annotated[
+            str,
+            Field(
+                description=(
+                    "Preset id (preset() lists them); supplies the index definition and every "
+                    "helper convention."
+                )
+            ),
+        ],
+        quotes: Annotated[
+            list[cb.CurveQuote],
+            Field(
+                description=(
+                    "[{type: deposit|fra|future|swap|ois, tenor: '6M', rate: 0.052}, ...]; fra: "
+                    "months_to_start / months_to_end; future: future_start_date + price or rate. "
+                    "Sorted by maturity; a duplicate (type, tenor) is rejected."
+                )
+            ),
+        ],
+        reference_date: Annotated[
+            str,
+            Field(
+                description="Curve date YYYY-MM-DD (normally the pricing as_of).",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        trait: Annotated[
+            BootstrapTrait | None,
+            Field(
+                description="Override the preset's bootstrap trait: Discount, ZeroRate or FwdRate."
+            ),
+        ] = None,
+        interpolator: Annotated[
+            Interpolator | None, Field(description="Override the preset's interpolator.")
+        ] = None,
+        day_counter: Annotated[
+            DayCounter | None, Field(description="Override the preset's curve day counter.")
+        ] = None,
     ) -> ToolResult:
-        """Turn a quote strip into an engine curve spec (no engine call).
-
-        Args:
-            id: curve id to register, e.g. ``USD_SOFR_OIS``.
-            preset: a preset id from ``list_presets``; supplies the index
-                definition and every helper convention.
-            quotes: ``[{type: deposit|fra|future|swap|ois, tenor: "6M", rate: 0.052}, ...]``
-                (fra: ``months_to_start``/``months_to_end``; future:
-                ``future_start_date`` + ``price`` or ``rate``). Sorted by
-                maturity; a duplicate (type, tenor) is rejected locally.
-            reference_date: ``YYYY-MM-DD`` curve date (normally the pricing as_of).
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            trait: override the preset's bootstrap trait (``Discount``,
-                ``ZeroRate``, ``FwdRate``).
-            interpolator: override the preset's interpolator.
-            day_counter: override the preset's curve day counter.
-
-        Returns ``{ok, curve, indices, preset, notes}``: ``curve`` is the
-        ``TermStructure`` and ``indices`` the ``IndexDef`` list to pass to
-        ``bootstrap_curve`` (or to ``session_put``); ``notes`` lists every
-        default applied with its source. Nothing is priced here.
+        """Turn a quote strip into an engine curve spec (no engine call). Returns ``{ok, curve,
+        indices, preset, notes, digest}``: ``curve`` is the TermStructure and ``indices`` the
+        IndexDef list to pass to bootstrap_curve, a pricing tool's market or session_put;
+        ``notes`` lists every default applied with its source; ``digest`` is the sha256 of the
+        canonical curve + indices JSON (pricing tools recognise it). Nothing is priced here.
         """
         return stamp(
             build_curve_impl(id, preset, quotes, reference_date, trait, interpolator, day_counter),
@@ -376,44 +385,66 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Curve spec from explicit values (no engine call)", engine=False)
     def build_value_curve(
-        id: str,
-        kind: cb.ValueKind,
-        points: list[cb.ValuePoint],
-        reference_date: str,
-        market_data_source: MarketDataSource,
-        preset: str | None = None,
-        conventions: cb.ValueCurveConventions | None = None,
-        compounding: Compounding | None = None,
-        frequency: Frequency | None = None,
-        interpolator: Interpolator | None = None,
+        id: Annotated[str, Field(description="Curve id.")],
+        kind: Annotated[
+            cb.ValueKind,
+            Field(
+                description=(
+                    "zero (InterpolatedZero), discount (InterpolatedDiscount: first point = "
+                    "reference date with value 1.0) or forward (InterpolatedFwd, instantaneous "
+                    "continuous forwards; Linear / BackwardFlat / ForwardFlat only)."
+                )
+            ),
+        ],
+        points: Annotated[
+            list[cb.ValuePoint],
+            Field(
+                description=(
+                    "[{date: '2026-01-15', value: 0.96}, {tenor: '2Y', value: ...}] in order; the "
+                    "engine anchors the curve at the first point."
+                )
+            ),
+        ],
+        reference_date: Annotated[
+            str, Field(description="Curve date YYYY-MM-DD.", pattern="^\\d{4}-\\d{2}-\\d{2}$")
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        preset: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Take the curve day counter and the points' calendar / convention from this "
+                    "preset; or give conventions."
+                )
+            ),
+        ] = None,
+        conventions: Annotated[
+            cb.ValueCurveConventions | None,
+            Field(
+                description=(
+                    "{day_counter, calendar, business_day_convention} when no preset is given."
+                )
+            ),
+        ] = None,
+        compounding: Annotated[
+            Compounding | None,
+            Field(
+                description=(
+                    "Zero points only: their compounding (default Continuous; all points share it)."
+                )
+            ),
+        ] = None,
+        frequency: Annotated[
+            Frequency | None,
+            Field(description="Zero points only: their compounding frequency (default Annual)."),
+        ] = None,
+        interpolator: Annotated[
+            Interpolator | None,
+            Field(description="Default Linear (zero, forward) or LogLinear (discount)."),
+        ] = None,
     ) -> ToolResult:
-        """An interpolated curve from explicit values (no engine call).
-
-        Args:
-            id: curve id.
-            kind: ``zero`` (InterpolatedZero), ``discount`` (InterpolatedDiscount:
-                first point must be the reference date with value 1.0) or
-                ``forward`` (InterpolatedFwd: instantaneous continuously-compounded
-                forwards; Linear/BackwardFlat/ForwardFlat only).
-            points: ``[{date: "2026-01-15", value: 0.96}, {tenor: "2Y", value: ...}]``
-                in order; the engine anchors the curve at the first point.
-            reference_date: ``YYYY-MM-DD``.
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            preset: take the curve day counter and point calendar/convention
-                from this preset; or give ``conventions`` explicitly.
-            conventions: ``{day_counter, calendar, business_day_convention}``.
-            compounding, frequency: zero points only (default Continuous /
-                Annual; all points share them).
-            interpolator: default Linear (zero, forward) or LogLinear (discount).
-
-        Returns ``{ok, curve, indices: [], preset, notes}``.
+        """An interpolated curve from explicit zero rates, discount factors or forwards (no engine
+        call). Returns ``{ok, curve, indices: [], preset, notes, digest}``.
         """
         return stamp(
             build_value_curve_impl(
@@ -432,61 +463,101 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Curve spec from a pasted table (no engine call)", engine=False)
     def curve_from_pasted_table(
-        text: str,
-        id: str,
-        kind: Literal["discount", "zero", "par"],
-        market_data_source: MarketDataSource,
-        preset: str | None = None,
-        reference_date: str | None = None,
-        conventions: cb.ValueCurveConventions | None = None,
-        quote_type: HelperType | None = None,
-        percent: bool | None = None,
-        date_format: Literal["iso", "mdy", "dmy"] | None = None,
-        compounding: Compounding | None = None,
-        frequency: Frequency | None = None,
-        interpolator: Interpolator | None = None,
+        text: Annotated[
+            str,
+            Field(
+                description=(
+                    "The pasted rows: CSV / TSV / ';' / '|' / whitespace separated, header "
+                    "optional. Each row: a date (2034-09-18, 18-Sep-2034, 09/18/2034 with "
+                    "date_format) or a tenor (10Y), then the value; '%' values are divided by "
+                    "100, thousands separators dropped; an optional word per row (ois, swap, "
+                    "deposit) tags a par quote's type."
+                )
+            ),
+        ],
+        id: Annotated[str, Field(description="Curve id to register.")],
+        kind: Annotated[
+            Literal["discount", "zero", "par"],
+            Field(
+                description=(
+                    "discount (discount factors -> InterpolatedDiscount), zero (zero rates -> "
+                    "InterpolatedZero) or par (market quotes -> the preset's bootstrap helpers)."
+                )
+            ),
+        ],
+        market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        preset: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Supplies the curve day counter and the points' calendar / convention; "
+                    "required for par; or give conventions."
+                )
+            ),
+        ] = None,
+        reference_date: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "The curve / as-of date YYYY-MM-DD; for discount it may be omitted when the "
+                    "first row is that date with value 1.0."
+                ),
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ] = None,
+        conventions: Annotated[
+            cb.ValueCurveConventions | None,
+            Field(
+                description=(
+                    "{day_counter, calendar, business_day_convention} when no preset is given."
+                )
+            ),
+        ] = None,
+        quote_type: Annotated[
+            HelperType | None,
+            Field(
+                description=(
+                    "Par tables only: the helper type when the rows do not name one and the "
+                    "preset offers several."
+                )
+            ),
+        ] = None,
+        percent: Annotated[
+            bool | None,
+            Field(
+                description=(
+                    "true: every value is a percentage; default: only values written with '%'."
+                )
+            ),
+        ] = None,
+        date_format: Annotated[
+            Literal["iso", "mdy", "dmy"] | None,
+            Field(
+                description=(
+                    "mdy or dmy for slash dates; inferred when a field exceeds 12, otherwise "
+                    "required."
+                )
+            ),
+        ] = None,
+        compounding: Annotated[
+            Compounding | None,
+            Field(description="Zero tables only: the zeros' compounding (default Continuous)."),
+        ] = None,
+        frequency: Annotated[
+            Frequency | None,
+            Field(description="Zero tables only: the zeros' frequency (default Annual)."),
+        ] = None,
+        interpolator: Annotated[
+            Interpolator | None, Field(description="Override the builder default.")
+        ] = None,
     ) -> ToolResult:
-        """A curve from a table the user pasted (a vendor curve screen, a spreadsheet,
-        a ticket): parses it and calls build_value_curve (discount / zero) or
-        build_curve (par quotes). No engine call; no arithmetic on the values.
-
-        Args:
-            text: the pasted rows. CSV / TSV / ';' / '|' / whitespace separated, header
-                optional. Each row: a date (``2034-09-18``, ``18-Sep-2034``,
-                ``09/18/2034`` with ``date_format``) or a tenor (``10Y``), then the
-                value. ``%`` values are divided by 100; ``1,000.5`` loses its commas.
-                An optional word per row (``ois``, ``swap``, ``deposit``) tags a par
-                quote's type.
-            id: curve id to register.
-            kind: ``discount`` (discount factors -> InterpolatedDiscount), ``zero``
-                (zero rates -> InterpolatedZero) or ``par`` (market quotes -> bootstrap
-                helpers of the preset).
-            market_data_source: where the market numbers in this call come from. ``user_pasted``
-                (the user pasted or typed the numbers in this conversation), ``user_file`` (the
-                user attached a file/screenshot the numbers were read from), ``engine_example``
-                (an engine example's pricing block, only when the user explicitly asked to run
-                an example), ``session`` (a market previously stored in this session, which
-                itself came from one of the above). There is no value for estimated, recalled or
-                placeholder data. If you would have to invent numbers, do not call this tool:
-                ask the user for the data.
-            preset: supplies the curve day counter and point calendar/convention
-                (``USD_SOFR_OIS``...); required for ``par``; or give ``conventions``.
-            reference_date: the curve / as-of date. For ``discount`` it may be omitted
-                when the first row is that date with value 1.0.
-            quote_type: par tables only: the helper type when the rows do not name one
-                and the preset offers several.
-            percent: ``true`` = every value is a percentage; default: only values
-                written with ``%``.
-            date_format: ``mdy`` / ``dmy`` for slash dates; inferred when a field exceeds
-                12, otherwise required.
-            compounding, frequency: zero tables only (default Continuous / Annual).
-            interpolator: override the builder default.
-
-        Returns the builder result (``{ok, curve, indices, preset, notes}``) plus
-        ``parsed_rows`` (line, label, value as read), ``unparsed`` (line, text,
-        reason) and ``header``. For a discount table whose first row is not the
-        reference date, the anchor point ``{reference_date: 1.0}`` the engine
-        requires is added in front and said so in ``notes``.
+        """A curve from a table the user pasted (a vendor curve screen, a spreadsheet, a ticket):
+        parses it and calls build_value_curve (discount / zero) or build_curve (par quotes). No
+        engine call; no arithmetic on the values. Returns the builder result (``{ok, curve,
+        indices, preset, notes, digest}``) plus ``parsed_rows`` (line, label, value as read),
+        ``unparsed`` (line, text, reason) and ``header``. For a discount table whose first row
+        is not the reference date, the anchor point {reference_date: 1.0} the engine requires is
+        added in front and said so in ``notes``.
         """
         return stamp(
             curve_from_pasted_table_impl(
@@ -508,60 +579,111 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Curve query spec (no engine call)", engine=False)
     def build_query(
-        curve_id: str,
-        measures: list[cb.Measure],
-        tenors: list[str | dict[str, Any]] | None = None,
-        range_grid: cb.RangeGrid | None = None,
-        calendar: Calendar | None = None,
-        business_day_convention: BusinessDayConvention | None = None,
-        zero: cb.ZeroQuery | None = None,
-        fwd: cb.FwdQuery | None = None,
+        curve_id: Annotated[str, Field(description="The curve to sample.")],
+        measures: Annotated[list[cb.Measure], Field(description="Any of DF, ZERO, FWD.")],
+        tenors: Annotated[
+            list[str | dict[str, Any]] | None,
+            Field(
+                description=(
+                    "TenorGrid, e.g. ['1M', '6M', '1Y', '5Y', '10Y']; needs calendar + "
+                    "business_day_convention to roll each tenor."
+                )
+            ),
+        ] = None,
+        range_grid: Annotated[
+            cb.RangeGrid | None,
+            Field(
+                description=(
+                    "RangeGrid alternative: {end_date, step_number, step_time_unit, start_date?, "
+                    "business_days_only?, calendar?, ...}."
+                )
+            ),
+        ] = None,
+        calendar: Annotated[
+            Calendar | None, Field(description="Calendar used to roll the tenors.")
+        ] = None,
+        business_day_convention: Annotated[
+            BusinessDayConvention | None, Field(description="Convention used to roll the tenors.")
+        ] = None,
+        zero: Annotated[
+            cb.ZeroQuery | None,
+            Field(
+                description=(
+                    "Options for ZERO (default: continuous, annual, the curve's day counter)."
+                )
+            ),
+        ] = None,
+        fwd: Annotated[
+            cb.FwdQuery | None,
+            Field(
+                description=(
+                    "Required when FWD is requested: forward_type Period + tenor, or "
+                    "Instantaneous + eps; compounding; frequency."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """A ``CurveQuerySpec`` for ``bootstrap_curve`` (no engine call).
-
-        Args:
-            curve_id: the curve to sample.
-            measures: any of ``DF``, ``ZERO``, ``FWD``.
-            tenors: TenorGrid, e.g. ``["1M", "6M", "1Y", "5Y", "10Y"]``; needs
-                ``calendar`` + ``business_day_convention`` to roll each tenor.
-            range_grid: RangeGrid alternative ``{end_date, step_number,
-                step_time_unit, start_date?, business_days_only?, calendar?, ...}``.
-            zero: options for ZERO (default: continuous, annual, curve day counter).
-            fwd: required when FWD is requested (``forward_type`` Period + tenor,
-                or Instantaneous + eps; compounding; frequency).
-
-        Returns ``{ok, query, notes}``.
-        """
+        """A CurveQuerySpec for bootstrap_curve (no engine call). Returns ``{ok, query, notes}``."""
         return build_query_impl(
             curve_id, measures, tenors, range_grid, calendar, business_day_convention, zero, fwd
         )
 
     @tool(app, "Bootstrap and sample curves (POST /bootstrap-curves)", engine=True)
     async def bootstrap_curve(
-        curves: list[dict[str, Any]],
-        as_of: str,
-        queries: list[dict[str, Any]],
-        indices: list[dict[str, Any]] | None = None,
-        calendar_overrides: list[CalendarOverride] | None = None,
-        request_id: str | None = None,
+        curves: Annotated[
+            list[dict[str, Any]],
+            Field(
+                description=(
+                    'TermStructure objects, build_curve results ({curve, indices}) or {"session": '
+                    "name} references to a stored curve or market."
+                )
+            ),
+        ],
+        as_of: Annotated[
+            str,
+            Field(
+                description="Valuation date YYYY-MM-DD (pricing.as_of_date).",
+                pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            ),
+        ],
+        queries: Annotated[
+            list[dict[str, Any]],
+            Field(description="CurveQuerySpec objects or build_query results."),
+        ],
+        indices: Annotated[
+            list[dict[str, Any]] | None,
+            Field(
+                description=(
+                    'Extra IndexDef objects or {"session": name} refs; indices carried by '
+                    "build_curve results are added automatically. Identical duplicates are sent "
+                    "once; conflicting ids are rejected."
+                )
+            ),
+        ] = None,
+        calendar_overrides: Annotated[
+            list[CalendarOverride] | None,
+            Field(
+                description=(
+                    "Per-request holiday corrections (engine >= 0.7.0): [{calendar, "
+                    "added_holidays?, removed_holidays?}]; applies to curve helpers, indices and "
+                    "schedules alike."
+                )
+            ),
+        ] = None,
+        request_id: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "X-Request-Id to forward; generated when absent and reported in "
+                    "engine.request_id."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
-        """Bootstrap curves on the engine and sample them (POST /bootstrap-curves).
-
-        Args:
-            curves: items are ``TermStructure`` objects, ``build_curve`` results
-                (``{curve, indices}``) or ``{"session": "<name>"}`` references
-                to a stored ``curve`` or ``market``.
-            as_of: ``YYYY-MM-DD`` valuation date (``pricing.as_of_date``).
-            queries: ``CurveQuerySpec`` objects or ``build_query`` results.
-            indices: extra ``IndexDef`` objects or ``{"session": name}`` refs;
-                indices carried by build_curve results are added automatically.
-                Identical duplicates are sent once; conflicting ids are rejected.
-            calendar_overrides: per-request holiday corrections (engine >= 0.7.0).
-            request_id: optional ``X-Request-Id``.
-
-        The echoed ``request`` is the fully RESOLVED body. ``summary`` lists per
-        curve ``{id, pillars, first_grid_date, last_grid_date, measures}``; the
-        sampled values are in ``response.results[].series``.
+        """Bootstrap curves on the engine and sample them (POST /bootstrap-curves). The echoed
+        ``request`` is the fully resolved body; ``summary`` lists per curve {id, pillars,
+        first_grid_date, last_grid_date, measures}; the sampled values are in
+        ``response.results[].series``.
         """
         return await bootstrap_curve_impl(
             backend, store, curves, as_of, queries, indices, calendar_overrides, request_id
