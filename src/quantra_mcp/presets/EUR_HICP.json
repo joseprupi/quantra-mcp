@@ -1,6 +1,6 @@
 {
   "id": "EUR_HICP",
-  "description": "EUR HICP inflation swap and cap/floor conventions: 3M observation lag, Linear CPI interpolation, Actual365Fixed, TARGET ModifiedFollowing; the ZCIIS inflation leg uses NullCalendar / Following with adjust_observation_dates false; YoY swaps and caps pay annually. Base CPI / YoY fixings are a required argument of the tools (the engine needs the fixing at start minus the observation lag and the server has no market-data source).",
+  "description": "EUR HICP inflation swap and cap/floor conventions: 3M observation lag, Linear CPI interpolation, Actual365Fixed, TARGET ModifiedFollowing; the ZCIIS inflation leg uses NullCalendar / Following with adjust_observation_dates false; YoY swaps and caps pay annually. Base CPI / YoY fixings are a required argument of the tools (the engine needs the fixing at start minus the observation lag and the server has no market-data source). Linear CPI interpolation is the fixture's choice; many EUR HICP zero-coupon swaps are quoted with flat (monthly, unadjusted) indexation. Confirm against the trade terms; the raw engine_request accepts the interpolation (observation_interpolation) as a field.",
   "currency": "EUR",
   "provenance": "engine fixture (quantraserver v0.7.0) examples/data/inflation/zciis_eur_5y_payer_linear_obs.json (zc_inflation_swap), inflation/yyiis_eur_5y_payer_annual.json (yoy_inflation_swap), inflation_cap_floor/yoy_cf_eur_5y_cap_150bp_black_bites.json (yoy_inflation_cap_floor)",
   "trades": {

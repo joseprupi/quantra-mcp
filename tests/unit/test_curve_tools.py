@@ -72,13 +72,14 @@ async def test_presets_tools_and_resources(app: Any) -> None:
         res = await c.read_resource("quantra://presets/USD_SOFR_OIS")
         with pytest.raises(Exception, match="unknown preset"):
             await c.read_resource("quantra://presets/NOPE")
-    assert lst["ok"] and [p["id"] for p in lst["presets"]][-1] == "USD_SOFR_OIS"
+    ids = [p["id"] for p in lst["presets"]]
+    assert lst["ok"] and ids[-1] == "US_TREASURY" and "USD_SOFR_OIS" in ids  # sorted by id
     assert one["ok"] and one["preset"]["helpers"]["ois"]["payment_lag"] == 1
     assert one["preset"]["field_provenance"]["helpers.ois.payment_lag"].startswith(
         "market standard"
     )
     assert bad["ok"] is False and "USD_SOFR_OIS" in bad["error"]
-    assert json.loads(idx.contents[0].text)["presets"][0]["uri"] == "quantra://presets/EUR_CDS"  # type: ignore[union-attr]
+    assert json.loads(idx.contents[0].text)["presets"][0]["uri"] == "quantra://presets/DE_BUND"  # type: ignore[union-attr]
     assert json.loads(res.contents[0].text)["index"]["id"] == "USD_SOFR"  # type: ignore[union-attr]
 
 
@@ -342,3 +343,29 @@ async def test_build_value_curve_and_inflation_passthrough(
     )
     assert any(p["path"] == "/pricing" for p in infl["problems"])
     assert all(m == "GET" for m, *_ in fake_backend.calls)  # nothing POSTed
+
+
+async def test_build_curve_tool_discount_curve_sets_deps_and_rejects_own_id(
+    app: Any, fake_backend: FakeBackend
+) -> None:
+    strip = STRIPS["EUR_EURIBOR_6M"]
+    args = {
+        "market_data_source": "user_pasted",
+        "id": "EUR_6M",
+        "preset": "EUR_EURIBOR_6M",
+        "quotes": strip["quotes"],
+        "reference_date": strip["reference_date"],
+    }
+    async with Client(app) as c:
+        dual = _s(await c.call_tool("build_curve", {**args, "discount_curve": "EUR_OIS"}))
+        plain = _s(await c.call_tool("build_curve", args))
+        own = _s(await c.call_tool("build_curve", {**args, "discount_curve": "EUR_6M"}))
+    assert dual["ok"] and plain["ok"]
+    assert all(method != "POST" for method, *_ in fake_backend.calls)  # no engine call
+    swaps = [pt for pt in dual["curve"]["points"] if pt["point_type"] == "SwapHelper"]
+    assert swaps and all(
+        pt["point"]["deps"] == {"discount_curve": {"id": "EUR_OIS"}} for pt in swaps
+    )
+    assert all("deps" not in pt["point"] for pt in plain["curve"]["points"])
+    assert dual["digest"] != plain["digest"]  # a different wire fragment
+    assert own["ok"] is False and "is the curve being built" in own["error"]

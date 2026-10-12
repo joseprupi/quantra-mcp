@@ -60,6 +60,26 @@ SCHED_PARSER_CPP = "src/parsers/schedule_parser.cpp"
 ENGINE_REPO_URL = "https://github.com/joseprupi/quantraserver"
 CONNECTOR_REPO_URL = "https://github.com/joseprupi/quantra-mcp"
 
+#: Engine lines the connector page refers to by hand (the connector page is generated
+#: from THIS tree without the engine checkout). Line numbers verified at the pin by
+#: ``git show``; ``tests/unit/test_methodology.py`` re-checks them when the engine
+#: repository is available, so a pin bump that moves them fails the gate.
+ENGINE_PIN_TAG = "v0.7.0"
+
+
+def _engine_ref(path: str, line: int) -> dict[str, str]:
+    return {
+        "path": path,
+        "line": str(line),
+        "ref": f"{path}@{ENGINE_PIN_TAG}:L{line}-L{line}",
+        "url": f"{ENGINE_REPO_URL}/blob/{ENGINE_PIN_TAG}/{path}#L{line}",
+    }
+
+
+ENGINE_FILL_VANILLA = _engine_ref(VS_CPP, 243)  # out.fixedLegBps = swap->fixedLegBPS();
+ENGINE_FILL_OIS = _engine_ref(OIS_CPP, 126)  # out.fixedLegBps = swap->fixedLegBPS();
+ENGINE_FILL_FBS = _engine_ref(VS_RESP_FBS, 41)  # fixed_leg_bps:double;
+
 # this server's own source (the connector-analytics page cites the working tree)
 BUMPS_PY = "src/quantra_mcp/builders/bumps.py"
 ANALYTICS_PY = "src/quantra_mcp/tools/analytics.py"
@@ -1124,6 +1144,11 @@ CONNECTOR_TOPIC: Topic = {
             "connector arithmetic: quantra - external; abs_diff / |external|",
         ),
         (
+            "`compare_results` rows labelled PV01 / BPV / annuity",
+            "engine output: mapped to `fixed_leg_bps` (the fixed leg's basis-point value the "
+            "engine returns), never to the connector's `dv01`",
+        ),
+        (
             "bumped quotes (`bumped_quotes`, `calls[*].edits`, `changes_applied`)",
             "connector "
             "edit of the request: quote + bump_bp / 10 000 (futures price - bump_bp / 100), or the "
@@ -1281,6 +1306,35 @@ CONNECTOR_TOPIC: Topic = {
                 r"row\[\"abs_diff\"\] = value - ext",
                 r"row\[\"rel_diff\"\] = \(value - ext\) / abs\(ext\) if ext != 0 else None",
             ),
+        ),
+        s(
+            "`compare_results` label synonyms: PV01 / BPV / annuity map to the engine's "
+            "`fixed_leg_bps`; DV01 / shifting / delta shift map to the connector's "
+            "bump-and-reprice `dv01` (the full table).",
+            c(RECONCILE_PY, r"^LABEL_SYNONYMS: dict\[str, list\[str\]\] = \{", r"^}$"),
+        ),
+    ],
+    "notes": [
+        (
+            "PV01 vs DV01",
+            "PV01 (also BPS, BPV, annuity) is the fixed leg's basis-point sensitivity the ENGINE "
+            "returns as `fixed_leg_bps`: QuantLib's `fixedLegBPS()` read off the swap object, "
+            "filled at `" + ENGINE_FILL_VANILLA["ref"] + "` (<" + ENGINE_FILL_VANILLA["url"] + ">) "
+            "for a fixed-vs-IBOR swap and at `"
+            + ENGINE_FILL_OIS["ref"]
+            + "` (<"
+            + ENGINE_FILL_OIS["url"]
+            + ">) for an OIS; the response field is declared at `"
+            + ENGINE_FILL_FBS["ref"]
+            + "` (<"
+            + ENGINE_FILL_FBS["url"]
+            + ">). DV01 is this "
+            "connector's bump-and-reprice number (`swap_dv01`, centered by default: two engine "
+            "NPVs 1bp apart on the curve quotes, halved). They are different quantities: PV01 "
+            "is the annuity of the fixed leg for a 1bp coupon change on fixed discount factors; "
+            "DV01 moves the curve. `compare_results` maps PV01 / BPV / annuity to "
+            "`fixed_leg_bps` and DV01 / shifting / delta shift to `dv01`; a vendor's PV01 must "
+            "be compared with `fixed_leg_bps`, not with `dv01`.",
         ),
     ],
     "gaps": [

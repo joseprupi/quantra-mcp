@@ -15,6 +15,7 @@ from quantra_mcp.presets.registry import (
 )
 
 EXPECTED = [
+    "DE_BUND",
     "EUR_CDS",
     "EUR_EQUITY",
     "EUR_ESTR_OIS",
@@ -24,7 +25,9 @@ EXPECTED = [
     "EUR_HICP",
     "GBP_SONIA_OIS",
     "GBP_SONIA_SWAP",
+    "UK_GILT",
     "USD_SOFR_OIS",
+    "US_TREASURY",
 ]
 CURVE_PRESETS = [
     "EUR_ESTR_OIS",

@@ -19,8 +19,25 @@ private repository or a filesystem path (a test enforces it).
 | `EUR_EURIBOR_6M` | `EURIBOR_6M` (Ibor 6M, TARGET, Act/360, MF, fixing 2) | deposit, fra, swap | deposits/FRAs with the Euribor conventions; swap Annual / 30/360 / MF on TARGET | index: `QuantLib::Euribor6M` (`ql/indexes/ibor/euribor.hpp` / `.cpp` at v1.41: 2 fixing days, TARGET, Act/360, MF and end-of-month for month tenors); swap fixed leg: market standard (ISDA/CCP), not from an in-repo source |
 | `EUR_EURIBOR_3M` | `EURIBOR_3M` (Ibor 3M, TARGET, Act/360, MF, fixing 2) | deposit, fra, future, swap | as above plus 3M futures (`future_months` 3, convexity adjustment stated) | as above; `future_months`: market standard (ISDA/CCP), not from an in-repo source |
 
-Bond presets (`UST_BOND`, `GILT_BOND`) are deferred: the `BondHelper`
-conventions are not fully sourced from an in-repo file yet.
+Under collateral (OIS) discounting an IBOR strip (`EUR_EURIBOR_6M`,
+`EUR_EURIBOR_3M`, `GBP_SONIA_SWAP`) is built with `build_curve(...,
+discount_curve=<the OIS curve id>)`: every swap / OIS helper then carries
+`deps.discount_curve` and the engine discounts its cashflows on that curve
+(dual-curve bootstrap); without it the helpers are self-discounted, as in the
+engine fixtures. Bond *curve* presets (`BondHelper` strips) are still deferred.
+
+Sovereign bond trade presets (M5.7), each a `fixed_rate_bond` block with a public
+source on every field (`field_provenance`); the day counter cites the QuantLib
+1.41 `ActualActual::ISMA` header as the engine's `ActualActualISMA`:
+
+| Preset | Conventions | Source |
+|---|---|---|
+| `DE_BUND` | Act/Act (ICMA) annual, Unadjusted, Backward from maturity, payment Following, T+2 on `Germany`, redemption 100, yield Act/Act ICMA Compounded Annual | Deutsche Finanzagentur, Federal bonds (https://www.deutsche-finanzagentur.de/en/federal-securities/types-of-federal-securities/federal-bonds); ICMA Rule 251 via the QuantLib header (no ICMA URL confirmed) |
+| `US_TREASURY` | Act/Act (ICMA) semiannual, Unadjusted, Backward, payment Following, T+1 on `UnitedStatesGovernmentBond`, redemption 100, yield Act/Act ICMA Compounded Semiannual | 31 CFR 356 Appendix B (https://www.law.cornell.edu/cfr/text/31/appendix-B_to_part_356) |
+| `UK_GILT` | Act/Act (ICMA) semiannual, Unadjusted, Backward, payment Following, T+1 on `UnitedKingdom`, redemption 100, yield Act/Act ICMA Compounded Semiannual | UK DMO, Formulae for Calculating Gilt Prices from Yields (https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf) |
+
+`payment_convention` (Following) and the settlement lag are market practice
+stated as such in the provenance, not fields of the cited documents.
 
 Presets also carry `trades` blocks, the conventions the pricing tools apply
 (schedule rules, leg frequencies and day counters, vol-surface base
@@ -33,7 +50,7 @@ sourced from a named engine fixture at the pin (`field_provenance`):
 | `EUR_EURIBOR_3M` | `vanilla_swap`, `fra`, `cap_floor` | `irs_eur_4y_payer_vs_euribor3m_quarterly`, `fra_eur_3x6_long_at_forward`, `cap_eur_5y_itm_strike_2pct` |
 | `USD_SOFR_OIS` | `ois_swap` (payment lag 2) | the SOFR post's OIS example; `ois_usd_3y_payer_sofr` with `payment_lag=0` |
 | `EUR_ESTR_OIS` | `ois_swap` (payment lag 0) | `ois_eur_5y_payer_estr` |
-| `EUR_FIXED_BOND` (trade-only) | `fixed_rate_bond`, `zero_coupon_bond`, `callable_fixed_rate_bond` | `frb_eur_5y_at_par_annual_30360`, `zcb_eur_10y_discount`, `cfrb_eur_8y_5pct_call_100_itm` |
-| `EUR_CDS` (trade-only) | `cds` (quarterly TwentiethIMM, MidPoint, recovery 40%) | `cds_eur_5y_buyer_100bp_spread_curve` |
+| `EUR_FIXED_BOND` (trade-only; the fixture's 30/360 annual conventions, not a sovereign) | `fixed_rate_bond`, `zero_coupon_bond`, `callable_fixed_rate_bond` | `frb_eur_5y_at_par_annual_30360`, `zcb_eur_10y_discount`, `cfrb_eur_8y_5pct_call_100_itm` |
+| `EUR_CDS` (trade-only; the fixture's conventions, not the ISDA standard model) | `cds` (quarterly TwentiethIMM, MidPoint, recovery 40%) | `cds_eur_5y_buyer_100bp_spread_curve` |
 | `EUR_EQUITY` (trade-only) | `equity_option` | `eqopt_eur_call_atm_1y` |
 | `EUR_HICP` (trade-only) | `zc_inflation_swap`, `yoy_inflation_swap`, `yoy_inflation_cap_floor` | `zciis_eur_5y_payer_linear_obs`, `yyiis_eur_5y_payer_annual`, `yoy_cf_eur_5y_cap_150bp_black_bites` |

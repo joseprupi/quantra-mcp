@@ -133,6 +133,9 @@ def test_connector_citations_match_the_working_tree() -> None:
     assert "engine output" in page and "connector arithmetic" in page
     assert "(npv_up - npv_down) / 2" in page and "npv - base_npv" in page
     assert "changed - base" in page and "quantra - external" in page
+    # M5.7: PV01 is the engine's fixed_leg_bps, DV01 the connector's bump-and-reprice
+    assert "## PV01 vs DV01" in page and "`fixed_leg_bps`" in page
+    assert "LABEL_SYNONYMS" in page and '"pv01": ["fixed_leg_bps"]' in page
     if (root / ".git").exists():
         # the cited commit exists in this repository (the page is regenerated after a commit)
         ok = subprocess.run(
@@ -185,6 +188,26 @@ def test_every_citation_exists_at_the_pin_in_the_engine_repo() -> None:
     sched = (METH_DIR / "schedules-and-stubs.md").read_text()
     assert "DateGenerationToQL(schedule->date_generation_rule().value())" in sched
     assert "first_date" in sched and "Backward" in sched and "Forward" in sched
+    # M5.7: the connector page's PV01 note refers to engine lines by hand (it is generated
+    # without the engine checkout); those lines must still say what the note says
+    conn = (METH_DIR / "connector-analytics.md").read_text()
+    for path, line, text in [
+        (
+            "src/evaluators/vanilla_swap_evaluator.cpp",
+            243,
+            "out.fixedLegBps = swap->fixedLegBPS();",
+        ),
+        ("src/evaluators/ois_swap_evaluator.cpp", 126, "out.fixedLegBps = swap->fixedLegBPS();"),
+        ("flatbuffers/fbs/vanilla_swap_response.fbs", 41, "fixed_leg_bps:double;"),
+    ]:
+        assert f"`{path}@{tag}:L{line}-L{line}`" in conn, (path, line)
+        assert f"<{ENGINE_URL}/blob/{tag}/{path}#L{line}>" in conn, (path, line)
+        out = subprocess.run(
+            ["git", "-C", str(ENGINE_REPO), "show", f"{tag}:{path}"],
+            check=True,
+            capture_output=True,
+        ).stdout.decode()
+        assert out.split("\n")[line - 1].strip() == text, (path, line)
 
 
 def test_pages_carry_no_vendor_or_example_specific_claims() -> None:

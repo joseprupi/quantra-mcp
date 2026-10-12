@@ -422,3 +422,34 @@ async def test_reprice_with_market_data_source_is_carried_or_required() -> None:
     assert "market_data_source is required" in missing["error"]
     assert missing["problems"][0]["path"] == "/market_data_source"
     assert posts() == n + 2  # the clash and the missing declaration sent nothing
+
+
+async def test_compare_results_maps_pv01_to_the_engine_fixed_leg_bps_not_dv01(
+    fake_backend: FakeBackend,
+) -> None:
+    """M5.7: PV01 / BPV / annuity are the engine's fixed-leg BPS; DV01 is the connector's
+    bump-and-reprice number. A swap result carries fixed_leg_bps; PV01 must land there."""
+    swap = {"swaps": [{"npv": -47408.49, "fair_rate": 0.031, "fixed_leg_bps": -4631.2}]}
+    r = await _call(
+        fake_backend,
+        "compare_results",
+        {
+            "external": {"PV01": -4630.0, "BPV": -4630.0, "Annuity": 4630.0, "DV01": 4625.0},
+            "quantra": swap,
+        },
+    )
+    assert r["ok"] is True
+    rows = {row["label"]: row for row in r["rows"]}
+    for label in ("PV01", "BPV", "Annuity"):
+        assert rows[label]["mapped_to"] == "fixed_leg_bps", label
+        assert rows[label]["quantra"] == -4631.2
+        assert rows[label]["topic"] == "fair-rate"
+    assert r["mapping"]["PV01"] == ["fixed_leg_bps"]
+    assert reconcile.LABEL_SYNONYMS["pv01"] == ["fixed_leg_bps"]
+    assert reconcile.LABEL_SYNONYMS["bpv"] == ["fixed_leg_bps"]
+    assert reconcile.LABEL_SYNONYMS["annuity"] == ["fixed_leg_bps"]
+    assert reconcile.LABEL_SYNONYMS["shifting"] == ["dv01"]
+    assert reconcile.LABEL_SYNONYMS["deltashift"] == ["dv01"]
+    # DV01 stays on the connector number and is reported unmapped on a bare engine result
+    un = {u["label"]: u for u in r["unmapped"]}
+    assert "DV01" in un and "dv01" in un["DV01"]["reason"]

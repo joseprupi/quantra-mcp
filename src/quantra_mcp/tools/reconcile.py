@@ -56,8 +56,13 @@ LABEL_SYNONYMS: dict[str, list[str]] = {
     "marketvalue": ["npv"],
     "presentvalue": ["npv"],
     "mtm": ["npv"],
-    "pv01": ["dv01"],
-    "bpv": ["dv01"],
+    # PV01 / BPV / annuity = the fixed leg's basis-point value the engine returns
+    # (fixed_leg_bps); DV01 = this server's bump-and-reprice. Different quantities.
+    "pv01": ["fixed_leg_bps"],
+    "bpv": ["fixed_leg_bps"],
+    "annuity": ["fixed_leg_bps"],
+    "shifting": ["dv01"],
+    "deltashift": ["dv01"],
     "fairrate": ["fair_rate", "atm_forward", "forward_rate"],
     "parrate": ["fair_rate", "atm_forward", "forward_rate"],
     "swaprate": ["fair_rate", "atm_forward"],

@@ -1622,7 +1622,15 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
         ],
         market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
         preset: Annotated[
-            str, Field(description="A preset with a fixed_rate_bond block (EUR_FIXED_BOND).")
+            str,
+            Field(
+                description=(
+                    "A preset with a fixed_rate_bond block: DE_BUND (Act/Act ICMA annual, T+2), "
+                    "US_TREASURY / UK_GILT (Act/Act ICMA semiannual, T+1) with public "
+                    "provenance, or EUR_FIXED_BOND (the engine fixture's 30/360 annual "
+                    "conventions, not a sovereign)."
+                )
+            ),
         ],
         face_amount: Annotated[float, Field(description="Face amount, > 0.")],
         coupon_rate: Annotated[float, Field(description="Annual coupon rate as a decimal.")],

@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.1.7 (2026-10-12)
+
+Quant review fixes on the connector side (M5.7).
+
+- **T1 Exogenous discounting on `build_curve`.** New optional `discount_curve`: the id
+  of another curve in the same request; every SwapHelper / OISHelper point then carries
+  `deps.discount_curve` (deposits, FRAs, futures untouched), which is what a dual-curve
+  bootstrap of an IBOR strip under OIS discounting needs. Omitted = self-discounted, and
+  the built request is byte-identical to 0.1.6 (goldens unchanged). Verified live on
+  engine 0.7.0 with the multicurve fixture's quotes: the 6M curve's 5Y DF moves from
+  0.858309659352 (self) to 0.858196982005 (OIS-discounted), 0.26bp in zero terms, and
+  the two curves may be listed in either order. The Euribor and SONIA swap presets say so.
+- **T2 `compare_results` PV01.** PV01 / BPV / annuity map to the engine's `fixed_leg_bps`
+  (the fixed leg's BPS), no longer to the connector's bump-and-reprice `dv01`; `shifting`
+  and `deltashift` map to `dv01`. `quantra://methodology/connector-analytics` gains a
+  "PV01 vs DV01" note citing the engine lines that fill `fixed_leg_bps`;
+  `scripts/methodology_gen.py --check` fails when the page is stale.
+- **T3 Honest labels.** `EUR_CDS` no longer claims SNAC conventions (it is the engine
+  fixture's: TwentiethIMM, MidPoint; not the ISDA standard model); `EUR_FIXED_BOND` says
+  it is the fixture's 30/360 annual bond, not a Bund; `EUR_HICP` flags Linear CPI
+  interpolation as the fixture's choice. Values unchanged.
+- **T4 Sovereign bond presets.** `DE_BUND`, `US_TREASURY`, `UK_GILT` (`fixed_rate_bond`
+  blocks: Act/Act ICMA, Unadjusted, Backward, redemption 100, yield Compounded at the
+  coupon frequency; T+2 Germany / T+1 UnitedStatesGovernmentBond / T+1 UnitedKingdom) with
+  a public source on every field (Deutsche Finanzagentur, 31 CFR 356 Appendix B, UK DMO
+  gilt formulae) and the QuantLib 1.41 `ActualActual::ISMA` header for the day counter.
+- README links the agents page (`/docs/app/agents`).
+
 ## 0.1.6 (2026-10-12)
 
 Size, protocol, schemas and provenance, from the external review (M5.6).

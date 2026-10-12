@@ -36,6 +36,9 @@ from quantra_mcp.schema.enums_generated import (
 
 BOOTSTRAP_CURVES = "/bootstrap-curves"
 
+#: helper types whose engine schema carries ``deps`` (HelperDependencies)
+DEPS_HELPER_TYPES: frozenset[str] = frozenset({"swap", "ois"})
+
 ValueKind = Literal["zero", "discount", "forward"]
 Measure = Literal["DF", "ZERO", "FWD"]
 
@@ -378,14 +381,40 @@ def build_curve(
     trait: BootstrapTrait | None = None,
     interpolator: Interpolator | None = None,
     day_counter: DayCounter | None = None,
+    discount_curve: str | None = None,
 ) -> BuiltCurve:
     """A quote strip -> ``{"curve": TermStructure, "indices": [IndexDef]}``.
 
     Points are sorted by maturity; a duplicate (type, tenor) is a local error.
     Every engine field is set explicitly from the preset; overrides are noted.
+
+    ``discount_curve`` (optional) is the id of ANOTHER curve in the same engine
+    request; when given, every SwapHelper / OISHelper point carries
+    ``deps.discount_curve = {id}`` so the engine discounts the helper's
+    cashflows on that curve while projecting the index off the curve being
+    bootstrapped (dual-curve). Deposit / FRA / future points are untouched
+    (the engine schema has no ``deps`` for them). Omitted = self-discounted,
+    exactly the engine fixtures' behaviour and byte-identical to the previous
+    output. Verified live on engine 0.7.0: the two curves can be listed in
+    either order within one ``/bootstrap-curves`` body (discount curve first or
+    last gives the same discount factors).
     """
     if not curve_id or not isinstance(curve_id, str):
         raise _problem("/id", "id: a non-empty curve id is required")
+    if discount_curve is not None:
+        if not isinstance(discount_curve, str) or not discount_curve.strip():
+            raise _problem(
+                "/discount_curve",
+                "discount_curve: a non-empty curve id is required when given (the id of "
+                "another curve in the same request); omit it for a self-discounted bootstrap",
+            )
+        if discount_curve == curve_id:
+            raise _problem(
+                "/discount_curve",
+                f"discount_curve {discount_curve!r} is the curve being built ({curve_id!r}); "
+                "it must name ANOTHER curve in the same request (e.g. the OIS curve); omit it "
+                "for a self-discounted bootstrap",
+            )
     _, c, _ = preset.require_curve()
     ref = check_date(reference_date, "reference_date")
     ref_date = dt.date.fromisoformat(ref)
@@ -396,6 +425,7 @@ def build_curve(
     built: list[tuple[float, int, dict[str, Any]]] = []
     seen: dict[tuple[str, float], tuple[int, str]] = {}
     used: dict[str, int] = {}
+    with_deps = 0
     for i, q in enumerate(quotes):
         point, order_key, label = _helper_point(q, i, preset, ref_date)
         identity = (q.type, round(order_key, 6))
@@ -408,6 +438,9 @@ def build_curve(
             )
         seen[identity] = (i, label)
         used[q.type] = used.get(q.type, 0) + 1
+        if discount_curve is not None and q.type in DEPS_HELPER_TYPES:
+            point["deps"] = {"discount_curve": {"id": discount_curve}}
+            with_deps += 1
         built.append((order_key, i, {"point_type": POINT_TYPE[q.type], "point": point}))
     built.sort(key=lambda t: (t[0], t[1]))
     if [b[1] for b in built] != list(range(len(built))):
@@ -450,12 +483,32 @@ def build_curve(
     if "swap" in used:
         notes.append(
             f"swap helpers reference float_index {ix['id']}; the engine projects it off the "
-            "curve being bootstrapped (single-curve)"
+            "curve being bootstrapped"
+            + (
+                f"; cashflows discounted on curve {discount_curve!r} (deps.discount_curve; "
+                "dual-curve)"
+                if discount_curve is not None
+                else " (single-curve: self-discounted)"
+            )
         )
     if "ois" in used:
         notes.append(
             f"ois helpers reference overnight_index {ix['id']}; lookback_days=0 means no lookback "
             "(QuantLib null), per engine 0.6.0"
+            + (
+                f"; cashflows discounted on curve {discount_curve!r} (deps.discount_curve)"
+                if discount_curve is not None
+                else ""
+            )
+        )
+    if discount_curve is not None:
+        untouched = sorted(t for t in used if t not in DEPS_HELPER_TYPES)
+        notes.append(
+            f"discount_curve={discount_curve!r}: deps.discount_curve set on {with_deps} "
+            f"swap/ois helper point{'s' if with_deps != 1 else ''}"
+            + (f"; no deps on {', '.join(untouched)} helpers" if untouched else "")
+            + f"; curve {discount_curve!r} must be in the same engine request "
+            "(bootstrap_curve curves or a pricing tool's market), in either order"
         )
 
     curve = {

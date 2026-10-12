@@ -67,10 +67,20 @@ def build_curve_impl(
     trait: BootstrapTrait | None = None,
     interpolator: Interpolator | None = None,
     day_counter: DayCounter | None = None,
+    discount_curve: str | None = None,
 ) -> ToolResult:
     try:
         p = get_preset(preset)
-        built = cb.build_curve(id, p, quotes, reference_date, trait, interpolator, day_counter)
+        built = cb.build_curve(
+            id,
+            p,
+            quotes,
+            reference_date,
+            trait,
+            interpolator,
+            day_counter,
+            discount_curve=discount_curve,
+        )
     except PresetError as exc:
         return local_error_result(BOOTSTRAP_CURVES, None, str(exc))
     except LocalValidationError as exc:
@@ -317,8 +327,9 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             str | None,
             Field(
                 description="A preset id (USD_SOFR_OIS, EUR_ESTR_OIS, GBP_SONIA_OIS, "
-                "GBP_SONIA_SWAP, EUR_EURIBOR_6M, EUR_EURIBOR_3M, EUR_FIXED_BOND, EUR_CDS, "
-                "EUR_EQUITY, EUR_HICP). Omit it to list every preset.",
+                "GBP_SONIA_SWAP, EUR_EURIBOR_6M, EUR_EURIBOR_3M, EUR_FIXED_BOND, DE_BUND, "
+                "US_TREASURY, UK_GILT, EUR_CDS, EUR_EQUITY, EUR_HICP). Omit it to list every "
+                "preset.",
             ),
         ] = None,
     ) -> dict[str, Any]:
@@ -372,15 +383,38 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
         day_counter: Annotated[
             DayCounter | None, Field(description="Override the preset's curve day counter.")
         ] = None,
+        discount_curve: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Id of ANOTHER curve in the same request (bootstrap_curve curves or a "
+                    "price_* market) that discounts the swap / OIS helpers' cashflows "
+                    "(deps.discount_curve on every SwapHelper / OISHelper point; deposits, FRAs "
+                    "and futures untouched). Required for a dual-curve bootstrap of an IBOR "
+                    "curve under OIS discounting; omitted = self-discounted (the engine "
+                    "fixtures' behaviour). Either curve may come first in the request."
+                )
+            ),
+        ] = None,
     ) -> ToolResult:
         """Turn a quote strip into an engine curve spec (no engine call). Returns ``{ok, curve,
         indices, preset, notes, digest}``: ``curve`` is the TermStructure and ``indices`` the
         IndexDef list to pass to bootstrap_curve, a pricing tool's market or session_put;
         ``notes`` lists every default applied with its source; ``digest`` is the sha256 of the
         canonical curve + indices JSON (pricing tools recognise it). Nothing is priced here.
+        ``discount_curve`` names the OIS curve for a dual-curve (collateral-discounted) strip.
         """
         return stamp(
-            build_curve_impl(id, preset, quotes, reference_date, trait, interpolator, day_counter),
+            build_curve_impl(
+                id,
+                preset,
+                quotes,
+                reference_date,
+                trait,
+                interpolator,
+                day_counter,
+                discount_curve=discount_curve,
+            ),
             market_data_source,
         )
 

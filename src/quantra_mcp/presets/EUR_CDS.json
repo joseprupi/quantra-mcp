@@ -1,6 +1,6 @@
 {
   "id": "EUR_CDS",
-  "description": "EUR single-name CDS, standard (SNAC-style) conventions: quarterly premium on TwentiethIMM dates, Following, Unadjusted termination, Actual360, accrual settled / paid at default / rebated, protection from the trade date, cash settlement T+3; credit curve bootstrapped from par spreads (MidPoint helper, recovery 40%, LogLinear, Actual365Fixed on TARGET); MidPoint pricing engine.",
+  "description": "EUR single-name CDS with the conventions of the engine fixture cds_eur_5y_buyer_100bp_spread_curve: quarterly premium on TwentiethIMM dates, Following, Unadjusted termination, Actual360, accrual settled / paid at default / rebated, protection from the trade date, cash settlement T+3; credit curve bootstrapped from par spreads (MidPoint helper, recovery 40%, LogLinear, Actual365Fixed on TARGET); MidPoint pricing engine. This is NOT the ISDA standard model (CDS2015 date rule, ISDA engine, upfront + 100/500 running), which the engine does not expose.",
   "currency": "EUR",
   "provenance": "engine fixture (quantraserver v0.7.0) examples/data/cds/cds_eur_5y_buyer_100bp_spread_curve.json",
   "trades": {

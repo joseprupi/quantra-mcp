@@ -1,0 +1,42 @@
+{
+  "id": "UK_GILT",
+  "description": "UK conventional gilt conventions: semiannual coupons accruing Actual/Actual (ICMA) on unadjusted quasi-coupon periods, coupon dates generated backward from maturity, payment Following, settlement T+1 on the UnitedKingdom calendar, redemption 100, yield quoted Actual/Actual (ICMA) Compounded Semiannual. Trade-only preset (fixed_rate_bond); the discount curve comes from the market.",
+  "currency": "GBP",
+  "provenance": "UK Debt Management Office, Formulae for Calculating Gilt Prices from Yields (published 8 June 1998, effective 1 November 1998): https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf (actual/actual accrued interest, semi-annual quasi-coupon dates, compounding on quasi-coupon dates); Actual/Actual (ICMA) as implemented by QuantLib 1.41 ActualActual::ISMA, https://github.com/lballabio/QuantLib/blob/v1.41/ql/time/daycounters/actualactual.hpp",
+  "trades": {
+    "fixed_rate_bond": {
+      "settlement_days": 1,
+      "schedule": {
+        "calendar": "UnitedKingdom",
+        "convention": "Unadjusted",
+        "termination_date_convention": "Unadjusted",
+        "date_generation_rule": "Backward",
+        "end_of_month": false
+      },
+      "frequency": "Semiannual",
+      "accrual_day_counter": "ActualActualISMA",
+      "payment_convention": "Following",
+      "redemption": 100.0,
+      "yield": {
+        "day_counter": "ActualActualISMA",
+        "compounding": "Compounded",
+        "frequency": "Semiannual"
+      }
+    }
+  },
+  "field_provenance": {
+    "trades.fixed_rate_bond.settlement_days": "T+1: conventional gilts settle the business day after trade date (gilt market practice; the DMO paper discounts to the settlement date) (UK DMO, Formulae for Calculating Gilt Prices from Yields, https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf)",
+    "trades.fixed_rate_bond.schedule.calendar": "UnitedKingdom: the engine's Calendar enum for the UK (QuantLib UnitedKingdom) (UK DMO, Formulae for Calculating Gilt Prices from Yields, https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf)",
+    "trades.fixed_rate_bond.schedule.convention": "Unadjusted: coupon periods run calendar date to calendar date; accrual is on the unadjusted dates (UK DMO, Formulae for Calculating Gilt Prices from Yields, https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf)",
+    "trades.fixed_rate_bond.schedule.termination_date_convention": "Unadjusted: the maturity date is the calendar date (UK DMO, Formulae for Calculating Gilt Prices from Yields, https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf)",
+    "trades.fixed_rate_bond.schedule.date_generation_rule": "Backward: coupon dates are generated from the maturity date, a short first period if any (UK DMO, Formulae for Calculating Gilt Prices from Yields, https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf)",
+    "trades.fixed_rate_bond.schedule.end_of_month": "false: coupon dates keep the maturity date's day of month (UK DMO, Formulae for Calculating Gilt Prices from Yields, https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf)",
+    "trades.fixed_rate_bond.frequency": "Semiannual: conventional gilts pay on the semi-annual quasi-coupon cycle defined by the maturity date (UK DMO, Formulae for Calculating Gilt Prices from Yields, https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf)",
+    "trades.fixed_rate_bond.accrual_day_counter": "Actual/Actual (ICMA): the actual/actual accrued interest convention for gilts (effective 1 November 1998); the engine's DayCounter ActualActualISMA = QuantLib 1.41 ActualActual::ISMA, https://github.com/lballabio/QuantLib/blob/v1.41/ql/time/daycounters/actualactual.hpp",
+    "trades.fixed_rate_bond.payment_convention": "Following: a coupon falling on a non-business day is paid on the next business day; accrual itself is Unadjusted (market practice, stated here as such: the cited source https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf fixes the accrual and yield formulae, not the payment-date adjustment)",
+    "trades.fixed_rate_bond.redemption": "100: redeemed at par (UK DMO, Formulae for Calculating Gilt Prices from Yields, https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf)",
+    "trades.fixed_rate_bond.yield.day_counter": "Actual/Actual (ICMA): the actual/actual accrued interest convention for gilts (effective 1 November 1998); the engine's DayCounter ActualActualISMA = QuantLib 1.41 ActualActual::ISMA, https://github.com/lballabio/QuantLib/blob/v1.41/ql/time/daycounters/actualactual.hpp",
+    "trades.fixed_rate_bond.yield.compounding": "Compounded: the quoted yield compounds once per coupon period (UK DMO, Formulae for Calculating Gilt Prices from Yields, https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf)",
+    "trades.fixed_rate_bond.yield.frequency": "Semiannual: conventional gilts pay on the semi-annual quasi-coupon cycle defined by the maturity date; the yield compounds at the coupon frequency (UK DMO, Formulae for Calculating Gilt Prices from Yields, https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf)"
+  }
+}

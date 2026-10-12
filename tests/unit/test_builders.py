@@ -17,7 +17,8 @@ from quantra_mcp.builders import curves as cb
 from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.presets.registry import curve_preset_ids, get_preset
 from quantra_mcp.resources import load_example
-from tests.strips import GOLDEN_DIR, STRIPS, bootstrap_body_for
+from quantra_mcp.schema.validate import validate_component
+from tests.strips import GOLDEN_DIR, STRIPS, bootstrap_body_for, quotes_for
 
 REGEN = os.environ.get("QUANTRA_REGEN_GOLDENS") == "1"
 
@@ -456,3 +457,81 @@ def test_bootstrap_summary_reads_default_measure_as_df() -> None:
         ]
     }
     assert cb.bootstrap_summary({"nope": 1}) is None
+
+
+# ---------------------------------------------------------------- discount_curve (M5.7)
+
+
+def test_discount_curve_adds_deps_to_swap_helpers_only_and_is_otherwise_byte_identical() -> None:
+    p = get_preset("EUR_EURIBOR_6M")
+    quotes = quotes_for("EUR_EURIBOR_6M")
+    ref = STRIPS["EUR_EURIBOR_6M"]["reference_date"]
+    base = cb.build_curve("EUR_6M", p, quotes, ref)
+    dual = cb.build_curve("EUR_6M", p, quotes, ref, discount_curve="EUR_OIS")
+    types = {pt["point_type"] for pt in dual.curve["points"]}
+    assert {"DepositHelper", "SwapHelper"} <= types  # the strip has both kinds
+    for pt in dual.curve["points"]:
+        if pt["point_type"] == "SwapHelper":
+            assert pt["point"]["deps"] == {"discount_curve": {"id": "EUR_OIS"}}, pt
+        else:
+            assert "deps" not in pt["point"], pt
+    assert validate_component("TermStructure", dual.curve) == []
+    # strip the deps: the rest of the curve is byte-identical to the self-discounted build
+    stripped = json.loads(json.dumps(dual.curve))
+    for pt in stripped["points"]:
+        pt["point"].pop("deps", None)
+    assert _canon(stripped) == _canon(base.curve)
+    assert dual.indices == base.indices
+    n_swaps = sum(pt["point_type"] == "SwapHelper" for pt in dual.curve["points"])
+    assert any(
+        n.startswith(f"discount_curve='EUR_OIS': deps.discount_curve set on {n_swaps} swap/ois")
+        and "no deps on deposit" in n
+        and "either order" in n
+        for n in dual.notes
+    ), dual.notes
+    assert any(
+        "discounted on curve 'EUR_OIS'" in n and n.startswith("swap helpers") for n in dual.notes
+    )
+    assert any("single-curve: self-discounted" in n for n in base.notes)
+    assert not any("discount_curve" in n for n in base.notes)
+
+
+def test_discount_curve_applies_to_ois_helpers_too() -> None:
+    p = get_preset("USD_SOFR_OIS")
+    dual = cb.build_curve(
+        "USD_SOFR_OIS",
+        p,
+        quotes_for("USD_SOFR_OIS"),
+        STRIPS["USD_SOFR_OIS"]["reference_date"],
+        discount_curve="USD_DISC",
+    )
+    assert all(pt["point_type"] == "OISHelper" for pt in dual.curve["points"])
+    assert all(
+        pt["point"]["deps"] == {"discount_curve": {"id": "USD_DISC"}} for pt in dual.curve["points"]
+    )
+    assert validate_component("TermStructure", dual.curve) == []
+    assert any(
+        n.startswith("ois helpers") and "discounted on curve 'USD_DISC'" in n for n in dual.notes
+    )
+
+
+@pytest.mark.parametrize(
+    ("discount_curve", "fragment"),
+    [
+        ("", "non-empty curve id"),
+        ("   ", "non-empty curve id"),
+        ("EUR_6M", "is the curve being built"),
+    ],
+)
+def test_discount_curve_local_errors(discount_curve: str, fragment: str) -> None:
+    p = get_preset("EUR_EURIBOR_6M")
+    with pytest.raises(LocalValidationError) as exc:
+        cb.build_curve(
+            "EUR_6M",
+            p,
+            quotes_for("EUR_EURIBOR_6M"),
+            STRIPS["EUR_EURIBOR_6M"]["reference_date"],
+            discount_curve=discount_curve,
+        )
+    assert fragment in exc.value.error
+    assert exc.value.problems[0]["path"] == "/discount_curve"

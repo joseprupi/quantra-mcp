@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 from mcp import Client
 
+from quantra_mcp import examples_catalog as cat
 from quantra_mcp.presets.registry import curve_preset_ids, get_preset
 from quantra_mcp.resources import load_example
 from tests.live.test_live_engine import (
@@ -238,3 +239,120 @@ async def test_pasted_discount_table_reprices_the_sofr_example() -> None:
         f"pasted-curve NPV {npv!r} vs {npv0!r}: {npv - npv0:+e}"
     )
     assert canonical(r["response"]) == canonical(await replay("/price-ois-swap", r["request"]))
+
+
+# ---------------------------------------------------------------- discount_curve (M5.7)
+
+MULTICURVE = "irs_eur_5y_payer_ois_discounted_multicurve"
+_UNIT = {"Days": "D", "Weeks": "W", "Months": "M", "Years": "Y"}
+
+
+def _fixture_quotes() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """The OIS and 6M strips of the vendored multicurve fixture as build_curve quotes."""
+    body = cat.load_body(cat.find(MULTICURVE))
+    curves = {c["id"]: c for c in body["pricing"]["rates"]["curves"]}
+
+    def tenor(pt: dict[str, Any]) -> str:
+        return f"{pt['point']['tenor']['n']}{_UNIT[pt['point']['tenor']['unit']]}"
+
+    ois = [
+        {"type": "ois", "tenor": tenor(pt), "rate": pt["point"]["rate"]}
+        for pt in curves["EUR_OIS"]["points"]
+    ]
+    six = [
+        {
+            "type": "deposit" if pt["point_type"] == "DepositHelper" else "swap",
+            "tenor": tenor(pt),
+            "rate": pt["point"]["rate"],
+        }
+        for pt in curves["EUR_6M_CURVE"]["points"]
+    ]
+    assert all(
+        pt["point_type"] in ("DepositHelper", "SwapHelper")
+        for pt in curves["EUR_6M_CURVE"]["points"]
+    )
+    return ois, six
+
+
+async def test_dual_curve_bootstrap_with_discount_curve_moves_the_5y_df_in_either_order() -> None:
+    """EUR_OIS + EUR_6M_CURVE with the multicurve fixture's quotes: self-discounted vs
+    deps.discount_curve = EUR_OIS. The 5Y DF of the 6M curve must differ (a few tenths of
+    a bp in zero terms) and the result must not depend on the order of the two curves."""
+    ois_q, six_q = _fixture_quotes()
+    ref = "2025-01-15"
+    async with live_client() as client:
+        ois = await _call(
+            client,
+            "build_curve",
+            {
+                "market_data_source": "engine_example",
+                "id": "EUR_OIS",
+                "preset": "EUR_ESTR_OIS",
+                "quotes": ois_q,
+                "reference_date": ref,
+            },
+        )
+        assert ois["ok"], ois
+        six: dict[str, dict[str, Any]] = {}
+        for label, extra in (("self", {}), ("dual", {"discount_curve": "EUR_OIS"})):
+            six[label] = await _call(
+                client,
+                "build_curve",
+                {
+                    "market_data_source": "engine_example",
+                    "id": "EUR_6M_CURVE",
+                    "preset": "EUR_EURIBOR_6M",
+                    "quotes": six_q,
+                    "reference_date": ref,
+                    **extra,
+                },
+            )
+            assert six[label]["ok"], six[label]
+        query = await _call(
+            client,
+            "build_query",
+            {
+                "curve_id": "EUR_6M_CURVE",
+                "measures": ["DF", "ZERO"],
+                "tenors": ["5Y"],
+                "calendar": "TARGET",
+                "business_day_convention": "ModifiedFollowing",
+            },
+        )
+        assert query["ok"], query
+        out: dict[str, tuple[float, float]] = {}
+        for label, order in (
+            ("self ois-first", [ois, six["self"]]),
+            ("self six-first", [six["self"], ois]),
+            ("dual ois-first", [ois, six["dual"]]),
+            ("dual six-first", [six["dual"], ois]),
+        ):
+            r = await _call(
+                client, "bootstrap_curve", {"curves": order, "as_of": ref, "queries": [query]}
+            )
+            assert r["ok"], (label, r)
+            res = next(x for x in r["response"]["results"] if x["id"] == "EUR_6M_CURVE")
+            df = next(s for s in res["series"] if s.get("measure", "DF") == "DF")["values"][0]
+            zero = next(s for s in res["series"] if s.get("measure") == "ZERO")["values"][0]
+            out[label] = (df, zero)
+            assert canonical(r["response"]) == canonical(
+                await replay("/bootstrap-curves", r["request"])
+            )
+    print({k: (repr(v[0]), repr(v[1])) for k, v in out.items()})
+    # order of the curves in the request does not matter (engine 0.7.0)
+    assert out["self ois-first"] == out["self six-first"]
+    assert out["dual ois-first"] == out["dual six-first"]
+    # exogenous discounting moves the bootstrap
+    df_self, z_self = out["self ois-first"]
+    df_dual, z_dual = out["dual ois-first"]
+    assert df_self != df_dual
+    assert 1e-5 <= abs(z_dual - z_self) <= 5e-5, (z_self, z_dual)  # 0.1-0.5bp in zero terms
+    # the dual request carries deps on every swap helper and on no deposit
+    dual_curve = next(
+        c for c in r["request"]["pricing"]["rates"]["curves"] if c["id"] == "EUR_6M_CURVE"
+    )
+    for pt in dual_curve["points"]:
+        if pt["point_type"] == "SwapHelper":
+            assert pt["point"]["deps"] == {"discount_curve": {"id": "EUR_OIS"}}
+        else:
+            assert "deps" not in pt["point"]

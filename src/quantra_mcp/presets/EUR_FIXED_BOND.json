@@ -1,6 +1,6 @@
 {
   "id": "EUR_FIXED_BOND",
-  "description": "EUR fixed-rate bond conventions: spot T+2, annual Thirty360 coupons, ModifiedFollowing on TARGET, Forward date generation, redemption 100, yields quoted Actual365Fixed / Compounded / Annual; zero-coupon bonds settle T+3 on TARGET; callable bonds price on a Hull-White lattice (100 lattice steps, 500 tree steps) with explicit a / sigma.",
+  "description": "EUR fixed-rate bond with the engine fixture conventions (annual Thirty360, ModifiedFollowing on TARGET), not a Bund or any sovereign; see DE_BUND / US_TREASURY / UK_GILT for issuer conventions. Fixture conventions: spot T+2, annual Thirty360 coupons, ModifiedFollowing on TARGET, Forward date generation, redemption 100, yields quoted Actual365Fixed / Compounded / Annual; zero-coupon bonds settle T+3 on TARGET; callable bonds price on a Hull-White lattice (100 lattice steps, 500 tree steps) with explicit a / sigma.",
   "currency": "EUR",
   "provenance": "engine fixture (quantraserver v0.7.0) examples/data/bonds/frb_eur_5y_at_par_annual_30360.json (fixed_rate_bond), bonds/zcb_eur_10y_discount.json (zero_coupon_bond), callable_bonds/cfrb_eur_8y_5pct_call_100_itm.json (callable_fixed_rate_bond)",
   "trades": {

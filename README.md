@@ -110,7 +110,7 @@ Catalog with every argument: [docs/tools.md](docs/tools.md).
 - [docs/walkthroughs.md](docs/walkthroughs.md): price a swap in three calls; build a curve from a strip
 - [docs/development.md](docs/development.md): gate, live checks, QuantLib parity, engine pin, layout
 - [docs/RELEASING.md](docs/RELEASING.md): how a release is cut
-- User guide on the site: https://quantra.io/docs/app/claude
+- User guide on the site: https://quantra.io/docs/app/agents
 
 ## Development
 

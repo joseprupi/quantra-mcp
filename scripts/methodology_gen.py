@@ -7,6 +7,7 @@ runnable alone)::
 
     uv run python scripts/methodology_gen.py --engine-repo /path/to/quantraserver --tag v0.7.0
     uv run python scripts/methodology_gen.py --connector-only   # after a source commit
+    uv run python scripts/methodology_gen.py --check            # gate: page + INDEX current
 
 For every engine rule the cited file is read with ``git show <tag>:<path>``
 (the working tree of the engine repository is never touched), the excerpt is
@@ -245,6 +246,8 @@ def render_connector_topic(
     out += ["", "## What this server does", ""]
     for i, st in enumerate(topic["statements"], start=1):
         out += [f"### {i}. {st['say']}", "", excerpt(st, "statement"), ""]
+    for heading, text in topic.get("notes", []):
+        out += [f"## {heading}", "", text, ""]
     _gaps(out, topic, "## Caveats", "None.")
     meta = {
         "slug": topic["slug"],
@@ -314,6 +317,25 @@ def generate(repo: Path, tag: str, sha: str, out_dir: Path = OUT_DIR) -> dict[st
     )
 
 
+def check_connector(out_dir: Path = OUT_DIR) -> list[str]:
+    """Render the connector page from the working tree at the sha recorded in INDEX.json
+    and compare it with the committed page and citations; returns the differences."""
+    index: dict[str, Any] = json.loads((out_dir / "INDEX.json").read_text())
+    conn_cache: dict[str, list[str]] = {}
+    page, meta = render_connector_topic(rules.CONNECTOR_TOPIC, index["connector_sha"], conn_cache)
+    problems: list[str] = []
+    on_disk = (out_dir / meta["file"]).read_text()
+    if on_disk != page:
+        problems.append(f"{meta['file']} differs from the rules + working tree")
+    recorded = next((t for t in index["topics"] if t.get("source") == "connector"), None)
+    if recorded is None or recorded["citations"] != meta["citations"]:
+        problems.append("INDEX.json connector citations differ from the working tree")
+    files = {p: _count(lines) for p, lines in conn_cache.items()}
+    if index.get("connector_files") != files:
+        problems.append("INDEX.json connector_files line counts differ from the working tree")
+    return problems
+
+
 def generate_connector(out_dir: Path = OUT_DIR) -> dict[str, Any]:
     """Regenerate only the connector page; the engine parts of INDEX.json are kept."""
     index: dict[str, Any] = json.loads((out_dir / "INDEX.json").read_text())
@@ -342,7 +364,25 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="regenerate only connector-analytics.md from the working tree (cited at HEAD)",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="exit 1 if connector-analytics.md / INDEX.json are stale against the working tree",
+    )
     args = parser.parse_args(argv)
+    if args.check:
+        problems = check_connector()
+        for problem in problems:
+            print(f"methodology check: {problem}", file=sys.stderr)
+        if problems:
+            print(
+                "methodology check: STALE (run --connector-only after committing)", file=sys.stderr
+            )
+            return 1
+        print(
+            "methodology check: connector-analytics.md and INDEX.json are current", file=sys.stderr
+        )
+        return 0
     if args.connector_only:
         index = generate_connector()
     else:

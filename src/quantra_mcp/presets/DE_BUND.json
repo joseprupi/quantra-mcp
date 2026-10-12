@@ -1,0 +1,42 @@
+{
+  "id": "DE_BUND",
+  "description": "German Federal bond (Bund) conventions: annual coupons accruing Actual/Actual (ICMA) on unadjusted periods, coupon dates generated backward from maturity, payment Following, settlement T+2 on the Germany calendar, redemption 100, yield quoted Actual/Actual (ICMA) Compounded Annual. Trade-only preset (fixed_rate_bond); the discount curve comes from the market.",
+  "currency": "EUR",
+  "provenance": "Deutsche Finanzagentur, Federal bonds (Bunds): https://www.deutsche-finanzagentur.de/en/federal-securities/types-of-federal-securities/federal-bonds (annual interest, interest dates and maturities of the Bund family); Actual/Actual (ICMA) day count per ICMA Rule 251 as implemented by QuantLib 1.41 ActualActual::ISMA, https://github.com/lballabio/QuantLib/blob/v1.41/ql/time/daycounters/actualactual.hpp (an ICMA rule-book URL could not be confirmed from the build environment, so the QuantLib header is cited for the day counter)",
+  "trades": {
+    "fixed_rate_bond": {
+      "settlement_days": 2,
+      "schedule": {
+        "calendar": "Germany",
+        "convention": "Unadjusted",
+        "termination_date_convention": "Unadjusted",
+        "date_generation_rule": "Backward",
+        "end_of_month": false
+      },
+      "frequency": "Annual",
+      "accrual_day_counter": "ActualActualISMA",
+      "payment_convention": "Following",
+      "redemption": 100.0,
+      "yield": {
+        "day_counter": "ActualActualISMA",
+        "compounding": "Compounded",
+        "frequency": "Annual"
+      }
+    }
+  },
+  "field_provenance": {
+    "trades.fixed_rate_bond.settlement_days": "T+2: Bund trades settle two business days after trade date (market practice stated with the Finanzagentur's Federal securities pages) (Deutsche Finanzagentur, Federal bonds, https://www.deutsche-finanzagentur.de/en/federal-securities/types-of-federal-securities/federal-bonds)",
+    "trades.fixed_rate_bond.schedule.calendar": "Germany: the engine's Calendar enum for German settlement (QuantLib Germany::Settlement) (Deutsche Finanzagentur, Federal bonds, https://www.deutsche-finanzagentur.de/en/federal-securities/types-of-federal-securities/federal-bonds)",
+    "trades.fixed_rate_bond.schedule.convention": "Unadjusted: coupon periods run calendar date to calendar date; accrual is on the unadjusted dates (Deutsche Finanzagentur, Federal bonds, https://www.deutsche-finanzagentur.de/en/federal-securities/types-of-federal-securities/federal-bonds)",
+    "trades.fixed_rate_bond.schedule.termination_date_convention": "Unadjusted: the maturity date is the calendar date (Deutsche Finanzagentur, Federal bonds, https://www.deutsche-finanzagentur.de/en/federal-securities/types-of-federal-securities/federal-bonds)",
+    "trades.fixed_rate_bond.schedule.date_generation_rule": "Backward: coupon dates are generated from the maturity date, a short first period if any (Deutsche Finanzagentur, Federal bonds, https://www.deutsche-finanzagentur.de/en/federal-securities/types-of-federal-securities/federal-bonds)",
+    "trades.fixed_rate_bond.schedule.end_of_month": "false: coupon dates keep the maturity date's day of month (Deutsche Finanzagentur, Federal bonds, https://www.deutsche-finanzagentur.de/en/federal-securities/types-of-federal-securities/federal-bonds)",
+    "trades.fixed_rate_bond.frequency": "Annual: Bunds pay interest once a year on the interest date (Deutsche Finanzagentur, Federal bonds, https://www.deutsche-finanzagentur.de/en/federal-securities/types-of-federal-securities/federal-bonds)",
+    "trades.fixed_rate_bond.accrual_day_counter": "Actual/Actual (ICMA): ICMA Rule 251 as used for Bunds; the engine's DayCounter ActualActualISMA = QuantLib 1.41 ActualActual::ISMA, https://github.com/lballabio/QuantLib/blob/v1.41/ql/time/daycounters/actualactual.hpp",
+    "trades.fixed_rate_bond.payment_convention": "Following: a coupon falling on a non-business day is paid on the next business day; accrual itself is Unadjusted (market practice, stated here as such: the cited source https://www.deutsche-finanzagentur.de/en/federal-securities/types-of-federal-securities/federal-bonds fixes the accrual and yield formulae, not the payment-date adjustment)",
+    "trades.fixed_rate_bond.redemption": "100: redeemed at par (Deutsche Finanzagentur, Federal bonds, https://www.deutsche-finanzagentur.de/en/federal-securities/types-of-federal-securities/federal-bonds)",
+    "trades.fixed_rate_bond.yield.day_counter": "Actual/Actual (ICMA): ICMA Rule 251 as used for Bunds; the engine's DayCounter ActualActualISMA = QuantLib 1.41 ActualActual::ISMA, https://github.com/lballabio/QuantLib/blob/v1.41/ql/time/daycounters/actualactual.hpp",
+    "trades.fixed_rate_bond.yield.compounding": "Compounded: the quoted yield compounds once per coupon period (Deutsche Finanzagentur, Federal bonds, https://www.deutsche-finanzagentur.de/en/federal-securities/types-of-federal-securities/federal-bonds)",
+    "trades.fixed_rate_bond.yield.frequency": "Annual: Bunds pay interest once a year on the interest date; the yield compounds at the coupon frequency (Deutsche Finanzagentur, Federal bonds, https://www.deutsche-finanzagentur.de/en/federal-securities/types-of-federal-securities/federal-bonds)"
+  }
+}
