@@ -159,9 +159,8 @@ they exposed.
 - Presets: the `trades.ois_swap` blocks of `USD_SOFR_OIS` and `EUR_ESTR_OIS` and the
   `trades.vanilla_swap` blocks of `EUR_EURIBOR_6M` and `EUR_EURIBOR_3M` now default
   `schedule.date_generation_rule` to `Backward` (short front stub, the market default for
-  odd-dated swaps) with a `field_provenance` note: market standard, verified against a
-  vendor screen of a 15-month USD SOFR OIS (2023-08-17) where Backward matched the
-  screen NPV within 1 USD and Forward was 5,400 USD away; no vendor fixture is vendored.
+  odd-dated swaps) with a `field_provenance` note: market practice for cleared and
+  interbank swaps, not from an in-repo fixture; no vendor fixture is vendored.
   The engine fixtures these blocks otherwise follow use Forward, so the fixture
   reproductions (`price_vanilla_swap`, `price_ois_swap`, the blog OIS, the swaption
   underlyings) set `Forward` explicitly through the leg overrides and remain JSON-equal
@@ -270,7 +269,7 @@ specific to an example, a vendor or a screenshot.
 
 ## 0.1.1 (2026-10-07)
 
-Business-user voice and the Bloomberg swaption path (M5.1):
+Business-user voice and the swaption-on-OIS path (M5.1):
 
 - Server instructions rewritten for a business audience (trade and market terms;
   can-it-be-priced -> missing market data in paste-able form -> conventions ->
@@ -282,7 +281,7 @@ Business-user voice and the Bloomberg swaption path (M5.1):
   2 business days; underlying = the preset's `ois_swap`: annual Act/360 both legs,
   SOFR compounded, payment lag 2) sourced from the engine fixtures
   `swaption_ois_bbg_zerorate_request.json` / `swaption_ois_request.json` (v0.7.0)
-  and the Bloomberg SWPM-OV comparison post. `price_swaption` with
+  and the public swaption comparison post. `price_swaption` with
   `underlying_type: OisSwap` now reads an underlying given with the shared swap
   fields only as an OIS trade (the pydantic union used to pick the vanilla model
   and reject it). Both fixtures are rebuilt JSON-equal (goldens

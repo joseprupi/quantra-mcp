@@ -1,4 +1,5 @@
 import json
+import re
 
 import pytest
 
@@ -91,8 +92,11 @@ def test_swap_trade_blocks_default_to_a_short_front_stub() -> None:
         conv = p.trade_block(block)
         assert conv.schedule.date_generation_rule == "Backward", (pid, block)
         prov = p.provenance_of(f"trades.{block}.schedule.date_generation_rule")
-        assert prov.startswith("market standard: short front stub (Backward generation)"), pid
-        assert "15-month USD SOFR OIS, 2023-08-17" in prov
+        assert prov.startswith(
+            "market practice for cleared and interbank swaps: short front stub (Backward "
+        ), pid
+        assert "override per trade" in prov.lower() and "use Forward" in prov
+        assert not re.search(r"bloomberg|swpm|2023-08-17|5,400", prov, re.IGNORECASE), prov
         # the rest of the block still cites its fixture
         assert "engine fixture" in p.provenance_of(f"trades.{block}.schedule.calendar")
 
