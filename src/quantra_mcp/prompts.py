@@ -44,7 +44,9 @@ Do this, in order:
    curves are never available here, the user has to paste them. If they paste a
    table use curve_from_pasted_table(kind="par" | "discount" | "zero"), otherwise
    build_curve(id, preset, quotes, reference_date=as_of). Read `notes`.
-4. session_put(name, kind="curve", value=<built curve>) so the market can be reused.
+4. session_put(name, kind="curve", value=<built curve>) so the market can be reused;
+   if it answers that session scratch is unavailable on this transport, pass the
+   built curve inline wherever {{"session": name}} appears below.
 5. {tool}(market={{"session": name}}, preset, swap_type, notional, fixed_rate,
    effective_date="spot", tenor="5Y" (or termination_date), discounting_curve=<curve id>,
    forwarding_curve=<curve id>, as_of=as_of, include_flows=true). Spot and the end date

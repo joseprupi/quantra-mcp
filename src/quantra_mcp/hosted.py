@@ -309,6 +309,7 @@ class HostedGuard:
             which = "session"
         if wait > 0:
             retry = _retry_seconds(wait)
+            self._refused("rate_limit:" + which, key, addr, retry)
             if is_call:
                 await _reply_tool_error(
                     send,
@@ -335,6 +336,7 @@ class HostedGuard:
             await self.app(scope, replay, send)
             return
         if self.per_session_limit and self.in_flight(key) >= self.per_session_limit:
+            self._refused("session_cap", key, addr, 1)
             await _reply_tool_error(
                 send,
                 rpc_id,
@@ -349,6 +351,7 @@ class HostedGuard:
             )
             return
         if not self.gate.try_enter():
+            self._refused("busy", key, addr, 1)
             await _reply_tool_error(
                 send,
                 rpc_id,
@@ -363,6 +366,15 @@ class HostedGuard:
             )
             return
         await self._run_gated(scope, replay, send, key)
+
+    def _refused(self, why: str, key: str, addr: str, retry: int) -> None:
+        access_log.info(
+            "client=%s refused=%s key=%s retry_after_s=%d",
+            display_address(addr, False),
+            why,
+            key if key.startswith("session:") else display_address(addr, False),
+            retry,
+        )
 
     async def _run_gated(self, scope: Scope, replay: Receive, send: Send, key: str) -> None:
         """Hold the global gate (a place is already reserved) and the session's slot."""

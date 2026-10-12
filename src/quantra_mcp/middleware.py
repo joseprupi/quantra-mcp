@@ -16,7 +16,7 @@ from typing import Any
 from mcp.server.context import CallNext, HandlerResult, ServerRequestContext
 from mcp.types import CallToolResult
 
-from quantra_mcp.session import bind_session
+from quantra_mcp.session import SESSIONLESS, bind_session
 
 SESSION_HEADER = "mcp-session-id"
 
@@ -45,13 +45,26 @@ def mcp_session_id(ctx: ServerRequestContext[Any, Any]) -> str | None:
     return None
 
 
+def session_key(ctx: ServerRequestContext[Any, Any]) -> str | None:
+    """What the scratch registry is keyed on for this message: the MCP session id when
+    the transport has one; :data:`SESSIONLESS` for an HTTP request without one (the
+    2026-07-28 single-exchange era, which carries no identity at all); ``None`` (the
+    implicit local session) for stdio and in-process clients."""
+    sid = mcp_session_id(ctx)
+    if sid:
+        return sid
+    if getattr(ctx.request, "headers", None) is not None:
+        return SESSIONLESS
+    return None
+
+
 class SessionScope:
     """Bind the caller's MCP session for the duration of each message."""
 
     async def __call__(
         self, ctx: ServerRequestContext[Any, Any], call_next: CallNext
     ) -> HandlerResult:
-        with bind_session(mcp_session_id(ctx)):
+        with bind_session(session_key(ctx)):
             return await call_next(ctx)
 
 

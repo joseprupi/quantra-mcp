@@ -33,9 +33,21 @@ from quantra_mcp.errors import LocalValidationError
 SessionKind = Literal["curve", "index", "market"]
 SESSION_KINDS: tuple[SessionKind, ...] = ("curve", "index", "market")
 
-#: the key of the one implicit session used when the transport has no session id
+#: the key of the one implicit session used by stdio and in-process clients
 LOCAL_SESSION = "local"
+#: bound for an HTTP request that carries no session id (protocol 2026-07-28 is
+#: single-exchange by design: no ``initialize``, no ``Mcp-Session-Id``); there is no
+#: identity to key scratch on, so scratch is unavailable rather than shared
+SESSIONLESS = "sessionless"
 DEFAULT_MAX_SESSIONS = 256
+
+SESSIONLESS_ERROR = (
+    "session scratch is unavailable on this transport: the request carries no MCP session "
+    "id (single-exchange streamable HTTP, protocol 2026-07-28), so there is nothing to key "
+    "a private store on and a shared one would expose your market data to other clients. "
+    'Pass the built objects inline instead of {"session": name}: a build_curve result '
+    "goes directly into `curves` / `market`, an IndexDef into `indices`."
+)
 
 _current_session: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "quantra_mcp_session", default=None
@@ -293,8 +305,14 @@ class SessionStores:
         return session_id or LOCAL_SESSION
 
     def for_session(self, session_id: str | None) -> SessionStore:
-        """The store of ``session_id`` (created on first use; marks it most recently used)."""
+        """The store of ``session_id`` (created on first use; marks it most recently used).
+
+        Raises :class:`LocalValidationError` for :data:`SESSIONLESS`."""
         k = self.key(session_id)
+        if k == SESSIONLESS:
+            raise LocalValidationError(
+                SESSIONLESS_ERROR, [{"path": "/session", "message": "no MCP session id"}]
+            )
         store = self._stores.get(k)
         if store is None:
             store = SessionStore(self.max_items, self.max_total_bytes)
@@ -310,6 +328,11 @@ class SessionStores:
 
     def drop_session(self, session_id: str | None) -> bool:
         return self._stores.pop(self.key(session_id), None) is not None
+
+    @property
+    def available(self) -> bool:
+        """False when the current request is bound to :data:`SESSIONLESS`."""
+        return current_session_id() != SESSIONLESS
 
     @property
     def session_count(self) -> int:

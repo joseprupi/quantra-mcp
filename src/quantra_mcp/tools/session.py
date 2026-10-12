@@ -55,16 +55,19 @@ def session_get_impl(store: ScratchStore, name: str) -> dict[str, Any]:
 
 
 def session_list_impl(store: ScratchStore) -> dict[str, Any]:
-    return {
-        "ok": True,
-        "items": [i.summary() for i in store.items()],
-        "size": len(store),
-        "max_items": store.max_items,
-    }
+    try:
+        items = [i.summary() for i in store.items()]
+    except LocalValidationError as exc:
+        return {"ok": False, "error": exc.error, "problems": exc.problems}
+    return {"ok": True, "items": items, "size": len(store), "max_items": store.max_items}
 
 
 def session_delete_impl(store: ScratchStore, name: str) -> dict[str, Any]:
-    return {"ok": True, "name": name, "deleted": store.delete(name), "size": len(store)}
+    try:
+        deleted = store.delete(name)
+    except LocalValidationError as exc:
+        return {"ok": False, "error": exc.error, "problems": exc.problems}
+    return {"ok": True, "name": name, "deleted": deleted, "size": len(store)}
 
 
 def register(app: MCPServer, store: ScratchStore) -> None:
@@ -92,7 +95,9 @@ def register(app: MCPServer, store: ScratchStore) -> None:
 
         In-memory only, private to this MCP session (another client of the same server
         never sees it), least-recently-used eviction at ``QUANTRA_SESSION_MAX_ITEMS``
-        (default 64), never persisted. Reference it later as
+        (default 64), never persisted. On a transport without a session id (single-exchange
+        streamable HTTP, protocol 2026-07-28) the tool answers ``ok: false``: pass the built
+        objects inline instead. Reference it later as
         ``{"session": "<name>"}`` in ``bootstrap_curve`` (and pricing tools); the stored
         ``market_data_source`` is reported in their ``notes``.
         """

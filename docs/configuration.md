@@ -56,11 +56,17 @@ Client setup is in [clients.md](clients.md).
   is unrestricted unless `QUANTRA_ALLOWED_ORIGINS` is set. `GET /`, `/healthz`
   and `/readyz` are not host-checked and answer with CORS `*`.
 - **Session scratch is per MCP session, in memory, bounded, never persisted.**
-  Each streamable-HTTP session (the `Mcp-Session-Id` minted at `initialize`)
-  has its own store; another client of the same server never sees its items
-  and a miss lists only the caller's own names. stdio has one implicit
-  session. Bounded per session (items), globally (sessions, total bytes), all
-  least-recently-used; gone when the process stops.
+  Each streamable-HTTP session (the `Mcp-Session-Id` minted at `initialize`,
+  protocol versions 2025-03-26 / 2025-06-18 / 2025-11-25) has its own store;
+  another client of the same server never sees its items and a miss lists
+  only the caller's own names. stdio has one implicit session. Bounded per
+  session (items), globally (sessions, total bytes), all least-recently-used;
+  gone when the process stops. A **2026-07-28 client** (single-exchange
+  streamable HTTP: no `initialize`, no `Mcp-Session-Id`) carries no identity
+  at all, so scratch is *unavailable* there rather than shared: `session_*`
+  and `{"session": name}` answer a tool error that says to pass the built
+  objects inline (every tool accepts a `build_curve` result in `curves` /
+  `market`). Rate limits for such clients fall back to the client address.
 - **What is logged.** One stderr line per tool call: timestamp, client address
   as a sha256 prefix (raw only with `QUANTRA_LOG_RAW_IP=1`), tool name, engine
   endpoint, status, duration. Never tool arguments, requests or responses. The

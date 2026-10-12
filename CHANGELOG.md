@@ -11,7 +11,10 @@ Hosted-mode fixes from an external review of the public server (M5.5).
   session). One client's `session_put("sofr")` no longer overwrites another's, and a
   miss lists only the caller's own names. Bounds: `QUANTRA_SESSION_MAX_ITEMS` per
   session (unchanged), new `QUANTRA_SESSION_MAX_SESSIONS` (default 256, whole-session
-  LRU), `QUANTRA_SESSION_MAX_TOTAL_BYTES` now a budget across every session.
+  LRU), `QUANTRA_SESSION_MAX_TOTAL_BYTES` now a budget across every session. A
+  protocol-2026-07-28 client (single-exchange streamable HTTP, no session id, no
+  identity) gets a tool error from `session_*` and `{"session": name}` telling it to
+  pass the built objects inline, instead of a store shared with strangers.
 - **Rate limiting per MCP session, not per IP.** The token bucket is keyed on the
   session id when present (claude.ai connector traffic reaches the server from a few
   shared egress addresses), on the client address before `initialize`; only
