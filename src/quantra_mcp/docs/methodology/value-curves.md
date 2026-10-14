@@ -153,3 +153,4 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/
 ## Not documented in engine v0.8.2
 
 - The engine does not document how a vendor's own curve interpolates; when a pasted table reprices a trade differently from the vendor, interpolation between the pasted nodes is the first hypothesis to test (`reprice_with` on `interpolator`, or paste the other quantity).
+- The engine source at this tag and the QuantLib source it is built on are readable with search_source / read_source (cite `<repo>:<path>@<tag>:L<a>-L<b>`); a point this page does not document is to be read there, never answered from memory.

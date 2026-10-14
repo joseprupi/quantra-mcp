@@ -54,5 +54,11 @@ def register(app: MCPServer) -> None:
         GitHub permalink, the request fields that control the behaviour, what is NOT documented)
         plus ``citations``, ``links``, ``repository``, ``not_documented`` and ``repos``. Quote
         the citations when you explain a number; never assert a cause the page does not support.
+        When the page says something is not documented, or the engine instantiates a QuantLib
+        class (PiecewiseYieldCurve, IterativeBootstrap, a pricer, a helper), continue with
+        search_source / read_source on the engine and on QuantLib at the pin and cite
+        path@tag:lines; "from memory", "general knowledge" and "not verified here" are banned
+        while the file is readable; the only negative is "not found in the engine or QuantLib
+        source at this pin", after a search returned nothing.
         """
         return explain_method_impl(topic)

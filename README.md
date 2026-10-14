@@ -120,9 +120,19 @@ QUANTRA_ENGINE_URL=http://localhost:18087 uv run python scripts/live_check.py   
 ```
 
 The engine contract is pinned to the tag in `src/quantra_mcp/schema/PIN`
-(v0.8.2). Requests are unchanged since 0.7.0; responses follow the pinned 0.8.x contract (swaption greek units, theta, zero-valued fields present). Bump it with
+(v0.8.2); the QuantLib version that engine is built on is in `schema/QUANTLIB_PIN`
+(1.41). `scripts/fetch_sources.py` fetches both source trees (text files only, verified
+against `schema/SOURCES.lock`) into `vendor/sources/` for the `search_source` /
+`read_source` / `list_source` tools; the container image ships them. Requests are unchanged since 0.7.0; responses follow the pinned 0.8.x contract (swaption greek units, theta, zero-valued fields present). Bump it with
 `scripts/pin_engine.py`, never by hand ([docs/development.md](docs/development.md)).
 
 ## License
 
 BSD-3-Clause. See `LICENSE`.
+
+The server vendors, for the source-reading tools and the examples, two BSD-3-Clause
+code bases: the Quantra pricing engine (https://github.com/joseprupi/quantraserver,
+`LICENSE.txt`) and QuantLib (https://github.com/lballabio/QuantLib, `LICENSE.TXT`,
+copyright the QuantLib Group and contributors). Their licence files are served verbatim
+at the roots of the fetched trees (`read_source("engine", "LICENSE.txt")`,
+`read_source("quantlib", "LICENSE.TXT")`).

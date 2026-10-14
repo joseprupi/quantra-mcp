@@ -154,3 +154,4 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/
 
 - Vol units are not stated in a schema comment; the catalog's wording (80bp normal = 0.008, 15% lognormal = 0.15 in the example files) is the documented usage: absolute decimals, never percent or bp numbers.
 - Normal-to-lognormal conversion is not performed by the engine; a vendor quoting the other type must be re-quoted by the user (or tested with `reprice_with` on `volatility_type` + the matching vol level).
+- The engine source at this tag and the QuantLib source it is built on are readable with search_source / read_source (cite `<repo>:<path>@<tag>:L<a>-L<b>`); a point this page does not document is to be read there, never answered from memory.

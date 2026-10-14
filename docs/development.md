@@ -59,11 +59,26 @@ tests/unit/test_pricing_tools.py` after an intentional builder change.
 
 Bump the engine pin (copies the spec, docs, catalog, license and every example
 request from an engine checkout at a tag, regenerates the enums and
-`examples/INDEX.json`, writes `PIN`):
+`examples/INDEX.json`, writes `PIN` and `QUANTLIB_PIN`, the `ARG QUANTLIB_VERSION`
+of the engine's Dockerfile at that tag):
 
 ```bash
 uv run python scripts/pin_engine.py --engine-repo /path/to/quantraserver --tag v0.8.2
+uv run python scripts/fetch_sources.py   # then refresh the source trees + schema/SOURCES.lock
 ```
+
+Source trees for `search_source` / `read_source` / `list_source`:
+`scripts/fetch_sources.py` downloads the engine tarball at the pinned tag and the
+QuantLib tarball at `v<QUANTLIB_PIN>`, verifies both sha256 against
+`src/quantra_mcp/schema/SOURCES.lock` (recorded on the first fetch of a tag; a later
+fetch of the same tag must match or the script fails), and extracts only text files
+(`.h .hpp .cpp .c .fbs .md .json .txt .cmake .sh .py`) of the allowed trees into
+`vendor/sources/` (gitignored, ~30 MB; `--check` verifies without network, `--force`
+re-extracts). The hermetic gate runs the tools over `tests/fixtures/sources/`; the
+live-ish tests in `tests/unit/test_source_live_ish.py` run over the fetched trees and
+are skipped until the script has run. `tests/live` asserts the engine's `/meta`
+`dependencies.quantlib` equals `QUANTLIB_PIN`. The Dockerfile runs the fetch in its
+build stage (network at build time only) and ships the trees in the image.
 
 ## Layout
 
@@ -72,10 +87,11 @@ src/quantra_mcp/
   server.py          MCPServer app, transport selection, startup engine check
   hosted.py          --http hardening: guard (per-session + per-IP rate limits, body cap, concurrency; refusals as tool errors), / /healthz /readyz, host validation, access log
   middleware.py      MCP-level middleware: session scope (binds the Mcp-Session-Id), failures -> isError
-  rules.py           the two market-data rules, quoted verbatim by INSTRUCTIONS and every prompt
+  rules.py           the two market-data rules (quoted verbatim by INSTRUCTIONS and every prompt) and the source rule
+  sources.py         the vendored engine + QuantLib trees: lazy index, bounded search, read, list
   config.py          env -> Settings
   backend/           Backend protocol + the engine HTTP client
-  schema/            vendored openapi3.json, PIN, generated enums, loader, validator
+  schema/            vendored openapi3.json, PIN, QUANTLIB_PIN, SOURCES.lock, generated enums, loader, validator
   presets/           market-convention presets (JSON data + registry; curve + trade blocks)
   builders/          pure builders: tenor parser, curves, schedule, market, bumps, products/<product>
   session.py         in-memory session scratch: one store per MCP session (LRU per session, LRU sessions, global byte budget)

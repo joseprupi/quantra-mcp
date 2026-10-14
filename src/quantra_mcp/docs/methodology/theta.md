@@ -178,3 +178,4 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/
 
 - Whether the one-day roll re-fixes a coupon or crosses a payment date is not stated; test with `reprice_with` on `pricing.as_of_date` (and the curves' `reference_date`) to see the one-day change directly.
 - Known limit stated by the engine: on a SABR-calibrated surface the roll moves the curves only.
+- The engine source at this tag and the QuantLib source it is built on are readable with search_source / read_source (cite `<repo>:<path>@<tag>:L<a>-L<b>`); a point this page does not document is to be read there, never answered from memory.

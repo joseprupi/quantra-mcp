@@ -140,3 +140,4 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/
 
 - The engine does not document what each cash-settlement method computes; it is QuantLib's semantics (CollateralizedCashPrice discounts the annuity on the discount curve; ParYieldCurve uses the par-yield annuity). Test the effect directly with `reprice_with` on `swaptions[0].swaption.settlement_method`.
 - `settlement_method` is the one swaption convention with a wire default; a cash-settled trade must state its method or it is priced as PhysicalOTC.
+- The engine source at this tag and the QuantLib source it is built on are readable with search_source / read_source (cite `<repo>:<path>@<tag>:L<a>-L<b>`); a point this page does not document is to be read there, never answered from memory.

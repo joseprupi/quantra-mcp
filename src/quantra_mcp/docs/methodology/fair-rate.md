@@ -132,3 +132,4 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/
 
 - A fair rate for bonds is not a concept the engine exposes; bonds report `yield` (see day-counters-and-compounding).
 - Which curve projects the fair rate is not stated in prose: from source the swap is built on the index whose curve is `forwarding_curve` and discounted on `discounting_curve`, so the fair rate is the par rate under exactly those two curves.
+- The engine source at this tag and the QuantLib source it is built on are readable with search_source / read_source (cite `<repo>:<path>@<tag>:L<a>-L<b>`); a point this page does not document is to be read there, never answered from memory.

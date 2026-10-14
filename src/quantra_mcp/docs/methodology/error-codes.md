@@ -133,3 +133,4 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/docs/http-api.md
 ## Not documented in engine v0.8.2
 
 - Nothing further: the excerpts above cover the behaviour the server relies on.
+- The engine source at this tag and the QuantLib source it is built on are readable with search_source / read_source (cite `<repo>:<path>@<tag>:L<a>-L<b>`); a point this page does not document is to be read there, never answered from memory.

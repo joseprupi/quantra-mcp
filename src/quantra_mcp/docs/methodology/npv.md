@@ -209,3 +209,4 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/
 
 - Sign convention: not documented in engine prose. From source, the value is QuantLib's `NPV()` for the instrument built with the request's `swap_type` / `side` / option type, so the sign is QuantLib's for that side (a payer swap's NPV rises when rates rise). Test it with `reprice_with` flipping the side.
 - Premium vs forward premium: the engine returns one present value as of `as_of_date`; it does not document a forward (deferred) premium field.
+- The engine source at this tag and the QuantLib source it is built on are readable with search_source / read_source (cite `<repo>:<path>@<tag>:L<a>-L<b>`); a point this page does not document is to be read there, never answered from memory.

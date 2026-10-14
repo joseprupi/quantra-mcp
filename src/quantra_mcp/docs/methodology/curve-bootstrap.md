@@ -382,3 +382,4 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/
 
 - Bootstrap accuracy, iteration limits and extrapolation policy are not documented in engine prose at this tag; from source (`buildCurve` above) the bootstrap tolerance is 1e-15 and everything else is QuantLib's `PiecewiseYieldCurve` default (a bond beyond the last pillar is rejected, see error-codes / the example `fixed_rate_bond_beyond_pillar_request`).
 - The pillar dates the engine reports for a bootstrapped curve are the helpers' tenor dates, not necessarily the helper maturity nodes (this server's live finding, CHANGELOG 0.1.1); rebuilding a curve from sampled discount factors at those dates does not reproduce it between nodes.
+- The engine source at this tag and the QuantLib source it is built on are readable with search_source / read_source (cite `<repo>:<path>@<tag>:L<a>-L<b>`); a point this page does not document is to be read there, never answered from memory.

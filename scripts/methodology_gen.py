@@ -159,12 +159,25 @@ class _Excerpter:
         return f"{_fence(body, lang)}\n\nSource: `{ref}`\n\nGitHub: <{url}>"
 
 
-def _gaps(out: list[str], topic: dict[str, Any], heading: str, none: str) -> None:
+#: closes the "Not documented" section of every engine page (M5.9a): what the page does
+#: not cite is still readable, and must be read, not recalled.
+SOURCE_READABLE = (
+    "The engine source at this tag and the QuantLib source it is built on are readable "
+    "with search_source / read_source (cite `<repo>:<path>@<tag>:L<a>-L<b>`); a point this "
+    "page does not document is to be read there, never answered from memory."
+)
+
+
+def _gaps(
+    out: list[str], topic: dict[str, Any], heading: str, none: str, trailer: str | None = None
+) -> None:
     out += [heading, ""]
     if topic.get("gaps"):
         out += [f"- {g}" for g in topic["gaps"]]
     else:
         out.append(f"- {none}")
+    if trailer:
+        out.append(f"- {trailer}")
     out.append("")
 
 
@@ -195,6 +208,7 @@ def render_topic(
         topic,
         f"## Not documented in engine {tag}",
         "Nothing further: the excerpts above cover the behaviour the server relies on.",
+        SOURCE_READABLE,
     )
     meta = {
         "slug": topic["slug"],

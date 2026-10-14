@@ -15,6 +15,7 @@ Client setup is in [clients.md](clients.md).
 | `QUANTRA_SESSION_MAX_SESSIONS` | `256` | Cap on the number of MCP sessions holding scratch (whole least-recently-used sessions are dropped). |
 | `QUANTRA_MAX_CONCURRENCY` | `4` | Maximum simultaneous engine calls: the analytics fan-outs, and in `--http` mode the number of `tools/call` requests served at once. |
 | `QUANTRA_REQUIRE_ENGINE` | `0` | `1`: refuse to start when the engine's `/meta` is unreachable (default: warn and serve). |
+| `QUANTRA_SOURCES_DIR` | `<checkout>/vendor/sources` | Root of the vendored source trees (`engine/`, `quantlib/`) the `search_source` / `read_source` / `list_source` tools serve; fetched by `scripts/fetch_sources.py`; the container image sets it to `/app/vendor/sources`. |
 
 `--http` mode only:
 

@@ -11,8 +11,10 @@ dist
 build
 tmp
 tests
-scripts
+scripts/*
+!scripts/fetch_sources.py
 docs
+vendor
 .env
 .env.*
 docker-compose*.yml

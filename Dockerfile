@@ -12,13 +12,20 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --no-editable
+# the engine source at the pinned tag + QuantLib at the pinned version (text files only,
+# verified against src/quantra_mcp/schema/SOURCES.lock); network at build time only
+COPY scripts/fetch_sources.py ./scripts/fetch_sources.py
+RUN python scripts/fetch_sources.py --dest /app/vendor/sources --cache /tmp/sources-cache \
+    && rm -rf /tmp/sources-cache
 
 FROM python:3.12-slim
 RUN useradd --system --uid 10001 --create-home --shell /usr/sbin/nologin quantra
 COPY --from=build --chown=quantra:quantra /app/.venv /app/.venv
+COPY --from=build --chown=quantra:quantra /app/vendor/sources /app/vendor/sources
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    QUANTRA_MCP_LOG=info
+    QUANTRA_MCP_LOG=info \
+    QUANTRA_SOURCES_DIR=/app/vendor/sources
 USER quantra
 WORKDIR /home/quantra
 EXPOSE 8765

@@ -39,7 +39,9 @@ from quantra_mcp import examples_catalog as cat
 from quantra_mcp.config import Settings
 from quantra_mcp.presets.registry import curve_preset_ids, get_preset
 from quantra_mcp.resources import EXAMPLE_ENDPOINTS, example_names, load_example
+from quantra_mcp.schema.loader import quantlib_pin
 from quantra_mcp.server import build_server
+from quantra_mcp.sources import default_trees
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -517,6 +519,100 @@ async def m3_tools(client: Client, http: httpx.AsyncClient, rows: list[Row]) -> 
     return failed
 
 
+async def m59a_sources(client: Client, http: httpx.AsyncClient, rows: list[Row]) -> bool:
+    """M5.9a: the vendored source trees are present (fetched once, cached under
+    ``vendor/``), the engine's QuantLib version equals ``QUANTLIB_PIN``, and the three
+    source tools answer over the real trees (no engine call: replay column n/a)."""
+    failed = False
+    trees = default_trees()
+    if not all(trees.available().values()):
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import fetch_sources
+
+        fetch_sources.main([])
+        trees = default_trees()
+        trees._index.clear()
+    stats = trees.stats()
+    for key, st in stats.items():
+        ok = bool(st.get("available"))
+        failed |= not ok
+        rows.append(
+            Row(
+                f"sources {key}",
+                "(disk)",
+                "ok" if ok else "FAIL",
+                "n/a",
+                f"{st['tag']} {st.get('files', 0)} files {st.get('bytes', 0) / 1048576:.1f} MB",
+            )
+        )
+    meta = (await http.get("/meta")).json()
+    live_ql = str(meta.get("dependencies", {}).get("quantlib"))
+    same = live_ql == quantlib_pin().version
+    failed |= not same
+    rows.append(
+        Row(
+            "QUANTLIB_PIN vs /meta",
+            "/meta",
+            "ok" if same else "FAIL",
+            "byte-equal" if same else "MISMATCH",
+            f"pin {quantlib_pin().version} engine {live_ql}",
+        )
+    )
+    checks: list[tuple[str, dict[str, Any], str]] = [
+        (
+            "search_source",
+            {"query": "PiecewiseYieldCurve", "repo": "engine"},
+            "src/parsers/term_structure_parser.cpp",
+        ),
+        (
+            "search_source",
+            {"query": "class PiecewiseYieldCurve", "repo": "quantlib"},
+            "ql/termstructures/yield/piecewiseyieldcurve.hpp",
+        ),
+        (
+            "search_source",
+            {"query": "IterativeBootstrap", "repo": "quantlib", "max_results": 200},
+            "ql/termstructures/iterativebootstrap.hpp",
+        ),
+        (
+            "read_source",
+            {
+                "repo": "quantlib",
+                "path": "ql/termstructures/yield/piecewiseyieldcurve.hpp",
+                "start_line": 1,
+                "end_line": 60,
+            },
+            "Piecewise yield term structure",
+        ),
+        ("list_source", {"repo": "quantlib", "path_prefix": "ql/termstructures/yield"}, "yield"),
+    ]
+    for name, args, expect in checks:
+        result = await client.call_tool(name, args)
+        data = dict(result.structured_content or {})
+        if name == "search_source":
+            ok = bool(data.get("ok")) and expect in {h["path"] for h in data.get("hits", [])}
+            note = f"{data.get('count')} hits, {expect} {'found' if ok else 'MISSING'}"
+        elif name == "read_source":
+            ok = bool(data.get("ok")) and expect in str(data.get("text"))
+            note = str(data.get("citation"))
+        else:
+            ok = bool(data.get("ok")) and any(
+                e["path"].endswith("piecewiseyieldcurve.hpp") for e in data.get("entries", [])
+            )
+            note = f"{data.get('count')} entries"
+        failed |= not ok
+        rows.append(
+            Row(
+                f"{name} {args.get('query') or args.get('path') or args.get('path_prefix')}"[:40],
+                "(sources)",
+                "ok" if ok else "FAIL",
+                "n/a",
+                note[:80],
+            )
+        )
+    return failed
+
+
 async def main() -> int:
     engine_url = os.environ.get("QUANTRA_ENGINE_URL", "").rstrip("/")
     if not engine_url:
@@ -586,6 +682,7 @@ async def main() -> int:
         sweep_failed, summary = await m3_sweep(client, rows, sweep_rows)
         failed |= sweep_failed
         failed |= await m3_tools(client, http, rows)
+        failed |= await m59a_sources(client, http, rows)
 
     if sweep_table:
         _print_table(sweep_rows, ("example", "endpoint", "status", "replay", "oracle"))
