@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.1.10 (2026-10-14)
+
+Engine pin v0.8.2 -> **v0.11.0** (`e2c160d`), QuantLib 1.41 -> **1.44** (M5.9b).
+
+- **Pin.** Spec, docs, catalog and examples re-vendored by `pin_engine.py`: 26 POST
+  endpoints (+`/price-fx-forward`, `/price-cross-currency-swap`, reachable through
+  `engine_request`); 239 examples (+6 FX forward, +6 cross-currency swap, +4 FX
+  collateral curves; the vendor-named fixture stays excluded), 210 oracles. `QUANTLIB_PIN`
+  1.44; `SOURCES.lock` re-recorded for engine `v0.11.0` (340 files) and QuantLib `v1.44`
+  (2,443 files). The catalog's per-leg values (`npv=` repeated per leg from 0.10.0) are
+  parsed as `legs[i].*` oracles; `fields` oracles read the first priced item.
+- **Swap leg model (engine 0.10.0, wire-breaking upstream).** `price_vanilla_swap`,
+  `price_ois_swap`, the `price_swaption` underlying and every analytic composed on them
+  (`swap_dv01`, `key_rate_ladder`, `scenario`, `fair_rate`) emit `SwapLeg` legs
+  (`pay_receive`, `currency` from the index, typed `coupons`, curves on the legs; no
+  `swap_type`, no request-level curve ids). Tool arguments are unchanged. Oracle: every
+  pre-0.10.0 request golden and 20 preset x side x override builds, run through the
+  engine's `tools/migrate_swap_requests`, are JSON-equal to the new builder output
+  (25/25). The vendored SOFR blog pricing example is stored converted by the same tool.
+- **Responses.** Swap summaries carry `leg_npvs` (`legs[i].npv`); `fair_rate` /
+  `fair_spread` only when returned. `compare_results`: leg labels map to `legs[i].npv`;
+  PV01 / BPV / annuity map to a swaption's `annuity` and, on a swap, are listed unmapped
+  with the reason (engine 0.10.0 removed every `*_bps` field) and a pointer to
+  `swap_dv01`. `reprice_with` differences include `legs[i].npv` / `npv_reporting`.
+- **Methodology** regenerated at v0.11.0 (13 pages, 139 citations): the swap NPV and
+  fair-rate statements re-pointed to the `SwapLeg` evaluators and `swap_leg_pricer.cpp`;
+  the PV01 note now cites the 0.10.0 removal and the internal annuity. Preset provenance
+  re-pointed to QuantLib v1.44 headers (cited definitions verified unchanged since 1.41).
+- **A/B 0.8.2 vs 0.11.0 over all examples**: 173 identical; 12 CMS swaps whose
+  `fair_rate` / `fair_spread` went 0.0 -> computed (versioning.md 0.10.0 "Fixed"); 38
+  moved as the QuantLib upgrade page states (2.2 CDS 10, 2.4 inflation 17, 2.5 Hull-White
+  joint calibration 3, 2.7 bond yield/duration/convexity 6, 2.9 noise 2); 16 new
+  (no 0.8.2 baseline); leg fields mapped as 0.10.0 shape (`*_leg_npv` -> `legs[i].npv`,
+  `*_bps` removed). No other number moved.
+
 ## 0.1.9 (2026-10-13)
 
 Source access (M5.9a): the assistant can READ the engine source at the pinned tag and
