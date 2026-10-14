@@ -11,3 +11,5 @@ build/
 .env.*
 !.env.example
 tmp/
+# fetched source trees + tarball cache (scripts/fetch_sources.py); the lock is tracked
+vendor/

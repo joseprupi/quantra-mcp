@@ -11,6 +11,9 @@ Copies, from an engine checkout at the given tag (read with ``git show`` /
 * ``examples/data/**/*.json``           -> ``src/quantra_mcp/examples/<category>/<name>.json``
 
 and writes ``src/quantra_mcp/schema/PIN`` (``<tag> <commit sha>``),
+``src/quantra_mcp/schema/QUANTLIB_PIN`` (the ``QUANTLIB_VERSION`` the engine's
+Dockerfile builds at that tag; the runtime truth is ``/meta`` ``dependencies.quantlib``,
+checked by ``tests/live``; the source trees are then fetched by ``fetch_sources.py``),
 ``src/quantra_mcp/schema/enums_generated.py`` (one ``StrEnum`` per engine
 enum, so tool arguments are typed with the engine's own values) and
 ``src/quantra_mcp/examples/INDEX.json`` (one row per vendored example: name,
@@ -447,6 +450,18 @@ def vendor_examples(repo: Path, tag: str, sha: str) -> list[dict[str, Any]]:
 #: Filled by vendor_examples(): fixtures left out under VENDOR_RE (recorded in INDEX.json).
 EXCLUDED: list[dict[str, str]] = []
 
+_QL_VERSION_RE = re.compile(r"^\s*ARG\s+QUANTLIB_VERSION\s*=\s*([0-9][0-9.]*)\s*$", re.M)
+
+
+def quantlib_version(repo: Path, tag: str) -> str:
+    """The QuantLib version the engine builds at ``tag`` (``ARG QUANTLIB_VERSION=`` in its
+    Dockerfile); the one value a release is built from."""
+    dockerfile = git_show(repo, tag, "Dockerfile").decode("utf-8", errors="replace")
+    found = _QL_VERSION_RE.findall(dockerfile)
+    if len(found) != 1:
+        raise SystemExit(f"Dockerfile at {tag}: expected one ARG QUANTLIB_VERSION, found {found}")
+    return found[0]
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
@@ -468,6 +483,13 @@ def main(argv: list[str] | None = None) -> int:
     (SCHEMA_DIR / "enums_generated.py").write_text(render_enums(spec))
     (SCHEMA_DIR / "PIN").write_text(f"{tag} {sha}\n")
     print(f"PIN = {tag} {sha} (API {spec['info']['version']})", file=sys.stderr)
+    ql_version = quantlib_version(repo, tag)
+    (SCHEMA_DIR / "QUANTLIB_PIN").write_text(f"{ql_version}\n")
+    print(
+        f"QUANTLIB_PIN = {ql_version} (Dockerfile ARG QUANTLIB_VERSION at {tag}; "
+        "run scripts/fetch_sources.py to refresh vendor/sources and schema/SOURCES.lock)",
+        file=sys.stderr,
+    )
 
     rows = vendor_examples(repo, tag, sha)
     index = {

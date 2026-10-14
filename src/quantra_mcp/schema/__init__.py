@@ -15,6 +15,7 @@ from quantra_mcp.schema.loader import (
     SpecError,
     load_spec,
     pin,
+    quantlib_pin,
 )
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "ValidationProblem",
     "load_spec",
     "pin",
+    "quantlib_pin",
     "validate_request",
 ]
 

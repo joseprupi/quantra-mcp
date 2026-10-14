@@ -16,6 +16,7 @@ from typing import Any
 SCHEMA_DIR = Path(__file__).resolve().parent
 SPEC_PATH = SCHEMA_DIR / "openapi3.json"
 PIN_PATH = SCHEMA_DIR / "PIN"
+QUANTLIB_PIN_PATH = SCHEMA_DIR / "QUANTLIB_PIN"
 
 REF_PREFIX = "#/components/schemas/"
 ENUM_PREFIX = "quantra_enums_"
@@ -35,6 +36,22 @@ class Pin:
     def version(self) -> str:
         """``v0.8.2`` -> ``0.8.2``."""
         return self.tag.removeprefix("v")
+
+
+@dataclass(frozen=True, slots=True)
+class QuantLibPin:
+    """The QuantLib version the pinned engine is built on (``schema/QUANTLIB_PIN``,
+    written by ``scripts/pin_engine.py`` from the engine's Dockerfile at the tag; the
+    engine's ``/meta`` ``dependencies.quantlib`` is the runtime truth, checked live)."""
+
+    version: str
+
+    @property
+    def tag(self) -> str:
+        """The QuantLib repository tag: ``1.41`` -> ``v1.41`` (``lballabio/QuantLib`` tags
+        releases ``v<version>``; ``QuantLib-v<version>`` is the release tarball name,
+        not a git tag)."""
+        return f"v{self.version}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -201,3 +218,12 @@ def load_spec(path: Path = SPEC_PATH) -> Spec:
 def pin(path: Path = PIN_PATH) -> Pin:
     tag, sha = path.read_text().split()
     return Pin(tag=tag, sha=sha)
+
+
+@lru_cache(maxsize=1)
+def quantlib_pin(path: Path = QUANTLIB_PIN_PATH) -> QuantLibPin:
+    """The pinned QuantLib version (see :class:`QuantLibPin`)."""
+    text = path.read_text().strip()
+    if not text:
+        raise SpecError(f"{path} is empty")
+    return QuantLibPin(version=text.split()[0])
