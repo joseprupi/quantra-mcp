@@ -12,7 +12,8 @@ from quantra_mcp import examples_catalog as cat
 from quantra_mcp import methodology
 from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.presets.registry import PresetError, get_preset, list_presets
-from quantra_mcp.schema.loader import SpecError, load_spec, normalize_endpoint, pin
+from quantra_mcp.schema.loader import SpecError, load_spec, normalize_endpoint, pin, quantlib_pin
+from quantra_mcp.sources import default_trees, sources_lock
 from quantra_mcp.tools.discovery import endpoint_schema, enum_listing
 
 PKG_DIR = Path(__file__).resolve().parent
@@ -55,6 +56,24 @@ engine outputs and which are differences computed here. Every citation carries a
 permalink; the two repositories are the engine https://github.com/joseprupi/quantraserver
 (cited at the pinned tag) and this server https://github.com/joseprupi/quantra-mcp (cited
 at a commit); both URLs are also the first entry of the quantra://methodology index.
+
+Source access: search_source(query, repo=engine|quantlib|both, regex?, path_prefix?,
+max_results) / read_source(repo, path, start_line, end_line, max_lines<=400) /
+list_source(repo, path_prefix) serve, read-only and without shelling out, the engine
+source at the pinned tag (src/, jsonserver/, flatbuffers/*.fbs, docs/, the functional
+CATALOG; examples/data is the vendored examples) and QuantLib ql/ at the version the
+pinned engine is built on (quantra://pin reports both refs; the engine's /meta
+dependencies.quantlib is checked live against it). Every hit and every read carries a
+`citation` (`<repo>:<path>@<tag>:L<a>-L<b>`) and a GitHub `permalink`, the same form
+the methodology pages use, so a statement about HOW something is computed is cited
+to the line that does it: explain_method first, then search_source for the QuantLib
+class the engine instantiates, then read_source. The trees are fetched by
+`scripts/fetch_sources.py` (GitHub tarballs verified against `schema/SOURCES.lock`,
+text files only, ~30 MB) into `vendor/sources/` and shipped in the container image;
+without them the three tools return an error naming the script. Both sources are
+BSD-3-Clause: the engine (https://github.com/joseprupi/quantraserver, LICENSE.txt) and
+QuantLib (https://github.com/lballabio/QuantLib, LICENSE.TXT, copyright the QuantLib
+Group and contributors); the licence files are served verbatim at the tree roots.
 Every result echoes the exact
 request sent (`request`) and the engine body verbatim (`response`); on an engine error
 `ok` is false and `error` is the engine's text (400 = request wrong, 422 = well-formed
@@ -150,11 +169,16 @@ def register(app: MCPServer) -> None:
     @app.resource(
         "quantra://pin",
         name="engine-pin",
-        description="The engine tag and commit this server's vendored contract is pinned to.",
+        description=(
+            "The engine tag and commit this server's vendored contract is pinned to, the "
+            "QuantLib version that engine is built on, and the source trees served by "
+            "search_source / read_source / list_source."
+        ),
         mime_type="application/json",
     )
     def pin_resource() -> dict[str, Any]:
         p = pin()
+        q = quantlib_pin()
         spec = load_spec()
         return {
             "tag": p.tag,
@@ -162,6 +186,11 @@ def register(app: MCPServer) -> None:
             "api_version": spec.api_version,
             "image": f"ghcr.io/joseprupi/quantra-server:{p.version}",
             "endpoints": len(spec.endpoints),
+            "quantlib": q.version,
+            "quantlib_tag": q.tag,
+            "quantlib_url": f"https://github.com/lballabio/QuantLib/tree/{q.tag}",
+            "sources": default_trees().stats(),
+            "sources_lock": sources_lock(),
         }
 
     @app.resource(

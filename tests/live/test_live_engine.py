@@ -16,6 +16,7 @@ from mcp import Client
 
 from quantra_mcp.config import Settings
 from quantra_mcp.resources import load_example
+from quantra_mcp.schema.loader import quantlib_pin
 from quantra_mcp.server import build_server
 from tests.conftest import structured
 
@@ -67,6 +68,9 @@ async def test_meta_and_health() -> None:
     assert health["ok"] and health["response"]["status"] == "healthy"
     async with httpx.AsyncClient(base_url=ENGINE_URL) as http:
         assert (await http.get("/meta")).json() == meta["response"]
+    # the QuantLib version the engine really runs == the vendored QUANTLIB_PIN (M5.9a):
+    # the source served by search_source / read_source is the one the numbers come from
+    assert meta["response"]["dependencies"]["quantlib"] == quantlib_pin().version
 
 
 async def test_holidays_with_override_matches_doc_example() -> None:

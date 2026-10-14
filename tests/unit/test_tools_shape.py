@@ -30,7 +30,7 @@ async def test_lists_tools_and_resources(app: Any) -> None:
     async with Client(app) as c:
         listed = (await c.list_tools()).tools
         tools = {t.name for t in listed}
-        assert len(listed) == 38
+        assert len(listed) == 41
         assert tools == {
             "quantra_meta",
             "engine_schema",
@@ -70,6 +70,9 @@ async def test_lists_tools_and_resources(app: Any) -> None:
             "explain_method",
             "compare_results",
             "reprice_with",
+            "search_source",
+            "read_source",
+            "list_source",
         }
         uris = {str(r.uri) for r in (await c.list_resources()).resources}
         assert {

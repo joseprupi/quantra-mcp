@@ -35,7 +35,7 @@ def _props(schema: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
 async def test_every_tool_is_titled_annotated_and_described(app: Any) -> None:
     async with Client(app) as c:
         tools = (await c.list_tools()).tools
-    assert len(tools) == 38
+    assert len(tools) == 41
     for t in tools:
         assert t.title, t.name
         a = t.annotations

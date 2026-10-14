@@ -21,6 +21,7 @@
 | ``QUANTRA_LOG_RAW_IP`` | ``0`` | HTTP: log client IPs verbatim instead of a sha256 prefix. |
 | ``QUANTRA_REQUIRE_ENGINE`` | ``0`` | Refuse to start when the engine's ``/meta`` is unreachable. |
 | ``QUANTRA_PUBLIC_URL`` | *(empty)* | HTTP mode: the MCP URL advertised by ``GET /``. |
+| ``QUANTRA_SOURCES_DIR`` | ``<checkout>/vendor/sources`` | Vendored engine + QuantLib sources. |
 """
 
 from __future__ import annotations
@@ -100,6 +101,7 @@ class Settings:
     log_raw_ip: bool = False
     require_engine: bool = False
     public_url: str = ""
+    sources_dir: str = ""  # empty = quantra_mcp.sources.default_sources_dir()
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
@@ -168,4 +170,5 @@ class Settings:
             log_raw_ip=_bool(source, "QUANTRA_LOG_RAW_IP"),
             require_engine=_bool(source, "QUANTRA_REQUIRE_ENGINE"),
             public_url=public_url,
+            sources_dir=source.get("QUANTRA_SOURCES_DIR", "").strip(),
         )

@@ -6,6 +6,7 @@ import logging
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
@@ -17,9 +18,10 @@ from quantra_mcp.config import Settings
 from quantra_mcp.errors import EngineError, TransportError
 from quantra_mcp.hosted import AccessLog, build_http_app
 from quantra_mcp.middleware import FailuresAreErrors, SessionScope
-from quantra_mcp.rules import ABSOLUTE_RULE, EXAMPLE_SHAPE_RULE
+from quantra_mcp.rules import ABSOLUTE_RULE, EXAMPLE_SHAPE_RULE, SOURCE_RULE
 from quantra_mcp.schema.loader import load_spec, pin
 from quantra_mcp.session import ScratchStore, SessionStores
+from quantra_mcp.sources import SourceTrees
 from quantra_mcp.tools import (
     analytics,
     calendar,
@@ -30,6 +32,7 @@ from quantra_mcp.tools import (
     pricing,
     raw,
     reconcile,
+    source,
 )
 from quantra_mcp.tools import session as session_tools
 from quantra_mcp.tools._meta import finish_schemas
@@ -39,22 +42,19 @@ log = logging.getLogger("quantra_mcp")
 SERVER_NAME = "quantra"
 
 GUIDANCE = """\
-Quantra pricing engine (QuantLib): swaps, bonds, FRAs, caps/floors, swaptions, CDS,
-equity options, inflation; curves from par quotes, discount factors or zero rates; DV01,
-ladders, scenarios, fair rates; calendars. Every number comes from the engine. With a
-business user speak in trade terms, not tool or preset names. For a trade: (1) can it be
-priced here; (2) which market data is missing, in paste-able form; (3) every convention
-assumed, with its source; (4) the engine's result against the user's number, causes
-tested with reprice_with, never asserted; (5) the engine's numbers with their
-assumptions. State sign conventions and dates. Turn engine refusals into what the user
-can supply; never alter an input to match. "How is this computed?" comes from
-explain_method with citations; never claim vendor data or methodology.
-
-Developers: the technical map is the resource quantra://guide/developers.
+Quantra pricing engine. Every number comes from the engine. With a business user speak
+in trade terms, not tool names: (1) can the trade be priced here; (2) which market data
+is missing, in paste-able form; (3) every convention assumed, with its source; (4) the
+engine's result against the user's number, causes tested with reprice_with, never
+asserted. State sign conventions and dates; turn refusals into what the user can
+supply; never alter an input to match or claim vendor data.
+Developers: quantra://guide/developers.
 """
 
-#: order matters: the rule first, the example-shape rule second, the guidance last
-INSTRUCTIONS = f"{ABSOLUTE_RULE}\n{EXAMPLE_SHAPE_RULE}\n{GUIDANCE}"
+#: order matters: the rule first, the example-shape rule second, the source rule third,
+#: the guidance last. The whole text stays under INSTRUCTIONS_BUDGET (pinned by a test).
+INSTRUCTIONS = f"{ABSOLUTE_RULE}\n{EXAMPLE_SHAPE_RULE}\n{SOURCE_RULE}\n{GUIDANCE}"
+INSTRUCTIONS_BUDGET = 2000
 
 
 def configure_logging(level: str) -> None:
@@ -177,6 +177,7 @@ def build_server(
     analytics.register(app, the_backend, the_store, settings.max_concurrency)
     examples.register(app)
     explain.register(app)
+    source.register(app, SourceTrees(Path(settings.sources_dir) if settings.sources_dir else None))
     reconcile.register(app, the_backend)
     session_tools.register(app, the_store)
     resources.register(app)
