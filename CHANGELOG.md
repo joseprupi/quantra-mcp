@@ -1,5 +1,56 @@
 # Changelog
 
+## 0.1.9 (2026-10-13)
+
+Source access (M5.9a): the assistant can READ the engine source at the pinned tag and
+the QuantLib source the engine is built on, and cite them, instead of answering "from
+general knowledge" where the methodology pages stop.
+
+- **Three read-only tools** (41 tools now). `search_source(query, repo=engine|quantlib|both,
+  regex?, path_prefix?, max_results, case_sensitive?)`: hits sorted by path then line with
+  one line of context each side, a `citation` (`<repo>:<path>@<tag>:L<n>-L<n>`) and a
+  GitHub `permalink`; case-insensitive by default, regex matched per line (pattern cap 256
+  characters), queries under 3 characters refused, a scan byte budget (96 MiB) and a time
+  guard (10 s) reported as `truncated` / `truncated_reason`. `read_source(repo, path,
+  start_line, end_line?, max_lines<=400)`: the lines verbatim with `total_lines`, `ref`,
+  the citation and the permalink (`#La-Lb`); traversal (`..`, absolute paths, symlinks)
+  and binary files refused. `list_source(repo, path_prefix, max_entries)`: directories
+  (with file counts) then files (with sizes) plus the GitHub `tree_url`. Pure Python, no
+  shelling out, no engine call.
+- **Vendored trees.** `scripts/fetch_sources.py` downloads the two GitHub tarballs at the
+  pinned refs (engine `v0.8.2`; QuantLib `v1.41`, the `ARG QUANTLIB_VERSION` of the
+  engine's Dockerfile at that tag, recorded in `schema/QUANTLIB_PIN` by `pin_engine.py`
+  and checked live against `/meta` `dependencies.quantlib`), verifies their sha256 against
+  `schema/SOURCES.lock` (recorded on the first fetch; a later fetch of the same tag must
+  match) and extracts only text files of the allowed trees (engine: `src/`, `jsonserver/`,
+  `flatbuffers/*.fbs`, `docs/`, the functional CATALOG, LICENSE, README; QuantLib: `ql/`,
+  LICENSE, README) into `vendor/sources/` (gitignored): 309 + 2,380 files, 29.4 MB. The
+  container image fetches them in its build stage (network at build time only) and ships
+  them under `/app/vendor/sources` (`QUANTRA_SOURCES_DIR`). Without the trees the three
+  tools return an error naming the script.
+- **Behaviour.** A third rule in the server instructions (after the two market-data rules,
+  the whole text still under 2,000 characters): explain_method first; where its page lacks
+  the point, or the engine instantiates a QuantLib class, search and read that class in
+  the engine and in QuantLib at the pin and cite `path@tag:lines`; "from memory", "general
+  knowledge" and "not verified here" are banned while the file is readable; the only
+  negative is "not found in the engine or QuantLib source at this pin" after a search
+  returned nothing. The same sentence is in `explain_method`'s description, and every
+  engine methodology page closes its "Not documented" section with the pointer to the
+  readable source (pages regenerated at v0.8.2, citations unchanged). `quantra://pin`
+  reports the QuantLib version, tag and the fetched trees; `quantra://guide/developers`
+  documents the tools, the refs and both BSD-3-Clause licences.
+- **Tests.** Hermetic fixture trees under `tests/fixtures/sources/` through the real tool
+  code; live-ish tests over the fetched trees (skipped when absent): `PiecewiseYieldCurve`
+  in the engine finds `term_structure_parser.cpp` at a line inside an existing methodology
+  citation, `class PiecewiseYieldCurve` in QuantLib finds `piecewiseyieldcurve.hpp` whose
+  first 60 lines carry the class doc, `IterativeBootstrap` finds `iterativebootstrap.hpp`
+  and `read_source` on the `calculate()` definition returns the bootstrap loop with its
+  permalink; `tests/live` asserts `/meta` `dependencies.quantlib` == `QUANTLIB_PIN`;
+  `live_check.py` runs the three tools and the fetch check.
+- Deviation from the brief: QuantLib's git tag is `v1.41` (`QuantLib-v1.41` is the name of
+  the release tarball, not a tag; GitHub returns 404 for it), so the pin, the lock, the
+  citations and the permalinks use `v1.41`.
+
 ## 0.1.8 (2026-10-12)
 
 Engine pin bump v0.7.0 -> v0.8.2 (M5.8). Requests are unchanged; what the engine returns is.
