@@ -13,7 +13,7 @@ from __future__ import annotations
 from typing import Annotated, Any, Literal
 
 from mcp.server.mcpserver import MCPServer
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from quantra_mcp.backend.base import Backend
 from quantra_mcp.builders import curves as cb
@@ -114,8 +114,25 @@ def build_value_curve_impl(
 ALL_HELPER_TYPES: tuple[str, ...] = ("deposit", "fra", "future", "swap", "ois")
 
 
+class PastedRow(BaseModel):
+    """One curve row passed as data instead of text."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    tenor: str | None = Field(
+        default=None, description="Tenor as given (10Y, 18M, 1 WK, 18 MO, 10 YR); or date."
+    )
+    date: str | None = Field(default=None, description="YYYY-MM-DD or DD-Mon-YYYY; or tenor.")
+    value: float | str = Field(
+        description="The value exactly as given (a number, or text such as '3.5%')."
+    )
+    type: str | None = Field(
+        default=None, description="Par tables only: the quote type (ois, swap, deposit...)."
+    )
+
+
 def curve_from_pasted_table_impl(
-    text: str,
+    text: str | None,
     id: str,
     kind: pt.TableKind,
     preset: str | None = None,
@@ -127,9 +144,17 @@ def curve_from_pasted_table_impl(
     compounding: Compounding | None = None,
     frequency: Frequency | None = None,
     interpolator: Interpolator | None = None,
+    rows: list[PastedRow] | list[dict[str, Any]] | None = None,
 ) -> ToolResult:
     """Parse the table, then hand the rows to build_value_curve (discount / zero)
     or build_curve (par quotes). Parsing notes and unreadable rows ride along."""
+    if (text is None) == (rows is None):
+        return local_error_result(
+            BOOTSTRAP_CURVES,
+            None,
+            "give exactly one of text or rows: text = the table as the user pasted it, "
+            "rows = [{tenor | date, value}]",
+        )
     if kind not in ("discount", "zero", "par"):
         return local_error_result(
             BOOTSTRAP_CURVES, None, f"kind must be discount, zero or par (got {kind!r})"
@@ -143,9 +168,14 @@ def curve_from_pasted_table_impl(
             return local_error_result(BOOTSTRAP_CURVES, None, str(exc))
         if p.helpers is not None:
             helper_types = tuple(p.helpers.available)
-    table = pt.parse_table(
-        text, kind, percent=percent, date_format=date_format, helper_types=helper_types
-    )
+    if rows is not None:
+        items = [r.model_dump(exclude_none=True) if isinstance(r, PastedRow) else r for r in rows]
+        table = pt.parse_rows(items, percent=percent, helper_types=helper_types)
+    else:
+        assert text is not None
+        table = pt.parse_table(
+            text, kind, percent=percent, date_format=date_format, helper_types=helper_types
+        )
     extra: dict[str, Any] = {
         "parsed_rows": [r.as_dict() for r in table.rows],
         "unparsed": table.unparsed,
@@ -158,6 +188,8 @@ def curve_from_pasted_table_impl(
         out.update(extra)
         return out
 
+    if table.refusal is not None:
+        return fail(table.refusal)
     if not table.rows:
         return fail(
             "no row of the pasted table could be read as <date or tenor> <value>; "
@@ -498,18 +530,6 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
 
     @tool(app, "Curve spec from a pasted table (no engine call)", engine=False)
     def curve_from_pasted_table(
-        text: Annotated[
-            str,
-            Field(
-                description=(
-                    "The pasted rows: CSV / TSV / ';' / '|' / whitespace separated, header "
-                    "optional. Each row: a date (2034-09-18, 18-Sep-2034, 09/18/2034 with "
-                    "date_format) or a tenor (10Y), then the value; '%' values are divided by "
-                    "100, thousands separators dropped; an optional word per row (ois, swap, "
-                    "deposit) tags a par quote's type."
-                )
-            ),
-        ],
         id: Annotated[str, Field(description="Curve id to register.")],
         kind: Annotated[
             Literal["discount", "zero", "par"],
@@ -521,6 +541,29 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             ),
         ],
         market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        text: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "The table exactly as the user pasted it: CSV / TSV / ';' / '|' / "
+                    "whitespace separated, header optional. Each row: a date (2034-09-18, "
+                    "18-Sep-2034, 09/18/2034 with date_format) or a tenor (10Y, 1 WK, 18 MO, "
+                    "10 YR), then the value; '%' values are divided by 100, thousands "
+                    "separators dropped; extra columns need a header naming the value column; "
+                    "an optional word per row (ois, swap, deposit) tags a par quote's type. "
+                    "Exactly one of text or rows."
+                )
+            ),
+        ] = None,
+        rows: Annotated[
+            list[PastedRow] | None,
+            Field(
+                description=(
+                    "Alternative to text: [{tenor | date, value, type?}], values as given. "
+                    "Exactly one of text or rows."
+                )
+            ),
+        ] = None,
         preset: Annotated[
             str | None,
             Field(
@@ -592,7 +635,10 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
         indices, preset, notes, digest}``) plus ``parsed_rows`` (line, label, value as read),
         ``unparsed`` (line, text, reason) and ``header``. For a discount table whose first row
         is not the reference date, the anchor point {reference_date: 1.0} the engine requires is
-        added in front and said so in ``notes``.
+        added in front and said so in ``notes``. Pass the table as the user gave it: labels
+        like ``1 WK``, ``2 MO``, ``5 YR`` are read as-is; never retype or reformat the user's
+        numbers. With several value columns the header picks one (reported in ``notes``) or
+        the call is refused.
         """
         return stamp(
             curve_from_pasted_table_impl(
@@ -608,6 +654,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 compounding,
                 frequency,
                 interpolator,
+                rows,
             ),
             market_data_source,
         )

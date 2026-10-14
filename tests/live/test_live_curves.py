@@ -356,3 +356,50 @@ async def test_dual_curve_bootstrap_with_discount_curve_moves_the_5y_df_in_eithe
             assert pt["point"]["deps"] == {"discount_curve": {"id": "EUR_OIS"}}
         else:
             assert "deps" not in pt["point"]
+
+
+# ---------------------------------------------------------------- screen-style tables (0.1.11)
+
+
+@pytest.mark.parametrize("kind", ["par", "zero", "discount"])
+async def test_screen_style_table_bootstraps(kind: str) -> None:
+    """A six-column terminal curve tab (Term, Market Rate, Shift, Shifted Rate, Zero Rate,
+    Discount) with ``1 WK`` / ``18 MO`` / ``10 YR`` labels, pasted verbatim: the requested
+    column is read, all 32 rows parse and the engine bootstraps / samples the curve. The
+    values are synthetic test fixtures (tests/screen_tables.py), not market data."""
+    from tests.screen_tables import expected_column, six_column
+
+    args: dict[str, Any] = {
+        "market_data_source": "user_pasted",
+        "text": six_column(),
+        "id": "SCREEN",
+        "kind": kind,
+        "preset": "USD_SOFR_OIS",
+        "reference_date": "2025-01-15",
+    }
+    if kind != "discount":
+        args["percent"] = True
+    async with live_client() as client:
+        built = await _call(client, "curve_from_pasted_table", args)
+        assert built["ok"], built
+        assert built["unparsed"] == [] and len(built["parsed_rows"]) == 32
+        scale = 1.0 if kind == "discount" else 100.0
+        assert [round(r["value"] * scale, 6) for r in built["parsed_rows"]] == expected_column(kind)
+        q = await _call(
+            client,
+            "build_query",
+            {
+                "curve_id": "SCREEN",
+                "measures": ["DF"],
+                "tenors": ["1Y", "10Y", "30Y", "50Y"],
+                "calendar": "UnitedStatesGovernmentBond",
+                "business_day_convention": "ModifiedFollowing",
+            },
+        )
+        r = await _call(
+            client, "bootstrap_curve", {"curves": [built], "as_of": "2025-01-15", "queries": [q]}
+        )
+    assert r["ok"], r
+    dfs = _df(r, "SCREEN")
+    assert all(0 < b < a <= 1.0 for a, b in pairwise(dfs)), dfs
+    assert canonical(r["response"]) == canonical(await replay("/bootstrap-curves", r["request"]))

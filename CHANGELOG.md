@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.11 (2026-10-14)
+
+Curve tables pasted from a terminal screen are read as given (no retyping).
+
+- **Tenor labels.** One shared parser (`builders/tenor.py`, used by every tool that reads
+  a tenor) accepts optional whitespace between number and unit and a closed,
+  case-insensitive list of unit spellings: D/DY/DAY/DAYS, W/WK/WKS/WEEK/WEEKS,
+  M/MO/MOS/MTH/MTHS/MONTH/MONTHS, Y/YR/YRS/YEAR/YEARS (`1 WK`, `18 MO`, `10 YR`). Nothing
+  outside the list is guessed (`MO` is months). `ON` / `O/N` / `TN` / `T/N` / `SN` / `S/N`
+  are reported with the reason "overnight/tomorrow-next tenors are not supported as curve
+  pillars".
+- **Extra columns.** `curve_from_pasted_table` reads tables with several value columns
+  (e.g. Term, Market Rate, Shift, Shifted Rate, Zero Rate, Discount; tab, `;`, `|`, comma,
+  aligned or single-space headers): the header column matching the kind (par: par / market
+  rate / ... / rate; zero: zero / spot / yield / rate; discount: discount / df) is taken
+  and named in `notes`. Several matching columns, or several numeric columns with no
+  named one, refuse the table with the columns listed; nothing is picked silently.
+- **Structured rows.** New optional `rows: [{tenor | date, value, type?}]`, exclusive with
+  `text` (exactly one), same validation, notes and digest.
+- Tool description: paste the table as the user gave it; never retype or reformat.
+
 ## 0.1.10 (2026-10-14)
 
 Engine pin v0.8.2 -> **v0.11.0** (`e2c160d`), QuantLib 1.41 -> **1.44** (M5.9b).
