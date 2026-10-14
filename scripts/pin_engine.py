@@ -32,7 +32,7 @@ are not from the engine repository and are kept as they are.
 
 Usage::
 
-    uv run python scripts/pin_engine.py --engine-repo /path/to/quantraserver --tag v0.8.2
+    uv run python scripts/pin_engine.py --engine-repo /path/to/quantraserver --tag v0.11.0
 """
 
 from __future__ import annotations
@@ -104,7 +104,9 @@ BLOG_EXAMPLES: list[dict[str, Any]] = [
         "title": "USD 5Y payer SOFR OIS at 3%, payment lag 2",
         "description": (
             "The pricing request of the same post; NPV 337986.7913... against the public "
-            "engine and QuantLib-python 1.41."
+            "engine and QuantLib-python 1.41. Published in the pre-0.10.0 shape; vendored "
+            "here converted to the engine 0.10.0 SwapLeg shape with the engine's own "
+            "tools/migrate_swap_requests (numbers unchanged)."
         ),
         "compare": "npv",
         "list_key": "swaps",
@@ -291,11 +293,19 @@ def parse_oracle(compare: str, text: str, tolerance: float | None) -> dict[str, 
             return {"kind": "series", "names": m.group(1).split("/"), "points": int(m.group(2))}
         return None
     if compare == "fields":
-        fields: dict[str, float] = {}
+        # From engine 0.10.0 a swap's catalog line lists the swap-level fields, then
+        # each leg's `npv=` / `npv_reporting=` in leg order: a repeated name starts the
+        # next group; groups after the first are `legs[i].<name>`.
+        groups: list[dict[str, float]] = [{}]
         for part in text.split(", "):
             fm = _FIELD_RE.match(part.strip())
             if fm:
-                fields[fm.group(1)] = float(fm.group(2))
+                if fm.group(1) in groups[-1]:
+                    groups.append({})
+                groups[-1][fm.group(1)] = float(fm.group(2))
+        fields: dict[str, float] = dict(groups[0])
+        for i, g in enumerate(groups[1:]):
+            fields.update({f"legs[{i}].{k}": v for k, v in g.items()})
         if not fields:
             return None
         # CATALOG.md prints 6 significant digits; the engine gate uses 1e-7 abs.
@@ -328,6 +338,8 @@ ROUTE_BY_PRODUCT: dict[str, str] = {
     "zero_coupon_swap": "/price-zero-coupon-swap",
     "year_on_year_inflation_cap_floor": "/price-year-on-year-inflation-cap-floor",
     "callable_fixed_rate_bond": "/price-callable-fixed-rate-bond",
+    "fx_forward": "/price-fx-forward",
+    "cross_currency_swap": "/price-cross-currency-swap",
 }
 
 

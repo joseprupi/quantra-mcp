@@ -31,7 +31,7 @@ DEVELOPER_GUIDE = """\
 
 quantra_meta reports the engine version and
 products; engine_schema (no argument: every endpoint) / list_enums describe request shapes;
-quantra://examples/* and list_examples / get_example give 223 complete verified
+quantra://examples/* and list_examples / get_example give 239 complete verified
 engine requests (an example's `pricing` block is a valid `market`); engine_request
 POSTs any endpoint, including the four without a builder (/calibrate-swaption-vol,
 /calibrate-swaption-model, /sample-vol-surfaces, /bootstrap-inflation-curves).

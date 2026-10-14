@@ -6,16 +6,19 @@ from quantra_mcp.schema.loader import SpecError, load_spec, normalize_endpoint, 
 
 def test_pin_matches_spec_version() -> None:
     p = pin()
-    assert p.tag == "v0.8.2"
+    assert p.tag == "v0.11.0"
     assert len(p.sha) == 40
-    assert load_spec().api_version == p.version == "0.8.2"
+    assert load_spec().api_version == p.version == "0.11.0"
 
 
-def test_24_post_endpoints_with_summaries() -> None:
+def test_26_post_endpoints_with_summaries() -> None:
     spec = load_spec()
-    assert len(spec.endpoints) == 24
+    assert len(spec.endpoints) == 26
     assert all(e.summary for e in spec.endpoints)
     assert "/price-ois-swap" in spec.endpoint_paths
+    # engine 0.9.0: the two FX endpoints reach engine_request through the spec
+    assert "/price-fx-forward" in spec.endpoint_paths
+    assert "/price-cross-currency-swap" in spec.endpoint_paths
     assert "/health" not in spec.endpoint_paths
 
 

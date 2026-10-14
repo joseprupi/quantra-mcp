@@ -120,7 +120,7 @@ async def test_meta_is_verbatim(app: Any, fake_backend: FakeBackend) -> None:
         r = _structured(await c.call_tool("quantra_meta", {}))
     assert r["ok"] is True and r["endpoint"] == "/meta" and r["request"] is None
     assert r["response"] == fake_backend.responses["/meta"]
-    assert r["engine"] == {"api_version": "0.8.2", "request_id": None}
+    assert r["engine"] == {"api_version": "0.11.0", "request_id": None}
 
 
 async def test_calendar_holidays_echoes_request_and_summarizes(
@@ -148,7 +148,7 @@ async def test_calendar_holidays_echoes_request_and_summarizes(
     }
     assert r["response"] == fake_backend.responses["/calendar-holidays"]
     assert r["summary"] == {"count": 1, "first": "2024-06-14", "last": "2024-06-14"}
-    assert r["engine"]["api_version"] == "0.8.2"
+    assert r["engine"]["api_version"] == "0.11.0"
     assert r["engine"]["request_id"].startswith("qmcp-")
     method, endpoint, body, rid = fake_backend.calls[-1]
     assert (method, endpoint, body) == ("POST", "/calendar-holidays", r["request"])
@@ -282,7 +282,7 @@ async def test_discovery_tools(app: Any) -> None:
         enums = _structured(await c.call_tool("list_enums", {"name": "TimeUnit"}))
         bad_enum = _structured(await c.call_tool("list_enums", {"name": "Nope"}))
         bad_ep = _structured(await c.call_tool("engine_schema", {"endpoint": "/nope"}))
-    assert eps["count"] == 24 and eps["endpoints"][0]["endpoint"] == "/price-fixed-rate-bond"
+    assert eps["count"] == 26 and eps["endpoints"][0]["endpoint"] == "/price-fixed-rate-bond"
     assert schema["required"] == ["date"]
     assert schema["request_schema"]["properties"]["tenor_unit"]["enum"] == enums["values"]
     assert "advanced_date" in schema["response_schema"]["properties"]
@@ -304,5 +304,5 @@ async def test_resources(app: Any, ois_example: dict[str, Any]) -> None:
     assert json.loads(enum.contents[0].text)["values"][0] == "Argentina"  # type: ignore[union-attr]
     assert json.loads(schema.contents[0].text)["endpoint"] == "/price-ois-swap"  # type: ignore[union-attr]
     assert doc.contents[0].text.startswith("# HTTP API Contract")  # type: ignore[union-attr]
-    assert "0.8.2" in versioning.contents[0].text  # type: ignore[union-attr]
-    assert json.loads(pin.contents[0].text)["tag"] == "v0.8.2"  # type: ignore[union-attr]
+    assert "0.11.0" in versioning.contents[0].text  # type: ignore[union-attr]
+    assert json.loads(pin.contents[0].text)["tag"] == "v0.11.0"  # type: ignore[union-attr]

@@ -71,18 +71,52 @@ def test_product_goldens_validate() -> None:
         assert validate_request(endpoint_of[path.stem], body) == [], path.name
 
 
-def test_examples_are_byte_identical_to_the_published_files() -> None:
+def test_examples_match_the_published_files() -> None:
+    """The bootstrap example is byte-identical to the published file. The OIS pricing
+    example was published in the pre-0.10.0 swap shape; ours must equal the engine's own
+    converter (tools/migrate_swap_requests at the pinned tag) applied to the published
+    file. Only meaningful on the box with the website and engine checkouts."""
     import hashlib
+    import importlib.util
+    import subprocess
+    import tempfile
 
     from quantra_mcp.resources import EXAMPLES_DIR
+    from quantra_mcp.schema.loader import pin
 
     published = Path("/root/quantraweb/public/blog/data")
-    if not published.is_dir():  # only meaningful on the box that has the website checkout
+    engine = Path("/root/quantra_refractor/quantraserver")
+    if not published.is_dir() or not engine.is_dir():
         return
+    src = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(engine),
+            "show",
+            f"{pin().tag}:tools/migrate_swap_requests/migrate_swap_requests.py",
+        ],
+        check=True,
+        capture_output=True,
+    ).stdout
+    with tempfile.TemporaryDirectory() as d:
+        conv_path = Path(d) / "migrate_swap_requests.py"
+        conv_path.write_bytes(src)
+        spec = importlib.util.spec_from_file_location("migrate_swap_requests", conv_path)
+        assert spec is not None and spec.loader is not None
+        conv = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(conv)
     for name in example_names():
-        ours = hashlib.sha256((EXAMPLES_DIR / f"{name}.json").read_bytes()).hexdigest()
-        theirs = hashlib.sha256((published / f"{name}.json").read_bytes()).hexdigest()
-        assert ours == theirs, name
+        ours_bytes = (EXAMPLES_DIR / f"{name}.json").read_bytes()
+        theirs_bytes = (published / f"{name}.json").read_bytes()
+        theirs = json.loads(theirs_bytes)
+        try:
+            converted = conv.convert_request(theirs)
+        except conv.NotASwapRequest:
+            ours = hashlib.sha256(ours_bytes).hexdigest()
+            assert ours == hashlib.sha256(theirs_bytes).hexdigest(), name
+            continue
+        assert json.loads(ours_bytes) == converted, name
 
 
 def _cases() -> list[tuple[str, dict[str, Any]]]:

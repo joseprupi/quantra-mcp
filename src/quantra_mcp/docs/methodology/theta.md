@@ -1,6 +1,6 @@
 # Theta: exact definition
 
-_Generated from the engine's documentation and source at `v0.8.2` (`7b26e53ae084`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.8.2/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.11.0` (`e2c160dc83e3`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.11.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 Two definitions exist, selected by request flags, both in currency per calendar day since engine 0.8.0. Rebump theta (`swaption_pricing_rebump`) is NPV(as_of + 1 calendar day) - NPV(as_of) after a clean one-day roll of the whole market: the evaluation date and every explicit curve and vol `reference_date` move one day, date-anchored points and fixings stay. Analytic theta (`swaption_pricing_details`) is the pure time decay of the option premium with forward, vol and annuity held fixed, per calendar day. Equity options report QuantLib's calculator theta times quantity.
 
@@ -24,9 +24,9 @@ comparable:
 | `theta` | pure time decay with forward, vol and annuity held fixed (-1/2 sigma^2 F^2 Gamma for Black, -1/2 sigma_N^2 Gamma for Bachelier), per calendar day | NPV(as_of + 1 calendar day) - NPV(as_of) after a clean one-day roll of the market (see below) |
 ````
 
-Source: `docs/http-api.md@v0.8.2:L206-L218`
+Source: `docs/http-api.md@v0.11.0:L960-L972`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/docs/http-api.md#L206-L218>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/http-api.md#L960-L972>
 
 ### 2. The rebump roll moves every explicit `reference_date` (curves, helper curves, vol surfaces) with the evaluation date; date-anchored market data (zero / discount / forward points pinned to a date, index fixings) is not shifted, so theta equals the difference of two plain requests at as_of and as_of + 1 with the reference dates moved.
 
@@ -42,9 +42,9 @@ optional and absent when the vol surface carries no ATM level (or does not use
 spread-from-ATM strikes).
 ````
 
-Source: `docs/http-api.md@v0.8.2:L229-L237`
+Source: `docs/http-api.md@v0.11.0:L983-L991`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/docs/http-api.md#L229-L237>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/http-api.md#L983-L991>
 
 ### 3. Rebump theta = NPV repriced with the evaluation date rolled by `rollDays` minus the base NPV.
 
@@ -53,9 +53,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/docs/http-api.md
             row.theta = npvTomorrow - npv;
 ````
 
-Source: `src/evaluators/swaption_evaluator.cpp@v0.8.2:L697-L698`
+Source: `src/evaluators/swaption_evaluator.cpp@v0.11.0:L707-L708`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/swaption_evaluator.cpp#L697-L698>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/evaluators/swaption_evaluator.cpp#L707-L708>
 
 ### 4. `rollDays` is 1 day.
 
@@ -64,9 +64,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/s
     int rollDays = 1;
 ````
 
-Source: `src/domain/swaption_rebump.h@v0.8.2:L25-L26`
+Source: `src/domain/swaption_rebump.h@v0.11.0:L25-L26`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/domain/swaption_rebump.h#L25-L26>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/domain/swaption_rebump.h#L25-L26>
 
 ### 5. The roll leg is "bump 0 @ asOf + rollDays": no curve or vol bump, only the date moves.
 
@@ -74,9 +74,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/domain/swapt
 ///   - roll:      bump 0 @ asOf + rollDays              (theta leg)
 ````
 
-Source: `src/evaluators/swaption_evaluator.h@v0.8.2:L99-L99`
+Source: `src/evaluators/swaption_evaluator.h@v0.11.0:L99-L99`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/swaption_evaluator.h#L99-L99>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/evaluators/swaption_evaluator.h#L99-L99>
 
 ### 6. The theta-leg instrument is rebuilt so that evaluation-date-dependent pieces behave correctly under the rolled date.
 
@@ -86,9 +86,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/s
 /// rebuilds correctly under the rolled evaluation date of the theta leg.
 ````
 
-Source: `src/evaluators/swaption_evaluator.h@v0.8.2:L56-L58`
+Source: `src/evaluators/swaption_evaluator.h@v0.11.0:L56-L58`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/swaption_evaluator.h#L56-L58>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/evaluators/swaption_evaluator.h#L56-L58>
 
 ### 7. What changed in 0.8.0: in 0.7.0 the roll left explicit reference dates where they were, so a request whose curves carry a `reference_date` (value curves, the common shape) reported theta as exactly zero, which was then dropped; rebump theta values change for every request from 0.8.0 on.
 
@@ -106,9 +106,9 @@ curve roll and the option's time decay. Rebump theta values therefore change
 for every request. Known limit: SABR-calibrated surfaces roll curves only.
 ````
 
-Source: `docs/versioning.md@v0.8.2:L114-L124`
+Source: `docs/versioning.md@v0.11.0:L364-L374`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/docs/versioning.md#L114-L124>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/versioning.md#L364-L374>
 
 ### 8. Analytic theta (details flag): the calculator's `theta(forward, timeToExpiry)` built with discount 1, times the annuity, divided by 365 (per calendar day); Bachelier for Normal vol, Black with the displacement for (shifted) lognormal.
 
@@ -116,9 +116,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/docs/versioning.
                     row.theta = annuity * calc.theta(*row.atmForward, timeToExpiry) / 365.0;
 ````
 
-Source: `src/evaluators/swaption_evaluator.cpp@v0.8.2:L667-L667`
+Source: `src/evaluators/swaption_evaluator.cpp@v0.11.0:L677-L677`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/swaption_evaluator.cpp#L667-L667>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/evaluators/swaption_evaluator.cpp#L677-L677>
 
 ### 9. Equity option theta: the QuantLib option's `theta()` times `quantity`.
 
@@ -126,9 +126,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/s
     out.theta = safeGreek([&]() { return oneAssetOption->theta() * quantity; });
 ````
 
-Source: `src/evaluators/equity_option_evaluator.cpp@v0.8.2:L251-L251`
+Source: `src/evaluators/equity_option_evaluator.cpp@v0.11.0:L251-L251`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/equity_option_evaluator.cpp#L251-L251>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/evaluators/equity_option_evaluator.cpp#L251-L251>
 
 ### 10. A theta that is exactly zero is reported as `0.0`; an absent theta means not computed (the flag was not set, or the option is expired / has no vol), never zero.
 
@@ -141,14 +141,16 @@ default, so a `double` that is exactly `0.0` (for example a bond's
 Fields declared optional (`= null` in the schema) are the exception: they are
 absent until the engine sets them. A scalar that the engine computes only under
 a request flag or condition (the swaption greeks, `atm_forward`, `annuity`,
-the Hull-White `used_hw_*` diagnostics, `cms_swap_rate`, `fair_spread`) is
+the Hull-White `used_hw_*` diagnostics, `cms_swap_rate`, the CDS
+`fair_spread`, every swap endpoint's `fair_rate` / `fair_spread`, the
+`used_cms_*` block and the flow `kind`) is
 declared optional for that reason, so its absence always means "not computed"
 and a reported `0.0` always means "computed and equal to zero".
 ````
 
-Source: `docs/http-api.md@v0.8.2:L243-L253`
+Source: `docs/http-api.md@v0.11.0:L997-L1009`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/docs/http-api.md#L243-L253>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/http-api.md#L997-L1009>
 
 ## Request fields that control it
 
@@ -170,11 +172,11 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/docs/http-api.md
     swaption_pricing_rebump:bool = false;
 ````
 
-Source: `flatbuffers/fbs/pricing.fbs@v0.8.2:L60-L72`
+Source: `flatbuffers/fbs/pricing.fbs@v0.11.0:L61-L73`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/pricing.fbs#L60-L72>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/flatbuffers/fbs/pricing.fbs#L61-L73>
 
-## Not documented in engine v0.8.2
+## Not documented in engine v0.11.0
 
 - Whether the one-day roll re-fixes a coupon or crosses a payment date is not stated; test with `reprice_with` on `pricing.as_of_date` (and the curves' `reference_date`) to see the one-day change directly.
 - Known limit stated by the engine: on a SABR-calibrated surface the roll moves the curves only.

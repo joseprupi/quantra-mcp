@@ -400,7 +400,8 @@ async def test_additional_trades_batch_into_one_request(
     assert r["ok"], r
     assert len(r["request"]["swaps"]) == 2
     assert r["request"]["swaps"][0] == fixture_body(case.fixture)["swaps"][0]
-    assert r["request"]["swaps"][1]["vanilla_swap"]["swap_type"] == "Receiver"
+    assert r["request"]["swaps"][1]["vanilla_swap"]["fixed_leg"]["pay_receive"] == "Receive"
+    assert r["request"]["swaps"][1]["vanilla_swap"]["floating_leg"]["pay_receive"] == "Pay"
     assert r["request"]["include_flows"] is True
     assert backend.calls[-1][2] == r["request"]
 

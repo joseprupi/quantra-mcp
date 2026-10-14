@@ -15,7 +15,7 @@ Container (what the release workflow publishes):
 ```bash
 docker build -t quantra-mcp:dev .
 docker run --rm -p 8765:8765 --add-host=host.docker.internal:host-gateway \
-  -e QUANTRA_ENGINE_URL=http://host.docker.internal:18087 quantra-mcp:dev
+  -e QUANTRA_ENGINE_URL=http://host.docker.internal:18089 quantra-mcp:dev
 curl http://localhost:8765/readyz
 ```
 
@@ -25,9 +25,9 @@ the image, the PyPI package and the GitHub Release. See [RELEASING.md](RELEASING
 Live acceptance (needs a real engine; the CI `live` job does the same):
 
 ```bash
-docker run -d --name quantra-mcp-engine -p 18087:8080 ghcr.io/joseprupi/quantra-server:0.8.2
-QUANTRA_ENGINE_URL=http://localhost:18087 uv run pytest tests/live -m live
-QUANTRA_ENGINE_URL=http://localhost:18087 uv run python scripts/live_check.py
+docker run -d --name quantra-mcp-engine -p 18089:8080 ghcr.io/joseprupi/quantra-server:0.11.0
+QUANTRA_ENGINE_URL=http://localhost:18089 uv run pytest tests/live -m live
+QUANTRA_ENGINE_URL=http://localhost:18089 uv run python scripts/live_check.py
 ```
 
 `live_check.py` runs every tool and asserts each tool's `response` is
@@ -35,17 +35,17 @@ byte-equal to a direct HTTP replay of its echoed `request`; its M2 section
 builds the SOFR strip through `build_curve` and asserts the request is
 JSON-equal to the gold example and the 50Y DF matches the oracle, round-trips
 a discount value curve, bootstraps every preset (monotone DFs) and resolves a
-session reference; its M3 section sweeps all 223 vendored examples through
+session reference; its M3 section sweeps all 239 vendored examples through
 `engine_request` (status as indexed, reference values matched) and runs every
 pricing tool against its mapped fixture (built request JSON-equal, engine
 number equal to the oracle). `--sweep-table` prints one row per example.
 
 QuantLib parity (the only place QuantLib is imported; needs a Python with
-`QuantLib` and `pydantic`, e.g. the engine's QuantLib 1.41):
+`QuantLib` and `pydantic`, e.g. the engine's QuantLib 1.44):
 
 ```bash
-QUANTRA_ENGINE_URL=http://localhost:18087 PYTHONPATH=src python3 scripts/parity_ql.py
-# or: QUANTRA_ENGINE_URL=http://localhost:18087 uv run --with QuantLib python scripts/parity_ql.py
+QUANTRA_ENGINE_URL=http://localhost:18089 PYTHONPATH=src python3 scripts/parity_ql.py
+# or: QUANTRA_ENGINE_URL=http://localhost:18089 uv run --with QuantLib python scripts/parity_ql.py
 ```
 
 It rebuilds every preset's canonical strip (`tests/golden/strips.json`) in
@@ -63,7 +63,7 @@ request from an engine checkout at a tag, regenerates the enums and
 of the engine's Dockerfile at that tag):
 
 ```bash
-uv run python scripts/pin_engine.py --engine-repo /path/to/quantraserver --tag v0.8.2
+uv run python scripts/pin_engine.py --engine-repo /path/to/quantraserver --tag v0.11.0
 uv run python scripts/fetch_sources.py   # then refresh the source trees + schema/SOURCES.lock
 ```
 
@@ -102,7 +102,7 @@ src/quantra_mcp/
   prompts.py         price-a-swap, bootstrap-from-strip, holiday-check, explore-examples,
                      price-from-screen, reconcile-external-price
   examples_catalog.py  INDEX.json access + oracle checks
-  docs/, examples/   vendored engine docs, catalog and the 223 example requests;
+  docs/, examples/   vendored engine docs, catalog and the 239 example requests;
                      docs/methodology/ = the generated cited pages + INDEX.json
 scripts/             pin_engine.py (+ methodology_gen.py, methodology_rules.py), live_check.py, parity_ql.py
 tests/               unit, contract (vendored spec), live (real engine), golden/ requests

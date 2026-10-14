@@ -255,7 +255,10 @@ async def price_vanilla_swap_impl(
                 t.tenor,
                 i,
             )
-            b = ps.build_vanilla_swap(p, t, eff, end, index_id, discounting_curve, forwarding_curve)
+            ccy = mk.index_currency(pricing, index_id, "index_id")
+            b = ps.build_vanilla_swap(
+                p, t, eff, end, index_id, discounting_curve, forwarding_curve, ccy
+            )
             b.notes = notes + b.notes
             out.append(b)
         return out
@@ -309,7 +312,10 @@ async def price_ois_swap_impl(
                 t.tenor,
                 i,
             )
-            b = ps.build_ois_swap(p, t, eff, end, index_id, discounting_curve, forwarding_curve)
+            ccy = mk.index_currency(pricing, index_id, "index_id")
+            b = ps.build_ois_swap(
+                p, t, eff, end, index_id, discounting_curve, forwarding_curve, ccy
+            )
             b.notes = notes + b.notes
             out.append(b)
         return out
@@ -842,6 +848,7 @@ async def price_swaption_impl(
                 vol,
                 model,
                 pricing["as_of_date"],
+                mk.index_currency(pricing, index_id, "index_id"),
             )
             b.notes = notes + b.notes
             out.append(b)
@@ -1373,7 +1380,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
         """Price a fixed-vs-IBOR swap (POST /price-vanilla-swap). The preset's vanilla_swap block
         supplies both legs' schedules, frequencies, day counters and payment conventions; every
         default applied is in ``notes`` with its source, the engine-resolved dates in
-        ``date_resolution``. ``summary.swaps``: npv, fair_rate, fair_spread, leg npvs.
+        ``date_resolution``. ``summary.swaps``: npv, fair_rate, fair_spread, leg_npvs (legs[i].npv).
         """
         first = ps.VanillaSwapTrade(
             swap_type=swap_type,
@@ -1576,7 +1583,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
         """Price an OIS (fixed vs compounded overnight) swap (POST /price-ois-swap). The preset's
         ois_swap block supplies the schedules, day counters, payment conventions and the
         overnight-leg parameters (each overridable). ``notes`` lists every default with its
-        source; ``summary.swaps``: npv, fair_rate, leg npvs.
+        source; ``summary.swaps``: npv, fair_rate, fair_spread, leg_npvs (legs[i].npv).
         """
         first = ps.OisSwapTrade(
             swap_type=swap_type,

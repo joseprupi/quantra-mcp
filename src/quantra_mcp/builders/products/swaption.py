@@ -107,6 +107,7 @@ def build_swaption(
     vol: str | ConstantVol | AtmMatrixVol | RawSwaptionVol,
     model: str | HullWhiteModel,
     as_of: str,
+    currency: str,
 ) -> BuiltTrade:
     conv = preset.trade_block("swaption")
     assert isinstance(conv, SwaptionConventions)
@@ -123,6 +124,7 @@ def build_swaption(
             index_id,
             discounting_curve,
             forwarding_curve,
+            currency,
         )
         underlying = under.item["ois_swap"]
     else:
@@ -138,6 +140,7 @@ def build_swaption(
             index_id,
             discounting_curve,
             forwarding_curve,
+            currency,
         )
         underlying = under.item["vanilla_swap"]
     notes += [f"underlying.{n}" for n in under.notes]
@@ -293,10 +296,10 @@ def build_swaption(
             assert maybe_id is not None
             model_id = maybe_id
             notes.append(f"model={model_id!r} (explicit; must exist in pricing.volatility.models)")
+    # Engine 0.10.0: the curves are on the underlying's legs (both legs name the same
+    # discounting curve); the swaption wrapper carries the vol and model only.
     item = {
         "swaption": swaption,
-        "discounting_curve": discounting_curve,
-        "forwarding_curve": forwarding_curve,
         "volatility": vol_id,
         "model": model_id,
     }

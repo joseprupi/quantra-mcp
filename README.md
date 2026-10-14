@@ -31,7 +31,7 @@ for business users are in [docs/clients.md](docs/clients.md).
 Run an engine (one line, no account):
 
 ```bash
-docker run -d --name quantra-engine -p 8080:8080 ghcr.io/joseprupi/quantra-server:0.8.2
+docker run -d --name quantra-engine -p 8080:8080 ghcr.io/joseprupi/quantra-server:0.11.0
 ```
 
 Run the server against it, from PyPI or from a clone:
@@ -70,14 +70,14 @@ resolved by the engine's calendar endpoints); raw passthrough takes any
 request body, validated against the vendored OpenAPI spec first. 38 tools, each
 with a title and MCP annotations (read-only / open-world hints):
 
-- Discovery and calendars (6): `quantra_meta`, `engine_schema` (one endpoint, or all 24 without an argument), `list_enums`, `calendar_holidays`, `calendar_business_days`, `calendar_advance`
-- Raw passthrough (1): `engine_request` for any of the 24 POST endpoints, including the four without a builder (swaption vol / model calibration, vol-surface sampling, inflation bootstrap)
+- Discovery and calendars (6): `quantra_meta`, `engine_schema` (one endpoint, or all 26 without an argument), `list_enums`, `calendar_holidays`, `calendar_business_days`, `calendar_advance`
+- Raw passthrough (1): `engine_request` for any of the 26 POST endpoints, including the six without a builder (swaption vol / model calibration, vol-surface sampling, inflation bootstrap, FX forward, cross-currency swap)
 - Curves and presets (6): `preset` (one or all), `build_curve`, `build_value_curve`, `curve_from_pasted_table`, `build_query`, `bootstrap_curve`; builder results carry a content `digest`
 - Pricing (14): `price_*` for vanilla and OIS swaps, fixed / floating / zero-coupon / callable bonds, FRA, cap/floor, swaption, CDS, equity option, ZC and YoY inflation swaps and YoY cap/floor
 - Analytics by composition (4): `swap_dv01`, `key_rate_ladder`, `scenario`, `fair_rate`, all finite differences of engine NPVs (compact by default; `include_calls` for every replayable result)
 - Reconciliation (3): `explain_method` (cited engine methodology), `compare_results`, `reprice_with`
 - Session scratch (2): `session_put`, `session` (get / list / delete; private to the MCP session, in memory, bounded, never persisted)
-- Examples (2): `list_examples`, `get_example` over the engine's 223 vendored example requests
+- Examples (2): `list_examples`, `get_example` over the engine's 239 vendored example requests
 - Resources (docs, schemas, enums, examples, presets, pin, methodology) and 6 prompts
 
 Catalog with every argument: [docs/tools.md](docs/tools.md).
@@ -120,7 +120,7 @@ QUANTRA_ENGINE_URL=http://localhost:18087 uv run python scripts/live_check.py   
 ```
 
 The engine contract is pinned to the tag in `src/quantra_mcp/schema/PIN`
-(v0.8.2); the QuantLib version that engine is built on is in `schema/QUANTLIB_PIN`
+(v0.11.0); the QuantLib version that engine is built on is in `schema/QUANTLIB_PIN`
 (1.41). `scripts/fetch_sources.py` fetches both source trees (text files only, verified
 against `schema/SOURCES.lock`) into `vendor/sources/` for the `search_source` /
 `read_source` / `list_source` tools; the container image ships them. Requests are unchanged since 0.7.0; responses follow the pinned 0.8.x contract (swaption greek units, theta, zero-valued fields present). Bump it with

@@ -1,14 +1,14 @@
 {
   "engine": {
-    "bytes": 2252714,
-    "files": 309,
+    "bytes": 2520430,
+    "files": 340,
     "github": "joseprupi/quantraserver",
-    "sha256": "a1011768d3b87840df725b343b7ac0ffa93992421f4791a0135cf787cb77b3b8",
+    "sha256": "e88d73e1495ec0db16f6debd57e59e7c531ffd40a00c7f0c729d6a2ab3d70527",
     "skipped": [
       "examples/data/ (already vendored under src/quantra_mcp/examples/)"
     ],
-    "tag": "v0.8.2",
-    "tarball_bytes": 1754821,
+    "tag": "v0.11.0",
+    "tarball_bytes": 2273413,
     "trees": [
       "LICENSE.txt",
       "README.md",
@@ -18,21 +18,21 @@
       "src/",
       "tests/functional/CATALOG.md"
     ],
-    "url": "https://github.com/joseprupi/quantraserver/archive/refs/tags/v0.8.2.tar.gz"
+    "url": "https://github.com/joseprupi/quantraserver/archive/refs/tags/v0.11.0.tar.gz"
   },
   "quantlib": {
-    "bytes": 28573334,
-    "files": 2380,
+    "bytes": 29129349,
+    "files": 2443,
     "github": "lballabio/QuantLib",
-    "sha256": "e393bf968921d24adb2df5df542646ce644496d758cdfa4e1ebdd3594638d6b5",
+    "sha256": "e4b4c21d63907494248751b6cbd80193bc3fdf4fddbbdef36e7942c4b54cbeaa",
     "skipped": [],
-    "tag": "v1.41",
-    "tarball_bytes": 8232335,
+    "tag": "v1.44",
+    "tarball_bytes": 8563929,
     "trees": [
       "LICENSE.TXT",
       "README.md",
       "ql/"
     ],
-    "url": "https://github.com/lballabio/QuantLib/archive/refs/tags/v1.41.tar.gz"
+    "url": "https://github.com/lballabio/QuantLib/archive/refs/tags/v1.44.tar.gz"
   }
 }

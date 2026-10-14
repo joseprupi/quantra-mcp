@@ -1,4 +1,11 @@
-"""Vanilla (fixed vs IBOR) and OIS swap trade builders (pure)."""
+"""Vanilla (fixed vs IBOR) and OIS swap trade builders (pure).
+
+Engine 0.10.0+ leg model: every leg is one flat ``SwapLeg`` (``pay_receive``,
+``currency``, the fields every coupon kind shares, ``coupons_type`` / ``coupons``
+with only the kind-specific fields, and the curves on the leg). The tool
+arguments stay as before (``swap_type`` Payer / Receiver, the two curve ids
+named once); the mapping to legs happens here and is echoed in the notes.
+"""
 
 from __future__ import annotations
 
@@ -21,6 +28,75 @@ from quantra_mcp.schema.enums_generated import RateAveragingType, SwapType
 
 VANILLA_SWAP = "/price-vanilla-swap"
 OIS_SWAP = "/price-ois-swap"
+
+#: SwapLeg fields every coupon kind shares, in the engine's schema order
+#: (flatbuffers/fbs/swap_leg.fbs).
+SHARED_LEG_FIELDS = (
+    "notional",
+    "notionals",
+    "schedule",
+    "day_counter",
+    "payment_convention",
+    "payment_calendar",
+    "payment_lag",
+)
+#: Kind-specific fields per coupon table (flatbuffers/fbs/swap_coupons.fbs), schema order.
+COUPON_FIELDS: dict[str, tuple[str, ...]] = {
+    "FixedCoupons": ("rate",),
+    "IborCoupons": ("index", "spread", "fixing_days", "in_arrears"),
+    "OvernightCoupons": (
+        "index",
+        "spread",
+        "averaging_method",
+        "lookback_days",
+        "lockout_days",
+        "apply_observation_shift",
+        "telescopic_value_dates",
+    ),
+}
+
+
+def sides(swap_type: str) -> tuple[str, str]:
+    """``swap_type`` (Payer = pay the fixed leg) -> (fixed leg side, floating leg side)."""
+    return ("Pay", "Receive") if str(swap_type) == "Payer" else ("Receive", "Pay")
+
+
+def swap_leg(
+    body: dict[str, Any],
+    coupons_type: str,
+    pay_receive: str,
+    currency: str,
+    discounting_curve: str,
+    forwarding_curve: str | None,
+) -> dict[str, Any]:
+    """One flat ``SwapLeg`` from a coupon body (shared + kind-specific fields side by
+    side): shared fields on the leg, kind fields under ``coupons``, schema order."""
+    kind = COUPON_FIELDS[coupons_type]
+    unknown = [k for k in body if k not in SHARED_LEG_FIELDS and k not in kind]
+    if unknown:  # a builder bug, never user input
+        raise ValueError(f"{coupons_type} leg body has unplaceable fields {unknown}")
+    leg: dict[str, Any] = {"pay_receive": pay_receive, "currency": currency}
+    for k in SHARED_LEG_FIELDS:
+        if k in body:
+            leg[k] = body[k]
+    leg["coupons_type"] = coupons_type
+    leg["coupons"] = {k: body[k] for k in kind if k in body}
+    leg["discounting_curve"] = discounting_curve
+    if forwarding_curve is not None:
+        leg["forwarding_curve"] = forwarding_curve
+    return leg
+
+
+def _leg_notes(
+    swap_type: str, legs: tuple[str, str], fixed_side: str, float_side: str, currency: str
+) -> list[str]:
+    return [
+        f"{legs[0]}.pay_receive={fixed_side}, {legs[1]}.pay_receive={float_side} "
+        f"(from swap_type={swap_type}: Payer pays the fixed leg)",
+        f"currency={currency!r} on both legs (the floating index's IndexDef.currency)",
+        f"discounting_curve on both legs, forwarding_curve on {legs[1]} only "
+        "(engine 0.10.0 leg model: curves live on the legs)",
+    ]
 
 
 class VanillaSwapTrade(BaseModel):
@@ -190,6 +266,7 @@ def build_vanilla_swap(
     index_id: str,
     discounting_curve: str,
     forwarding_curve: str,
+    currency: str,
 ) -> BuiltTrade:
     conv = preset.trade_block("vanilla_swap")
     assert isinstance(conv, VanillaSwapConventions)
@@ -220,14 +297,19 @@ def build_vanilla_swap(
         notes,
     )
     notes.append(f"floating_leg.spread={float(trade.spread)!r} (argument; default 0.0)")
+    fixed_side, float_side = sides(str(trade.swap_type))
+    notes += _leg_notes(
+        str(trade.swap_type), ("fixed_leg", "floating_leg"), fixed_side, float_side, currency
+    )
     item = {
         "vanilla_swap": {
-            "swap_type": str(trade.swap_type),
-            "fixed_leg": fixed,
-            "floating_leg": floating,
+            "fixed_leg": swap_leg(
+                fixed, "FixedCoupons", fixed_side, currency, discounting_curve, None
+            ),
+            "floating_leg": swap_leg(
+                floating, "IborCoupons", float_side, currency, discounting_curve, forwarding_curve
+            ),
         },
-        "discounting_curve": discounting_curve,
-        "forwarding_curve": forwarding_curve,
     }
     return BuiltTrade(item=item, notes=notes)
 
@@ -240,6 +322,7 @@ def build_ois_swap(
     index_id: str,
     discounting_curve: str,
     forwarding_curve: str,
+    currency: str,
 ) -> BuiltTrade:
     conv = preset.trade_block("ois_swap")
     assert isinstance(conv, OisSwapConventions)
@@ -331,36 +414,60 @@ def build_ois_swap(
     notes.append(
         "overnight_leg.lookback_days=0 means no lookback (QuantLib null), per engine 0.6.0"
     )
+    # Engine 0.10.0: both OIS legs state payment_calendar / payment_lag (QuantLib's
+    # OvernightIndexedSwap applies the overnight leg's lag to both legs).
+    fixed["payment_calendar"] = overnight["payment_calendar"]
+    fixed["payment_lag"] = overnight["payment_lag"]
+    notes.append(
+        "fixed_leg.payment_calendar / payment_lag = the overnight leg's (one payment lag "
+        "for both legs, as QuantLib's OvernightIndexedSwap)"
+    )
+    fixed_side, float_side = sides(str(trade.swap_type))
+    notes += _leg_notes(
+        str(trade.swap_type), ("fixed_leg", "overnight_leg"), fixed_side, float_side, currency
+    )
     item = {
         "ois_swap": {
-            "swap_type": str(trade.swap_type),
-            "fixed_leg": fixed,
-            "overnight_leg": overnight,
+            "fixed_leg": swap_leg(
+                fixed, "FixedCoupons", fixed_side, currency, discounting_curve, None
+            ),
+            "overnight_leg": swap_leg(
+                overnight,
+                "OvernightCoupons",
+                float_side,
+                currency,
+                discounting_curve,
+                forwarding_curve,
+            ),
         },
-        "discounting_curve": discounting_curve,
-        "forwarding_curve": forwarding_curve,
     }
     return BuiltTrade(item=item, notes=notes)
 
 
+def leg_npvs(item: dict[str, Any]) -> list[Any] | None:
+    """``legs[i].npv`` of one swap result, in request leg order (engine 0.10.0+)."""
+    legs = item.get("legs")
+    if not isinstance(legs, list):
+        return None
+    return [leg.get("npv") if isinstance(leg, dict) else None for leg in legs]
+
+
 def swap_summary(response: Any) -> dict[str, Any] | None:
-    """Per swap: npv, fair_rate, fair_spread, leg npvs (a selection; nothing computed)."""
+    """Per swap: npv, fair_rate, fair_spread (present only when the engine reports
+    them), ``leg_npvs`` = ``legs[i].npv`` in leg order (a selection; nothing computed)."""
     if not isinstance(response, dict) or not isinstance(response.get("swaps"), list):
         return None
-    keys = (
-        "npv",
-        "fair_rate",
-        "fair_spread",
-        "fixed_leg_npv",
-        "floating_leg_npv",
-        "overnight_leg_npv",
-        "error",
-    )
-    return {
-        "swaps": [
-            {k: s[k] for k in keys if k in s} for s in response["swaps"] if isinstance(s, dict)
-        ]
-    }
+    keys = ("npv", "fair_rate", "fair_spread", "error")
+    out: list[dict[str, Any]] = []
+    for s in response["swaps"]:
+        if not isinstance(s, dict):
+            continue
+        row = {k: s[k] for k in keys if k in s}
+        npvs = leg_npvs(s)
+        if npvs is not None:
+            row["leg_npvs"] = npvs
+        out.append(row)
+    return {"swaps": out}
 
 
 __all__ = [
@@ -370,5 +477,8 @@ __all__ = [
     "VanillaSwapTrade",
     "build_ois_swap",
     "build_vanilla_swap",
+    "leg_npvs",
+    "sides",
+    "swap_leg",
     "swap_summary",
 ]

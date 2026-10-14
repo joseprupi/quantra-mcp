@@ -21,13 +21,15 @@ CANNED_HOLIDAYS = {
     "dates": ["2024-06-14"],
     "count": 1,
 }
-CANNED_META = {"openapi_version": "0.8.2", "products": ["OisSwap"], "endpoints": ["POST /meta"]}
+CANNED_META = {"openapi_version": "0.11.0", "products": ["OisSwap"], "endpoints": ["POST /meta"]}
 
 
 class FakeBackend:
     """Records every call; answers from ``responses`` keyed by endpoint."""
 
-    def __init__(self, responses: dict[str, Any] | None = None, api_version: str = "0.8.2") -> None:
+    def __init__(
+        self, responses: dict[str, Any] | None = None, api_version: str = "0.11.0"
+    ) -> None:
         self.responses: dict[str, Any] = {
             "/meta": CANNED_META,
             "/health": {"status": "healthy"},

@@ -56,6 +56,8 @@ CATALOG = "tests/functional/CATALOG.md"
 TS_PARSER_CPP = "src/parsers/term_structure_parser.cpp"
 TS_POINT_CPP = "src/parsers/term_structure_point_parser.cpp"
 SCHED_PARSER_CPP = "src/parsers/schedule_parser.cpp"
+SWAP_LEG_FBS = "flatbuffers/fbs/swap_leg.fbs"
+LEG_PRICER_CPP = "src/evaluators/swap_leg_pricer.cpp"
 
 ENGINE_REPO_URL = "https://github.com/joseprupi/quantraserver"
 CONNECTOR_REPO_URL = "https://github.com/joseprupi/quantra-mcp"
@@ -64,7 +66,7 @@ CONNECTOR_REPO_URL = "https://github.com/joseprupi/quantra-mcp"
 #: from THIS tree without the engine checkout). Line numbers verified at the pin by
 #: ``git show``; ``tests/unit/test_methodology.py`` re-checks them when the engine
 #: repository is available, so a pin bump that moves them fails the gate.
-ENGINE_PIN_TAG = "v0.8.2"
+ENGINE_PIN_TAG = "v0.11.0"
 
 
 def _engine_ref(path: str, line: int) -> dict[str, str]:
@@ -76,9 +78,11 @@ def _engine_ref(path: str, line: int) -> dict[str, str]:
     }
 
 
-ENGINE_FILL_VANILLA = _engine_ref(VS_CPP, 237)  # out.fixedLegBps = swap->fixedLegBPS();
-ENGINE_FILL_OIS = _engine_ref(OIS_CPP, 116)  # out.fixedLegBps = swap->fixedLegBPS();
-ENGINE_FILL_FBS = _engine_ref(VS_RESP_FBS, 41)  # fixed_leg_bps:double;
+#: 0.10.0 removed every swap `*_bps` response field (docs/versioning.md); the fixed
+#: leg's signed annuity survives only inside the engine, as the denominator of fair_rate.
+ENGINE_BPS_REMOVED = _engine_ref(VERSIONING, 130)  # ... the `*_bps` fields and the
+ENGINE_BPS_VANILLA = _engine_ref(VS_CPP, 31)  # const double fixedBps = SignedBps(...);
+ENGINE_BPS_OIS = _engine_ref(OIS_CPP, 31)  # const double fixedBps = SignedBps(...);
 
 # this server's own source (the connector-analytics page cites the working tree)
 BUMPS_PY = "src/quantra_mcp/builders/bumps.py"
@@ -101,6 +105,8 @@ METRIC_TOPICS: dict[str, str] = {
     "fixed_leg_npv": "npv",
     "floating_leg_npv": "npv",
     "overnight_leg_npv": "npv",
+    "legs": "npv",
+    "npv_reporting": "npv",
     "default_leg_npv": "npv",
     "premium_leg_npv": "npv",
     "clean_price": "npv",
@@ -113,10 +119,6 @@ METRIC_TOPICS: dict[str, str] = {
     "used_atm_forward": "fair-rate",
     "forward_rate": "fair-rate",
     "annuity": "fair-rate",
-    "fixed_leg_bps": "fair-rate",
-    "floating_leg_bps": "fair-rate",
-    "overnight_leg_bps": "fair-rate",
-    "bps": "fair-rate",
     "dv01": "greeks-bump-and-reprice",
     "delta": "greeks-bump-and-reprice",
     "gamma": "greeks-bump-and-reprice",
@@ -145,33 +147,40 @@ TOPICS: list[Topic] = [
         ),
         "statements": [
             s(
-                "A fixed-vs-IBOR swap is built as a QuantLib `VanillaSwap` for the stated "
-                "`swap_type` and priced with a `DiscountingSwapEngine` on the discounting curve; "
-                "`npv`, the fair rate / spread and the leg NPVs and BPS are read off that object.",
+                "A fixed-vs-IBOR swap is two `SwapLeg`s, each built on its own and valued on "
+                "its own discounting curve; the swap's `npv` is the sum of the two signed leg "
+                "values (`legs[0]` fixed, `legs[1]` floating).",
                 c(
                     VS_CPP,
-                    r"auto swap = std::make_shared<QuantLib::VanillaSwap>\(",
-                    r"hasCmsLeg = false",
+                    r"const BuiltSwapLeg fixed = BuildSwapLeg\(trade.fixedLeg",
+                    r"out.npv = out.legs\[0\].npv \+ out.legs\[1\].npv;",
                 ),
             ),
             s(
-                "If the fixed and floating notionals differ, the fixed leg's notional is used "
-                "(a warning, not an error).",
-                c(VS_CPP, r"if \(trade.fixed.notional != trade.ibor.notional\)", 5),
+                "A leg is valued as QuantLib's `DiscountingSwapEngine` values a leg: "
+                "`CashFlows::npv` as of the discount curve's reference date, flows on that date "
+                "excluded; the leg's value is then signed -1 when the party pays it (`Pay`), "
+                "+1 when it receives it.",
+                c(
+                    LEG_PRICER_CPP,
+                    r"Valued exactly as QuantLib's DiscountingSwapEngine values a leg",
+                    r"out.npv = leg.sign\(\) \* built.npvOwn;",
+                ),
             ),
             s(
-                "An OIS swap is priced the same way (`DiscountingSwapEngine` on the discounting "
-                "curve); `npv`, fair rate / spread, leg BPS and leg NPVs are QuantLib's.",
+                "An OIS swap is priced the same way: fixed leg and overnight leg built and "
+                "valued separately, `npv` = sum of the signed leg values.",
                 c(
                     OIS_CPP,
-                    r"std::make_shared<QuantLib::DiscountingSwapEngine>\(discHandle\)\);",
-                    r"out.overnightLegNpv",
+                    r"const BuiltSwapLeg fixed = BuildSwapLeg\(trade.fixedLeg",
+                    r"out.npv = out.legs\[0\].npv \+ out.legs\[1\].npv;",
                 ),
             ),
             s(
-                "The swap response fields: `npv`, `fair_rate`, `fair_spread`, per-leg `bps` and "
-                "`npv`, optional flows.",
-                c(VS_RESP_FBS, r"^table VanillaSwapResponse", r"floating_leg_flows"),
+                "The swap response: `npv` (sum of the legs, positive in favour of the reported "
+                "party), optional `fair_rate` / `fair_spread`, and `legs[]` with each leg's "
+                "signed `npv` and optional flows. No per-leg BPS since engine 0.10.0.",
+                c(VS_RESP_FBS, r"^table VanillaSwapResponse", r"legs:\[SwapLegResult\]"),
             ),
             s(
                 "A swaption's `npv` is \"the present value of the swaption under the selected "
@@ -213,15 +222,25 @@ TOPICS: list[Topic] = [
                 c(PRICING_FBS, r"Settlement date \(YYYY-MM-DD\)", 2),
             ),
             s(
-                "`discounting_curve` / `forwarding_curve` name curves in `pricing.rates.curves` "
-                "by id (shown for swaptions; swaps and FRAs use the same two references).",
-                c(SWPT_REQ_FBS, r"Reference to curve in pricing.rates.curves by id", 4),
+                "Swaps (engine 0.10.0+): each leg names its own `discounting_curve` (and, on a "
+                "floating leg, its `forwarding_curve`) in `pricing.rates.curves` by id.",
+                c(
+                    SWAP_LEG_FBS,
+                    r"Id of the curve in `pricing.rates.curves` that discounts every flow",
+                    r"discounting_curve:string \(required\);",
+                ),
+            ),
+            s(
+                "A swaption takes its curves from the underlying swap's legs (both legs must "
+                "name the same discounting curve).",
+                c(SWPT_REQ_FBS, r"One swaption to price with its vol and model references", 4),
             ),
         ],
         "gaps": [
             "Sign convention: not documented in engine prose. From source, the value is "
-            "QuantLib's `NPV()` for the instrument built with the request's `swap_type` / "
-            "`side` / option type, so the sign is QuantLib's for that side (a payer swap's "
+            "QuantLib's `NPV()` for the instrument built with the request's `pay_receive` / "
+            "`side` / option type (a swap response states it: positive in favour of the "
+            "reported party), so the sign is QuantLib's for that side (a payer swap's "
             "NPV rises when rates rise). Test it with `reprice_with` flipping the side.",
             "Premium vs forward premium: the engine returns one present value as of "
             "`as_of_date`; it does not document a forward (deferred) premium field.",
@@ -237,29 +256,47 @@ TOPICS: list[Topic] = [
         ),
         "statements": [
             s(
-                "Vanilla swap: `fair_rate` and `fair_spread` are `VanillaSwap::fairRate()` / "
-                "`fairSpread()`.",
-                c(VS_CPP, r"out.fairRate = swap->fairRate\(\);", 2),
-            ),
-            s(
-                "With a notionals vector the engine reproduces the same formula explicitly: "
-                "fair rate = fixed rate - NPV / (fixed-leg BPS / 1bp); fair spread likewise on "
-                "the floating leg.",
+                "Vanilla swap: `fair_rate` = fixed rate - NPV / (fixed leg's signed annuity / "
+                "1bp), QuantLib `VanillaSwap`'s own formula; absent when the annuity is zero "
+                "or the value is not finite.",
                 c(
                     VS_CPP,
-                    r"fairRate/fairSpread via VanillaSwap's own formula",
-                    r"trade.ibor.spread - out.npv",
+                    r"// VanillaSwap::fairRate: fixedRate - NPV",
+                    r"out.fairRate = fairRate;",
                 ),
             ),
             s(
-                "A swap with a CMS leg has no fair rate / spread; the engine reports 0.0 there "
-                "by design.",
-                c(VS_CPP, r"fair_rate/fair_spread are not defined for a CMS swap", 4),
+                "Vanilla swap: `fair_spread` is the same linear solve on the floating leg's "
+                "signed annuity (the IBOR forwards or CMS coupons held).",
+                c(
+                    VS_CPP,
+                    r"// VanillaSwap::fairSpread: spread - NPV",
+                    r"out.fairSpread = fairSpread;",
+                ),
             ),
             s(
-                "OIS swap: `fair_rate` / `fair_spread` are `OvernightIndexedSwap::fairRate()` / "
-                "`fairSpread()`.",
-                c(OIS_CPP, r"out.fairRate = swap->fairRate\(\);", 2),
+                "When `fair_rate` and `fair_spread` are present (engine 0.10.0+): `fair_rate` "
+                "iff exactly one leg carries `FixedCoupons`, `fair_spread` iff a leg carries "
+                "IBOR, overnight or CMS coupons; both are optional fields.",
+                c(
+                    VS_RESP_FBS,
+                    r"/// The fixed rate that zeroes `npv`",
+                    r"fair_spread:double = null;",
+                ),
+            ),
+            s(
+                "OIS swap: `fair_rate` / `fair_spread` by `OvernightIndexedSwap`'s formulas on "
+                "the fixed / overnight leg's signed annuity.",
+                c(
+                    OIS_CPP,
+                    r"// OvernightIndexedSwap::fairRate: fixedRate - NPV",
+                    r"out.fairSpread = fairSpread;",
+                ),
+            ),
+            s(
+                "Swap leg BPS (`fixed_leg_bps`, ...) are no longer response fields from engine "
+                "0.10.0; the annuity exists only inside the fair-rate formula above.",
+                c(VERSIONING, r"^`NotionalExchange`\)\. The per-leg fields", 3),
             ),
             s(
                 "CDS: `fair_spread` is the par spread in decimal, absent when QuantLib cannot "
@@ -1233,8 +1270,9 @@ CONNECTOR_TOPIC: Topic = {
         ),
         (
             "`compare_results` rows labelled PV01 / BPV / annuity",
-            "engine output: mapped to `fixed_leg_bps` (the fixed leg's basis-point value the "
-            "engine returns), never to the connector's `dv01`",
+            "engine output where one exists (a swaption's `annuity`); on a swap the label is "
+            "listed unmapped: the engine reports no leg BPS from 0.10.0, `swap_dv01` is the "
+            "connector's bump-and-reprice number (a different quantity)",
         ),
         (
             "bumped quotes (`bumped_quotes`, `calls[*].edits`, `changes_applied`)",
@@ -1396,33 +1434,39 @@ CONNECTOR_TOPIC: Topic = {
             ),
         ),
         s(
-            "`compare_results` label synonyms: PV01 / BPV / annuity map to the engine's "
-            "`fixed_leg_bps`; DV01 / shifting / delta shift map to the connector's "
-            "bump-and-reprice `dv01` (the full table).",
+            "`compare_results` label synonyms: PV01 / BPV / annuity map to a swaption's "
+            "`annuity`; DV01 / shifting / delta shift map to the connector's bump-and-reprice "
+            "`dv01`; leg labels map to `legs[i].npv` (the full table).",
             c(RECONCILE_PY, r"^LABEL_SYNONYMS: dict\[str, list\[str\]\] = \{", r"^}$"),
         ),
     ],
     "notes": [
         (
             "PV01 vs DV01",
-            "PV01 (also BPS, BPV, annuity) is the fixed leg's basis-point sensitivity the ENGINE "
-            "returns as `fixed_leg_bps`: QuantLib's `fixedLegBPS()` read off the swap object, "
-            "filled at `" + ENGINE_FILL_VANILLA["ref"] + "` (<" + ENGINE_FILL_VANILLA["url"] + ">) "
-            "for a fixed-vs-IBOR swap and at `"
-            + ENGINE_FILL_OIS["ref"]
-            + "` (<"
-            + ENGINE_FILL_OIS["url"]
-            + ">) for an OIS; the response field is declared at `"
-            + ENGINE_FILL_FBS["ref"]
-            + "` (<"
-            + ENGINE_FILL_FBS["url"]
-            + ">). DV01 is this "
-            "connector's bump-and-reprice number (`swap_dv01`, centered by default: two engine "
-            "NPVs 1bp apart on the curve quotes, halved). They are different quantities: PV01 "
-            "is the annuity of the fixed leg for a 1bp coupon change on fixed discount factors; "
-            "DV01 moves the curve. `compare_results` maps PV01 / BPV / annuity to "
-            "`fixed_leg_bps` and DV01 / shifting / delta shift to `dv01`; a vendor's PV01 must "
-            "be compared with `fixed_leg_bps`, not with `dv01`.",
+            "PV01 (also BPS, BPV, annuity) is the fixed leg's basis-point sensitivity: the "
+            "annuity of the fixed leg for a 1bp coupon change on fixed discount factors. The "
+            "engine reported it as `fixed_leg_bps` up to 0.9.0; engine 0.10.0 removed every "
+            "`*_bps` field (`"
+            + ENGINE_BPS_REMOVED["ref"]
+            + "`, <"
+            + ENGINE_BPS_REMOVED["url"]
+            + ">). The engine still computes the fixed leg's signed annuity, but only as the "
+            "denominator of `fair_rate` (`"
+            + ENGINE_BPS_VANILLA["ref"]
+            + "`, <"
+            + ENGINE_BPS_VANILLA["url"]
+            + ">; OIS `"
+            + ENGINE_BPS_OIS["ref"]
+            + "`, <"
+            + ENGINE_BPS_OIS["url"]
+            + ">), never as a response field. DV01 is this connector's bump-and-reprice "
+            "number (`swap_dv01`, centered by default: two engine NPVs 1bp apart on the curve "
+            "quotes, halved): it moves the curve, so it is a different quantity from a PV01. "
+            "`compare_results` maps DV01 / shifting / delta shift to `dv01`; PV01 / BPV / "
+            "annuity map to a swaption's `annuity` where present and are otherwise listed "
+            "unmapped with this explanation: there is no engine PV01 to compare a vendor's "
+            "PV01 with; `swap_dv01` is the closest curve sensitivity, and it must be compared "
+            "as a DV01, not as a PV01.",
         ),
     ],
     "gaps": [

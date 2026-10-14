@@ -11,6 +11,7 @@ category ``blog``. Names are unique across categories.
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -126,6 +127,20 @@ def _primary_number(row: dict[str, Any], response: Any) -> float | None:
     return float(value) if isinstance(value, int | float) else None
 
 
+def _first_item(row: dict[str, Any], response: Any) -> dict[str, Any] | None:
+    """The first priced item of a list response (``swaps[0]``, ``fx_forwards[0]``): where
+    a product's catalog fields live (engine 0.9.0+ FX forward / cross-currency swap)."""
+    if not isinstance(response, dict):
+        return None
+    keys = [row.get("list_key")] if row.get("list_key") else []
+    keys += [k for k, v in response.items() if isinstance(v, list)]
+    for k in keys:
+        lst = response.get(str(k))
+        if isinstance(lst, list) and lst and isinstance(lst[0], dict):
+            return lst[0]
+    return None
+
+
 def _find_field(response: Any, name: str) -> float | None:
     if not isinstance(response, dict):
         return None
@@ -210,8 +225,17 @@ def oracle_check(row: dict[str, Any], response: Any) -> dict[str, Any]:
     if kind == "fields":
         actual_f: dict[str, float | None] = {}
         ok = True
+        item = _first_item(row, response)
         for name, expected in oracle["values"].items():
             got = _find_field(response, name)
+            if got is None and item is not None:
+                got = _find_field(item, name)
+            leg = re.match(r"^legs\[(\d+)\]\.(\w+)$", name)
+            if got is None and leg and item is not None and isinstance(item.get("legs"), list):
+                legs = item["legs"]
+                i = int(leg.group(1))
+                if i < len(legs):
+                    got = _find_field(legs[i], leg.group(2))
             actual_f[name] = got
             tol = max(float(oracle.get("tolerance") or 1e-7), abs(expected) * 1e-5)
             ok = ok and got is not None and abs(got - expected) <= tol

@@ -112,7 +112,7 @@ def test_market_standard_fields_carry_the_exact_provenance_string() -> None:
         assert get_preset(pid).provenance_of(dotted).startswith(MARKET_STANDARD), (pid, dotted)
     # Euribor end-of-month is now sourced from QuantLib (euriborEOM), with a permalink
     eom = get_preset("EUR_EURIBOR_6M").provenance_of("index.end_of_month")
-    assert eom.startswith("QuantLib 1.41 euriborEOM") and "/blob/v1.41/" in eom
+    assert eom.startswith("QuantLib 1.44 euriborEOM") and "/blob/v1.44/" in eom
     # a sourced field falls back to the preset-level provenance (the QuantLib index class)
     assert "QuantLib::Sonia" in get_preset("GBP_SONIA_SWAP").provenance_of("index.calendar")
 
@@ -131,7 +131,7 @@ def test_index_provenance_cites_quantlib_and_no_private_path() -> None:
     }
     for pid, cls in expected.items():
         prov = get_preset(pid).provenance_of("index.fixing_days")
-        assert cls in prov and "https://github.com/lballabio/QuantLib/blob/v1.41/ql/" in prov, pid
+        assert cls in prov and "https://github.com/lballabio/QuantLib/blob/v1.44/ql/" in prov, pid
     for pid in preset_ids():
         text = (PRESETS_DIR / f"{pid}.json").read_text()
         assert "quantra-backend" not in text and "/root/" not in text, pid

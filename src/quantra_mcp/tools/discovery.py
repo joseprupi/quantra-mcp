@@ -112,7 +112,7 @@ def register(app: MCPServer, backend: Backend) -> None:
         ] = 3,
     ) -> dict[str, Any]:
         """Request and response JSON schema of one engine endpoint, or (without
-        ``endpoint``) the list of the 24 POST endpoints, from the vendored OpenAPI spec
+        ``endpoint``) the list of the 26 POST endpoints, from the vendored OpenAPI spec
         (no engine call; compare ``api_version`` with ``quantra_meta`` to detect a version
         mismatch). For one endpoint: the spec's top-level ``required`` list, the top-level
         field names and both schemas. The engine's rule: a field the product needs that

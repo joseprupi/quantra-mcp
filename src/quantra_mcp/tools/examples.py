@@ -43,7 +43,7 @@ def list_examples_impl(
     }
     shown = items
     if category is None and product is None and limit is None:
-        # the whole catalog is 223 rows (~60 KB): counts per category / product and the
+        # the whole catalog is 239 rows (~60 KB): counts per category / product and the
         # first names only; a filter or a limit returns rows
         by_cat: dict[str, int] = {}
         by_prod: dict[str, int] = {}

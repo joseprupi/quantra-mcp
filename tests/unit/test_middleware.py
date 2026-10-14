@@ -13,6 +13,7 @@ from quantra_mcp import prompts, server
 from quantra_mcp.middleware import FailuresAreErrors, SessionScope, mcp_session_id
 from quantra_mcp.resources import DEVELOPER_GUIDE
 from quantra_mcp.rules import ABSOLUTE_RULE, EXAMPLE_SHAPE_RULE, SOURCE_RULE
+from quantra_mcp.schema.loader import quantlib_pin
 from quantra_mcp.session import current_session_id
 from tests.conftest import FakeBackend, structured
 
@@ -114,7 +115,7 @@ async def test_instructions_lead_with_the_rule_and_the_developer_map_is_a_resour
         "explain_method first",
         "QuantLib class (PiecewiseYieldCurve, IterativeBootstrap, a pricer, a helper)",
         "search_source / read_source",
-        "quantlib:ql/<file>@v1.41:Lx-Ly",
+        f"quantlib:ql/<file>@{quantlib_pin().tag}:Lx-Ly",
         '"from memory", "general knowledge" or "not verified here"',
         '"not found in the engine or QuantLib source at this pin"',
     ):

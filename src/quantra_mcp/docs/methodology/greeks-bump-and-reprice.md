@@ -1,6 +1,6 @@
 # DV01, gamma, vega: bump-and-reprice vs analytic
 
-_Generated from the engine's documentation and source at `v0.8.2` (`7b26e53ae084`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.8.2/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.11.0` (`e2c160dc83e3`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.11.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 Swaption sensitivities exist in two forms selected by request flags: analytic (`swaption_pricing_details`: QuantLib's Black / Bachelier calculator built with discount 1, the swap annuity applied explicitly) and bump-and-reprice (`swaption_pricing_rebump`: +/-1bp parallel curve bump, +/-1bp vol bump, 1-calendar-day market roll). Since engine 0.8.0 both report the same units (currency per bp, gamma per bp^2, vega per bp of vol, theta per calendar day), every greek is an optional response field present only when computed, and the rebump dv01 / gamma / vega / theta take precedence when both flags are set. Equity greeks are analytic. Bonds report duration and convexity under `bond_pricing_details`. Swaps, FRAs, caps and CDS carry no sensitivities in the response.
 
@@ -24,9 +24,9 @@ comparable:
 | `theta` | pure time decay with forward, vol and annuity held fixed (-1/2 sigma^2 F^2 Gamma for Black, -1/2 sigma_N^2 Gamma for Bachelier), per calendar day | NPV(as_of + 1 calendar day) - NPV(as_of) after a clean one-day roll of the market (see below) |
 ````
 
-Source: `docs/http-api.md@v0.8.2:L206-L218`
+Source: `docs/http-api.md@v0.11.0:L960-L972`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/docs/http-api.md#L206-L218>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/http-api.md#L960-L972>
 
 ### 2. Which fields each flag fills, that every greek is optional (`= null`, present exactly when computed; none with neither flag), and the precedence when both flags are set (rebump dv01 / gamma / vega / theta; analytic delta, atm_forward, annuity kept).
 
@@ -55,9 +55,9 @@ Precedence: when both flags are set, the rebump `dv01`, `gamma`, `vega` and
 kept from the analytic pass.
 ````
 
-Source: `docs/http-api.md@v0.8.2:L220-L241`
+Source: `docs/http-api.md@v0.11.0:L974-L995`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/docs/http-api.md#L220-L241>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/http-api.md#L974-L995>
 
 ### 3. Rebump bump sizes: a 1bp parallel curve bump (DV01 / gamma), a 1bp absolute vol bump (vega) and a 1-day evaluation-date roll (theta), fixed in one place.
 
@@ -76,9 +76,9 @@ struct SwaptionRebumpConfig {
 };
 ````
 
-Source: `src/domain/swaption_rebump.h@v0.8.2:L16-L27`
+Source: `src/domain/swaption_rebump.h@v0.11.0:L16-L27`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/domain/swaption_rebump.h#L16-L27>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/domain/swaption_rebump.h#L16-L27>
 
 ### 4. The three pre-built market snapshots: curve up, curve down (parallel +/- bump at as-of) and roll (no bump, as-of + roll days). The vol-bump legs reuse the base curves.
 
@@ -99,9 +99,9 @@ struct SwaptionRebumpMarkets {
     bool present = false;
 ````
 
-Source: `src/evaluators/swaption_evaluator.h@v0.8.2:L91-L104`
+Source: `src/evaluators/swaption_evaluator.h@v0.11.0:L91-L104`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/swaption_evaluator.h#L91-L104>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/evaluators/swaption_evaluator.h#L91-L104>
 
 ### 5. Rebump definitions: dv01 = (NPV(+1bp) - NPV(-1bp)) / 2; gamma = NPV(+1bp) - 2 NPV + NPV(-1bp); vega = (NPV(vol+1bp) - NPV(vol-1bp)) / 2; theta = NPV(tomorrow) - NPV.
 
@@ -121,9 +121,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/s
             row.theta = npvTomorrow - npv;
 ````
 
-Source: `src/evaluators/swaption_evaluator.cpp@v0.8.2:L686-L698`
+Source: `src/evaluators/swaption_evaluator.cpp@v0.11.0:L696-L708`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/swaption_evaluator.cpp#L686-L698>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/evaluators/swaption_evaluator.cpp#L696-L708>
 
 ### 6. Analytic path (`swaption_pricing_details`): delta, gamma, vega, theta from QuantLib's `BachelierCalculator` (Normal vol) or `BlackCalculator` (with the displacement added to strike and forward), built with discount 1 and multiplied by the annuity and 1bp (1bp^2 for gamma, /365 for theta); dv01 = delta. Absent when the option is expired or has no vol.
 
@@ -174,9 +174,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/s
             if (row.delta) row.dv01 = row.delta;
 ````
 
-Source: `src/evaluators/swaption_evaluator.cpp@v0.8.2:L640-L683`
+Source: `src/evaluators/swaption_evaluator.cpp@v0.11.0:L650-L693`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/swaption_evaluator.cpp#L640-L683>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/evaluators/swaption_evaluator.cpp#L650-L693>
 
 ### 7. What changed in 0.8.0 for the details greeks: the 0.7.0 values were in the calculators' raw units (delta and vega 10,000 times larger, gamma 1e8 times, theta computed with the annuity where a discount factor was expected).
 
@@ -200,9 +200,9 @@ greeks:
 The values match native QuantLib computed with the same definitions.
 ````
 
-Source: `docs/versioning.md@v0.8.2:L96-L112`
+Source: `docs/versioning.md@v0.11.0:L346-L362`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/docs/versioning.md#L96-L112>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/versioning.md#L346-L362>
 
 ### 8. 0.8.2: under `swaption_pricing_rebump` every curve pillar is shifted exactly once; a curve written with `quote_id` pillars no longer reports about twice the dv01 and four times the gamma of the same curve written inline.
 
@@ -227,9 +227,9 @@ result.
   two spellings of the same market produce identical greeks.
 ````
 
-Source: `docs/versioning.md@v0.8.2:L29-L46`
+Source: `docs/versioning.md@v0.11.0:L279-L296`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/docs/versioning.md#L29-L46>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/versioning.md#L279-L296>
 
 ### 9. The response schema: every greek is `= null` (absent unless computed) and each field states its unit and the flag that fills it.
 
@@ -267,9 +267,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/docs/versioning.
     dv01:double = null;
 ````
 
-Source: `flatbuffers/fbs/swaption_response.fbs@v0.8.2:L19-L49`
+Source: `flatbuffers/fbs/swaption_response.fbs@v0.11.0:L19-L49`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/swaption_response.fbs#L19-L49>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/flatbuffers/fbs/swaption_response.fbs#L19-L49>
 
 ### 10. Equity options: delta, gamma, vega, theta, rho are the QuantLib option's analytic greeks times `quantity`.
 
@@ -281,9 +281,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/
     out.rho = safeGreek([&]() { return oneAssetOption->rho() * quantity; });
 ````
 
-Source: `src/evaluators/equity_option_evaluator.cpp@v0.8.2:L248-L252`
+Source: `src/evaluators/equity_option_evaluator.cpp@v0.11.0:L248-L252`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/equity_option_evaluator.cpp#L248-L252>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/evaluators/equity_option_evaluator.cpp#L248-L252>
 
 ### 11. Bonds (`bond_pricing_details`): yield, modified and Macaulay duration, convexity and BPS via QuantLib `BondFunctions` at the settlement date.
 
@@ -307,9 +307,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/e
             out.bps = QuantLib::BondFunctions::bps(*trade.bond, *discountCurve, ctx.settlement);
 ````
 
-Source: `src/evaluators/fixed_rate_bond_evaluator.cpp@v0.8.2:L88-L104`
+Source: `src/evaluators/fixed_rate_bond_evaluator.cpp@v0.11.0:L88-L104`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/src/evaluators/fixed_rate_bond_evaluator.cpp#L88-L104>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/evaluators/fixed_rate_bond_evaluator.cpp#L88-L104>
 
 ## Request fields that control it
 
@@ -337,11 +337,11 @@ table PricingOptions {
 }
 ````
 
-Source: `flatbuffers/fbs/pricing.fbs@v0.8.2:L55-L73`
+Source: `flatbuffers/fbs/pricing.fbs@v0.11.0:L56-L74`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.8.2/flatbuffers/fbs/pricing.fbs#L55-L73>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/flatbuffers/fbs/pricing.fbs#L56-L74>
 
-## Not documented in engine v0.8.2
+## Not documented in engine v0.11.0
 
 - Swaps, FRAs, caps / floors, CDS and inflation products carry no sensitivity fields in the response. This server's `swap_dv01`, `key_rate_ladder`, `scenario` and `reprice_with` tools obtain them by repricing under bumped quotes (differences of engine NPVs, inputs shown).
 - The rebump dv01 is per 1bp parallel move of the curves the request names (not a key-rate or a 100bp number) and moves forward and annuity together; the analytic dv01 moves the forward swap rate alone with the annuity held fixed, so the two dv01s differ by construction even on the same market.

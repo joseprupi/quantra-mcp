@@ -452,7 +452,7 @@ def test_mcp_over_http_calls_quantra_meta_and_logs_access(
         assert r.status_code == 200, r.text
         payload = _sse_result(r.text)["result"]
         structured = payload["structuredContent"]
-        assert structured["ok"] is True and structured["response"]["openapi_version"] == "0.8.2"
+        assert structured["ok"] is True and structured["response"]["openapi_version"] == "0.11.0"
     lines = [rec.getMessage() for rec in caplog.records if rec.name == "quantra_mcp.access"]
     assert len(lines) == 1, lines
     line = lines[0]

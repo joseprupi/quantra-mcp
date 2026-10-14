@@ -44,8 +44,8 @@ class SwapBackend(FakeBackend):
         self.calls.append(("POST", endpoint, body, request_id))
         self.bodies.append(json.loads(json.dumps(body)))
         swap = body["swaps"][0]["vanilla_swap"]
-        npv = -1e6 * sum(_rates(body)) + 2e8 * float(swap["fixed_leg"]["rate"])
-        if swap["swap_type"] == "Receiver":
+        npv = -1e6 * sum(_rates(body)) + 2e8 * float(swap["fixed_leg"]["coupons"]["rate"])
+        if swap["fixed_leg"]["pay_receive"] == "Receive":
             npv = -npv
         return BackendResponse(
             200,
@@ -54,13 +54,15 @@ class SwapBackend(FakeBackend):
                     {
                         "npv": npv,
                         "fair_rate": 0.0311,
-                        "fixed_leg_npv": 1.0,
-                        "fixed_leg_flows": [],
+                        "legs": [
+                            {"npv": 1.0, "npv_reporting": 1.0, "flows": []},
+                            {"npv": npv - 1.0, "npv_reporting": npv - 1.0},
+                        ],
                         "used_cms_pricer_type": "LinearTsr",
                     }
                 ]
             },
-            {"x-quantra-api-version": "0.8.2", "x-request-id": request_id or ""},
+            {"x-quantra-api-version": "0.11.0", "x-request-id": request_id or ""},
         )
 
 
@@ -75,11 +77,12 @@ async def _call(backend: FakeBackend, name: str, args: dict[str, Any]) -> dict[s
 
 
 def test_parse_path_forms() -> None:
-    assert parse_path("swaps[0].vanilla_swap.fixed_leg.rate") == [
+    assert parse_path("swaps[0].vanilla_swap.fixed_leg.coupons.rate") == [
         "swaps",
         0,
         "vanilla_swap",
         "fixed_leg",
+        "coupons",
         "rate",
     ]
     assert parse_path("pricing.rates.curves.1.points.3.point.rate") == [
@@ -232,7 +235,7 @@ async def test_reprice_with_changes_exactly_one_field_and_subtracts() -> None:
         {
             "result_or_request": base,
             "market_data_source": "engine_example",
-            "changes": [{"path": "swaps[0].vanilla_swap.fixed_leg.rate", "value": 0.035}],
+            "changes": [{"path": "swaps[0].vanilla_swap.fixed_leg.coupons.rate", "value": 0.035}],
         },
     )
     assert r["ok"] is True and r["endpoint"] == "/price-vanilla-swap"
@@ -240,7 +243,7 @@ async def test_reprice_with_changes_exactly_one_field_and_subtracts() -> None:
     assert r["notes"][0].startswith("market_data_source=engine_example (declared")
     assert r["base_source"] == "given result" and len(backend.bodies) == n_calls + 1
     assert r["request_diff"] == [
-        {"path": "swaps[0].vanilla_swap.fixed_leg.rate", "before": 0.032, "after": 0.035}
+        {"path": "swaps[0].vanilla_swap.fixed_leg.coupons.rate", "before": 0.032, "after": 0.035}
     ]
     assert r["changes_applied"][0]["before"] == 0.032 and r["changes_applied"][0]["kind"] == "set"
     assert r["base"]["response"] == base["response"]
@@ -251,10 +254,13 @@ async def test_reprice_with_changes_exactly_one_field_and_subtracts() -> None:
     assert d["item"] == "swaps[0]"
     assert d["fields"]["npv"] == {"base": npv_b, "changed": npv_c, "difference": npv_c - npv_b}
     assert d["fields"]["fair_rate"]["difference"] == 0.0
-    assert "fixed_leg_flows" not in d["fields"] and "used_cms_pricer_type" not in d["fields"]
+    assert "legs" not in d["fields"] and "used_cms_pricer_type" not in d["fields"]
+    # engine 0.10.0+ leg results are compared per leg
+    assert d["fields"]["legs[0].npv"]["difference"] == 0.0
+    assert d["fields"]["legs[1].npv"]["difference"] == npv_c - npv_b
     # the changed request really is what was sent
     assert backend.bodies[-1] == r["changed"]["request"]
-    assert backend.bodies[-1]["swaps"][0]["vanilla_swap"]["fixed_leg"]["rate"] == 0.035
+    assert backend.bodies[-1]["swaps"][0]["vanilla_swap"]["fixed_leg"]["coupons"]["rate"] == 0.035
 
 
 async def test_reprice_with_bump_bp_on_a_curve_quote_and_reprice_base() -> None:
@@ -290,12 +296,13 @@ async def test_reprice_with_flip_side_and_several_changes() -> None:
             "result_or_request": {"endpoint": "/price-vanilla-swap", "body": body},
             "market_data_source": "engine_example",
             "changes": [
-                {"path": "swaps[0].vanilla_swap.swap_type", "value": "Receiver"},
+                {"path": "swaps[0].vanilla_swap.fixed_leg.pay_receive", "value": "Receive"},
+                {"path": "swaps[0].vanilla_swap.floating_leg.pay_receive", "value": "Pay"},
                 {"path": "pricing.as_of_date", "value": "2025-01-16"},
             ],
         },
     )
-    assert r["ok"] and len(r["request_diff"]) == 2
+    assert r["ok"] and len(r["request_diff"]) == 3
     npv_b = r["base"]["response"]["swaps"][0]["npv"]
     assert r["differences"]["fields"]["npv"]["changed"] == -npv_b
 
@@ -309,7 +316,9 @@ async def test_reprice_with_validates_before_sending_and_reports_engine_errors()
         {
             "result_or_request": {"endpoint": "/price-vanilla-swap", "body": body},
             "market_data_source": "engine_example",
-            "changes": [{"path": "swaps[0].vanilla_swap.swap_type", "value": "Sideways"}],
+            "changes": [
+                {"path": "swaps[0].vanilla_swap.fixed_leg.pay_receive", "value": "Sideways"}
+            ],
         },
     )
     assert r["ok"] is False and r["status"] is None and backend.bodies == []
@@ -322,7 +331,7 @@ async def test_reprice_with_validates_before_sending_and_reports_engine_errors()
         {
             "result_or_request": {"endpoint": "/price-vanilla-swap", "body": body},
             "market_data_source": "engine_example",
-            "changes": [{"path": "swaps[3].vanilla_swap.swap_type", "value": "Payer"}],
+            "changes": [{"path": "swaps[3].vanilla_swap.fixed_leg.pay_receive", "value": "Pay"}],
         },
     )
     assert r["ok"] is False and "out of range" in r["error"] and backend.bodies == []
@@ -354,7 +363,7 @@ async def test_reprice_with_validates_before_sending_and_reports_engine_errors()
         async def post(
             self, endpoint: str, body: Any, request_id: str | None = None
         ) -> BackendResponse:
-            if body["swaps"][0]["vanilla_swap"]["fixed_leg"]["rate"] > 1:
+            if body["swaps"][0]["vanilla_swap"]["fixed_leg"]["coupons"]["rate"] > 1:
                 raise EngineError(
                     422, "QuantLib error: silly rate", {"error": "QuantLib error: silly rate"}
                 )
@@ -367,7 +376,7 @@ async def test_reprice_with_validates_before_sending_and_reports_engine_errors()
         {
             "result_or_request": {"endpoint": "/price-vanilla-swap", "body": body},
             "market_data_source": "engine_example",
-            "changes": [{"path": "swaps[0].vanilla_swap.fixed_leg.rate", "value": 5.0}],
+            "changes": [{"path": "swaps[0].vanilla_swap.fixed_leg.coupons.rate", "value": 5.0}],
         },
     )
     assert r["ok"] is False and r["status"] == 422 and "silly rate" in r["error"]
@@ -390,7 +399,7 @@ async def test_reprice_with_market_data_source_is_carried_or_required() -> None:
         return sum(1 for c in backend.calls if c[0] == "POST")
 
     n = posts()
-    change = [{"path": "swaps[0].vanilla_swap.fixed_leg.rate", "value": 0.035}]
+    change = [{"path": "swaps[0].vanilla_swap.fixed_leg.coupons.rate", "value": 0.035}]
     carried = await _call(backend, "reprice_with", {"result_or_request": priced, "changes": change})
     assert carried["ok"], carried
     assert carried["market_data_source"] == "engine_example"
@@ -424,30 +433,56 @@ async def test_reprice_with_market_data_source_is_carried_or_required() -> None:
     assert posts() == n + 2  # the clash and the missing declaration sent nothing
 
 
-async def test_compare_results_maps_pv01_to_the_engine_fixed_leg_bps_not_dv01(
+async def test_compare_results_pv01_has_no_engine_field_on_a_swap_from_0_10(
     fake_backend: FakeBackend,
 ) -> None:
-    """M5.7: PV01 / BPV / annuity are the engine's fixed-leg BPS; DV01 is the connector's
-    bump-and-reprice number. A swap result carries fixed_leg_bps; PV01 must land there."""
-    swap = {"swaps": [{"npv": -47408.49, "fair_rate": 0.031, "fixed_leg_bps": -4631.2}]}
+    """M5.9b: engine 0.10.0 removed every `*_bps` field. On a swap, PV01 / BPV / annuity
+    are listed unmapped with a pointer to swap_dv01; on a swaption they map to the
+    engine's `annuity`. DV01 stays the connector's bump-and-reprice number. Leg labels map
+    to `legs[i].npv`."""
+    swap = {
+        "swaps": [
+            {
+                "npv": -47408.49,
+                "fair_rate": 0.031,
+                "legs": [{"npv": -100.0, "npv_reporting": -100.0}, {"npv": -47308.49}],
+            }
+        ]
+    }
     r = await _call(
         fake_backend,
         "compare_results",
         {
-            "external": {"PV01": -4630.0, "BPV": -4630.0, "Annuity": 4630.0, "DV01": 4625.0},
+            "external": {
+                "PV01": -4630.0,
+                "BPV": -4630.0,
+                "Annuity": 4630.0,
+                "fixed_leg_bps": -4630.0,
+                "DV01": 4625.0,
+                "Fixed leg": -101.0,
+                "Floating leg NPV": -47300.0,
+            },
             "quantra": swap,
         },
     )
     assert r["ok"] is True
+    un = {u["label"]: u for u in r["unmapped"]}
+    for label in ("PV01", "BPV", "Annuity", "fixed_leg_bps"):
+        assert label in un, label
+        assert "0.10.0" in un[label]["reason"] and "swap_dv01" in un[label]["reason"], label
     rows = {row["label"]: row for row in r["rows"]}
-    for label in ("PV01", "BPV", "Annuity"):
-        assert rows[label]["mapped_to"] == "fixed_leg_bps", label
-        assert rows[label]["quantra"] == -4631.2
-        assert rows[label]["topic"] == "fair-rate"
-    assert r["mapping"]["PV01"] == ["fixed_leg_bps"]
-    assert reconcile.LABEL_SYNONYMS["pv01"] == ["fixed_leg_bps"]
-    assert reconcile.LABEL_SYNONYMS["bpv"] == ["fixed_leg_bps"]
-    assert reconcile.LABEL_SYNONYMS["annuity"] == ["fixed_leg_bps"]
+    assert (
+        rows["Fixed leg"]["mapped_to"] == "legs[0].npv" and rows["Fixed leg"]["quantra"] == -100.0
+    )
+    assert rows["Fixed leg"]["quantra_path"] == "swaps[0].legs[0].npv"
+    assert rows["Fixed leg"]["topic"] == "npv"
+    assert rows["Floating leg NPV"]["quantra"] == -47308.49
+    assert reconcile.LABEL_SYNONYMS["pv01"] == ["annuity"]
+    assert reconcile.LABEL_SYNONYMS["bpv"] == ["annuity"]
+    assert reconcile.LABEL_SYNONYMS["annuity"] == ["annuity"]
+    swpt = {"swaptions": [{"npv": 12516.87, "annuity": 4.31}]}
+    r2 = await _call(fake_backend, "compare_results", {"external": {"PV01": 4.3}, "quantra": swpt})
+    assert r2["rows"][0]["mapped_to"] == "annuity" and r2["rows"][0]["quantra"] == 4.31
     assert reconcile.LABEL_SYNONYMS["shifting"] == ["dv01"]
     assert reconcile.LABEL_SYNONYMS["deltashift"] == ["dv01"]
     # DV01 stays on the connector number and is reported unmapped on a bare engine result

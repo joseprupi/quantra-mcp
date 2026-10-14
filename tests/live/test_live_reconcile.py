@@ -44,19 +44,35 @@ async def test_reprice_with_changes_one_field_of_an_engine_example() -> None:
             {
                 "result_or_request": base,
                 "market_data_source": "engine_example",
-                "changes": [{"path": "swaps[0].vanilla_swap.swap_type", "value": "Receiver"}],
+                "changes": [
+                    {"path": "swaps[0].vanilla_swap.fixed_leg.pay_receive", "value": "Receive"},
+                    {"path": "swaps[0].vanilla_swap.floating_leg.pay_receive", "value": "Pay"},
+                ],
             },
         )
         assert r["ok"], r
         assert r["request_diff"] == [
-            {"path": "swaps[0].vanilla_swap.swap_type", "before": "Payer", "after": "Receiver"}
+            {
+                "path": "swaps[0].vanilla_swap.fixed_leg.pay_receive",
+                "before": "Pay",
+                "after": "Receive",
+            },
+            {
+                "path": "swaps[0].vanilla_swap.floating_leg.pay_receive",
+                "before": "Receive",
+                "after": "Pay",
+            },
         ]
         assert r["base"]["response"] == base["response"] and r["base_source"] == "given result"
         changed = r["changed"]
-        assert (
-            changed["ok"]
-            and changed["request"]["swaps"][0]["vanilla_swap"]["swap_type"] == "Receiver"
-        )
+        legs = changed["request"]["swaps"][0]["vanilla_swap"]
+        assert changed["ok"] and legs["fixed_leg"]["pay_receive"] == "Receive"
+        # engine 0.10.0+: the leg values flip sign with the side, leg by leg
+        base_legs = base["response"]["swaps"][0]["legs"]
+        changed_legs = changed["response"]["swaps"][0]["legs"]
+        for i in (0, 1):
+            assert changed_legs[i]["npv"] == pytest.approx(-base_legs[i]["npv"], rel=1e-12)
+            assert f"legs[{i}].npv" in r["differences"]["fields"]
         npv_c = changed["response"]["swaps"][0]["npv"]
         assert npv_c == pytest.approx(-FIXTURE_NPV, rel=1e-12)
         assert r["differences"]["fields"]["npv"] == {

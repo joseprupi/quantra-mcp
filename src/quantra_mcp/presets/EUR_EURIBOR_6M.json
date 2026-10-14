@@ -2,7 +2,7 @@
   "id": "EUR_EURIBOR_6M",
   "description": "EUR 6M Euribor projection curve: Euribor deposits for the short end (fixing days 2, TARGET, ModifiedFollowing, Actual/360), optional FRAs, and vanilla swaps vs 6M Euribor with an annual 30/360 ModifiedFollowing fixed leg on TARGET. Curve Actual365Fixed / LogLinear / Discount. Under collateral (OIS) discounting build the strip with build_curve's discount_curve pointing at the OIS curve (deps.discount_curve on every swap helper); otherwise the helpers are self-discounted.",
   "currency": "EUR",
-  "provenance": "index: index as defined by QuantLib 1.41 (the engine's QuantLib) QuantLib::Euribor6M in ql/indexes/ibor/euribor.hpp (https://github.com/lballabio/QuantLib/blob/v1.41/ql/indexes/ibor/euribor.hpp; constructor in ql/indexes/ibor/euribor.cpp, https://github.com/lballabio/QuantLib/blob/v1.41/ql/indexes/ibor/euribor.cpp: Euribor with a 6-month tenor: 2 fixing days, EUR, TARGET, Actual360, ModifiedFollowing and end-of-month for month tenors (euriborConvention / euriborEOM)); deposit and FRA helpers carry the same Euribor money-market conventions; the swap fixed leg (Annual, Thirty360, ModifiedFollowing, TARGET): market standard (ISDA/CCP), not from an in-repo source; curve day counter / interpolator / trait: same modelling choice as the SOFR gold example",
+  "provenance": "index: index as defined by QuantLib 1.44 (the engine's QuantLib from engine 0.11.0; the cited definitions are unchanged since 1.41) QuantLib::Euribor6M in ql/indexes/ibor/euribor.hpp (https://github.com/lballabio/QuantLib/blob/v1.44/ql/indexes/ibor/euribor.hpp; constructor in ql/indexes/ibor/euribor.cpp, https://github.com/lballabio/QuantLib/blob/v1.44/ql/indexes/ibor/euribor.cpp: Euribor with a 6-month tenor: 2 fixing days, EUR, TARGET, Actual360, ModifiedFollowing and end-of-month for month tenors (euriborConvention / euriborEOM)); deposit and FRA helpers carry the same Euribor money-market conventions; the swap fixed leg (Annual, Thirty360, ModifiedFollowing, TARGET): market standard (ISDA/CCP), not from an in-repo source; curve day counter / interpolator / trait: same modelling choice as the SOFR gold example",
   "index": {
     "id": "EURIBOR_6M",
     "name": "Euribor",
@@ -46,7 +46,7 @@
     }
   },
   "field_provenance": {
-    "index.end_of_month": "QuantLib 1.41 euriborEOM: true for month tenors (ql/indexes/ibor/euribor.cpp, https://github.com/lballabio/QuantLib/blob/v1.41/ql/indexes/ibor/euribor.cpp)",
+    "index.end_of_month": "QuantLib 1.44 euriborEOM: true for month tenors (ql/indexes/ibor/euribor.cpp, https://github.com/lballabio/QuantLib/blob/v1.44/ql/indexes/ibor/euribor.cpp)",
     "helpers.swap.calendar": "market standard (ISDA/CCP), not from an in-repo source",
     "helpers.swap.sw_fixed_leg_frequency": "market standard (ISDA/CCP), not from an in-repo source",
     "helpers.swap.sw_fixed_leg_convention": "market standard (ISDA/CCP), not from an in-repo source",

@@ -133,9 +133,11 @@ def test_connector_citations_match_the_working_tree() -> None:
     assert "engine output" in page and "connector arithmetic" in page
     assert "(npv_up - npv_down) / 2" in page and "npv - base_npv" in page
     assert "changed - base" in page and "quantra - external" in page
-    # M5.7: PV01 is the engine's fixed_leg_bps, DV01 the connector's bump-and-reprice
+    # M5.9b: engine 0.10.0 removed the leg BPS; PV01 maps to a swaption's annuity only,
+    # DV01 is the connector's bump-and-reprice
     assert "## PV01 vs DV01" in page and "`fixed_leg_bps`" in page
-    assert "LABEL_SYNONYMS" in page and '"pv01": ["fixed_leg_bps"]' in page
+    assert "LABEL_SYNONYMS" in page and '"pv01": ["annuity"]' in page
+    assert "removed every `*_bps` field" in page
     if (root / ".git").exists():
         # the cited commit exists in this repository (the page is regenerated after a commit)
         ok = subprocess.run(
@@ -194,11 +196,19 @@ def test_every_citation_exists_at_the_pin_in_the_engine_repo() -> None:
     for path, line, text in [
         (
             "src/evaluators/vanilla_swap_evaluator.cpp",
-            237,
-            "out.fixedLegBps = swap->fixedLegBPS();",
+            31,
+            "const double fixedBps = SignedBps(trade.fixedLeg, fixed);",
         ),
-        ("src/evaluators/ois_swap_evaluator.cpp", 116, "out.fixedLegBps = swap->fixedLegBPS();"),
-        ("flatbuffers/fbs/vanilla_swap_response.fbs", 41, "fixed_leg_bps:double;"),
+        (
+            "src/evaluators/ois_swap_evaluator.cpp",
+            31,
+            "const double fixedBps = SignedBps(trade.fixedLeg, fixed);",
+        ),
+        (
+            "docs/versioning.md",
+            130,
+            "`overnight_leg_npv`, `leg1_npv`, `leg2_npv`, the `*_bps` fields and the",
+        ),
     ]:
         assert f"`{path}@{tag}:L{line}-L{line}`" in conn, (path, line)
         assert f"<{ENGINE_URL}/blob/{tag}/{path}#L{line}>" in conn, (path, line)

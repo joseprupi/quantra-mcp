@@ -56,11 +56,12 @@ LABEL_SYNONYMS: dict[str, list[str]] = {
     "marketvalue": ["npv"],
     "presentvalue": ["npv"],
     "mtm": ["npv"],
-    # PV01 / BPV / annuity = the fixed leg's basis-point value the engine returns
-    # (fixed_leg_bps); DV01 = this server's bump-and-reprice. Different quantities.
-    "pv01": ["fixed_leg_bps"],
-    "bpv": ["fixed_leg_bps"],
-    "annuity": ["fixed_leg_bps"],
+    # PV01 / BPV / annuity: the swaption's underlying annuity where the engine reports
+    # one. Swap leg BPS (`*_bps`) are no longer reported from engine 0.10.0: see
+    # LEG_BPS_LABELS. DV01 = this server's bump-and-reprice. Different quantities.
+    "pv01": ["annuity"],
+    "bpv": ["annuity"],
+    "annuity": ["annuity"],
     "shifting": ["dv01"],
     "deltashift": ["dv01"],
     "fairrate": ["fair_rate", "atm_forward", "forward_rate"],
@@ -83,10 +84,19 @@ LABEL_SYNONYMS: dict[str, list[str]] = {
     "volatility": ["implied_volatility", "used_volatility"],
     "duration": ["modified_duration"],
     "moddur": ["modified_duration"],
-    "fixedleg": ["fixed_leg_npv"],
-    "floatleg": ["floating_leg_npv", "overnight_leg_npv"],
-    "floatinglegnpv": ["floating_leg_npv", "overnight_leg_npv"],
-    "floatlegnpv": ["floating_leg_npv", "overnight_leg_npv"],
+    # Engine 0.10.0+: per-leg values are `legs[i].npv` in request leg order
+    # (fixed leg first on vanilla / OIS; leg1 then leg2 on basis / cross-currency).
+    "fixedleg": ["legs[0].npv"],
+    "fixedlegnpv": ["legs[0].npv"],
+    "floatleg": ["legs[1].npv"],
+    "floatinglegnpv": ["legs[1].npv"],
+    "floatlegnpv": ["legs[1].npv"],
+    "overnightleg": ["legs[1].npv"],
+    "overnightlegnpv": ["legs[1].npv"],
+    "leg1": ["legs[0].npv"],
+    "leg1npv": ["legs[0].npv"],
+    "leg2": ["legs[1].npv"],
+    "leg2npv": ["legs[1].npv"],
     "protectionlegnpv": ["default_leg_npv"],
     "protectionleg": ["default_leg_npv"],
     "premiumleg": ["premium_leg_npv"],
@@ -94,7 +104,32 @@ LABEL_SYNONYMS: dict[str, list[str]] = {
     "dirtypx": ["dirty_price"],
 }
 
+#: Labels for a swap leg's basis-point value. The engine reported `fixed_leg_bps` /
+#: `floating_leg_bps` / `overnight_leg_bps` up to 0.9.0; 0.10.0 removed every `*_bps`
+#: field (docs/versioning.md, "Version 0.10.0"), so there is nothing to compare them
+#: with on a swap: the curve sensitivity of the swap is `swap_dv01` (bump-and-reprice).
+LEG_BPS_LABELS = frozenset(
+    {
+        "pv01",
+        "bpv",
+        "bps",
+        "annuity",
+        "fixedlegbps",
+        "floatinglegbps",
+        "floatlegbps",
+        "overnightlegbps",
+        "legbps",
+    }
+)
+LEG_BPS_REMOVED = (
+    "the engine no longer reports swap leg BPS / PV01 (the `*_bps` fields were removed in "
+    "engine 0.10.0, see docs/versioning.md); for the curve sensitivity of a swap run "
+    "swap_dv01 (bump-and-reprice DV01, a different quantity from a fixed-leg PV01) and "
+    "compare that result instead"
+)
+
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
+_LEG_PATH = re.compile(r"^legs\[(\d+)\]\.(\w+)$")
 
 
 def _norm(label: str) -> str:
@@ -141,6 +176,20 @@ def _find_field(obj: Any, field: str, prefix: str = "") -> tuple[str, Any] | Non
     return None
 
 
+def _find_candidate(obj: Any, field: str) -> tuple[str, Any] | None:
+    """``legs[i].<f>`` (a swap leg result, engine 0.10.0+) or a plain field name."""
+    m = _LEG_PATH.match(field)
+    if m is None:
+        return _find_field(obj, field)
+    if not isinstance(obj, dict) or not isinstance(obj.get("legs"), list):
+        return None
+    i, f = int(m.group(1)), m.group(2)
+    legs = obj["legs"]
+    if i < len(legs) and isinstance(legs[i], dict) and f in legs[i]:
+        return field, legs[i][f]
+    return None
+
+
 def _all_keys(obj: Any, out: set[str]) -> None:
     if isinstance(obj, dict):
         for k, v in obj.items():
@@ -183,36 +232,41 @@ def compare_results_impl(external: dict[str, Any], quantra: Any) -> dict[str, An
                 {
                     "label": label,
                     "external": ext,
-                    "reason": "no known response field for this label",
+                    "reason": LEG_BPS_REMOVED
+                    if n in LEG_BPS_LABELS
+                    else "no known response field for this label",
                 }
             )
             continue
         hit = None
         field = None
         for field in candidates:
-            hit = _find_field(item, field) or _find_field(response, field)
+            hit = _find_candidate(item, field) or _find_candidate(response, field)
             if hit is not None:
                 break
         if hit is None:
-            unmapped.append(
-                {
-                    "label": label,
-                    "external": ext,
-                    "reason": f"none of {candidates} is present in the result "
-                    "(the product's response has no such field, or the request flag that "
-                    "produces it is off)",
-                }
+            reason = (
+                f"none of {candidates} is present in the result "
+                "(the product's response has no such field, or the request flag that "
+                "produces it is off)"
             )
+            if n in LEG_BPS_LABELS:
+                reason = LEG_BPS_REMOVED
+            unmapped.append({"label": label, "external": ext, "reason": reason})
             continue
         path, value = hit
         assert field is not None
         row: dict[str, Any] = {
             "label": label,
             "mapped_to": field,
-            "quantra_path": (f"{item_path}.{path}" if item_path and path in item else path),
+            "quantra_path": (
+                f"{item_path}.{path}"
+                if item_path and (path in item or _LEG_PATH.match(path))
+                else path
+            ),
             "external": ext,
             "quantra": value,
-            "topic": methodology.topic_for_metric(field),
+            "topic": methodology.topic_for_metric("npv" if _LEG_PATH.match(field) else field),
         }
         if row["topic"]:
             row["topic_uri"] = f"{methodology.URI_PREFIX}/{row['topic']}"
@@ -419,6 +473,19 @@ def numeric_differences(base: Any, changed: Any) -> dict[str, Any]:
                 "changed": item_c[k],
                 "difference": item_c[k] - item_b[k],
             }
+    # swap leg results (engine 0.10.0+): legs[i].npv / npv_reporting
+    legs_b, legs_c = item_b.get("legs"), item_c.get("legs")
+    if isinstance(legs_b, list) and isinstance(legs_c, list):
+        for i, (lb_, lc_) in enumerate(zip(legs_b, legs_c, strict=False)):
+            if not (isinstance(lb_, dict) and isinstance(lc_, dict)):
+                continue
+            for f in ("npv", "npv_reporting"):
+                if _is_num(lb_.get(f)) and _is_num(lc_.get(f)):
+                    fields[f"legs[{i}].{f}"] = {
+                        "base": lb_[f],
+                        "changed": lc_[f],
+                        "difference": lc_[f] - lb_[f],
+                    }
     only_base = sorted(k for k in item_b if k not in item_c and _is_num(item_b[k]))
     only_changed = sorted(k for k in item_c if k not in item_b and _is_num(item_c[k]))
     out: dict[str, Any] = {
@@ -599,9 +666,11 @@ def register(app: MCPServer, backend: Backend) -> None:
                 description="{label: number} as the user quoted them, e.g. {'NPV': 10359.49, "
                 "'DV01': 415.5, 'fair rate': 0.0337}; labels are matched case- and "
                 "punctuation-insensitively to response fields (npv / premium / PV -> npv; "
-                "DV01 / PV01 -> dv01; fair rate -> fair_rate then atm_forward; vol -> "
-                "implied_volatility). Give the numbers in the engine's units (currency "
-                "amounts; rates and vols as decimals)."
+                "DV01 / shifting -> dv01; PV01 / BPV / annuity -> a swaption's annuity (swap "
+                "leg BPS are not reported from engine 0.10.0: use swap_dv01); fixed / "
+                "floating leg -> legs[0] / legs[1].npv; fair rate -> fair_rate then "
+                "atm_forward; vol -> implied_volatility). Give the numbers in the engine's "
+                "units (currency amounts; rates and vols as decimals)."
             ),
         ],
         quantra: Annotated[

@@ -29,7 +29,7 @@ SOURCE_URL = {
     "US_TREASURY": "https://www.law.cornell.edu/cfr/text/31/appendix-B_to_part_356",
     "UK_GILT": "https://www.dmo.gov.uk/media/gxraurqc/yldeqns_v1.pdf",
 }
-QL_ACTACT = "https://github.com/lballabio/QuantLib/blob/v1.41/ql/time/daycounters/actualactual.hpp"
+QL_ACTACT = "https://github.com/lballabio/QuantLib/blob/v1.44/ql/time/daycounters/actualactual.hpp"
 FIELDS = [
     "settlement_days",
     "schedule.calendar",

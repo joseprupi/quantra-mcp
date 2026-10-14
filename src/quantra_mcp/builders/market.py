@@ -190,6 +190,20 @@ def require_curve(pricing: dict[str, Any], curve_id: str, role: str) -> None:
         )
 
 
+def index_currency(pricing: dict[str, Any], index_id: str, role: str) -> str:
+    """``IndexDef.currency`` of an index in the market: the currency of the swap legs
+    built on it (engine 0.10.0 ``SwapLeg.currency``)."""
+    idef = find_item(pricing, "indices", index_id)
+    ccy = idef.get("currency") if isinstance(idef, dict) else None
+    if not isinstance(ccy, str) or len(ccy) != 3 or not ccy.isupper():
+        raise problem(
+            f"/{role}",
+            f"{role}: index {index_id!r} has no ISO currency in the market "
+            "(pricing.rates.indices[].currency); the swap legs take their currency from it",
+        )
+    return ccy
+
+
 def require_index(pricing: dict[str, Any], index_id: str, role: str) -> None:
     if find_item(pricing, "indices", index_id) is None:
         raise problem(
