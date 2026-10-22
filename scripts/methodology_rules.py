@@ -58,6 +58,10 @@ TS_POINT_CPP = "src/parsers/term_structure_point_parser.cpp"
 SCHED_PARSER_CPP = "src/parsers/schedule_parser.cpp"
 SWAP_LEG_FBS = "flatbuffers/fbs/swap_leg.fbs"
 LEG_PRICER_CPP = "src/evaluators/swap_leg_pricer.cpp"
+SN_CPP = "src/evaluators/structured_note_evaluator.cpp"
+PATH_ENGINE_CPP = "src/mc/path_engine.cpp"
+QUANTO_CPP = "src/market/quanto_builder.cpp"
+SN_FBS = "flatbuffers/fbs/structured_note.fbs"
 
 ENGINE_REPO_URL = "https://github.com/joseprupi/quantraserver"
 CONNECTOR_REPO_URL = "https://github.com/joseprupi/quantra-mcp"
@@ -66,7 +70,7 @@ CONNECTOR_REPO_URL = "https://github.com/joseprupi/quantra-mcp"
 #: from THIS tree without the engine checkout). Line numbers verified at the pin by
 #: ``git show``; ``tests/unit/test_methodology.py`` re-checks them when the engine
 #: repository is available, so a pin bump that moves them fails the gate.
-ENGINE_PIN_TAG = "v0.11.0"
+ENGINE_PIN_TAG = "v0.12.0"
 
 
 def _engine_ref(path: str, line: int) -> dict[str, str]:
@@ -80,7 +84,7 @@ def _engine_ref(path: str, line: int) -> dict[str, str]:
 
 #: 0.10.0 removed every swap `*_bps` response field (docs/versioning.md); the fixed
 #: leg's signed annuity survives only inside the engine, as the denominator of fair_rate.
-ENGINE_BPS_REMOVED = _engine_ref(VERSIONING, 130)  # ... the `*_bps` fields and the
+ENGINE_BPS_REMOVED = _engine_ref(VERSIONING, 245)  # ... the `*_bps` fields and the
 ENGINE_BPS_VANILLA = _engine_ref(VS_CPP, 31)  # const double fixedBps = SignedBps(...);
 ENGINE_BPS_OIS = _engine_ref(OIS_CPP, 31)  # const double fixedBps = SignedBps(...);
 
@@ -133,6 +137,13 @@ METRIC_TOPICS: dict[str, str] = {
     "yield": "day-counters-and-compounding",
     "accrued_amount": "day-counters-and-compounding",
     "accrued_days": "day-counters-and-compounding",
+    "npv_pct_of_notional": "structured-notes",
+    "standard_error": "structured-notes",
+    "p_barrier_breach": "structured-notes",
+    "expected_life_years": "structured-notes",
+    "event_probabilities": "structured-notes",
+    "correlation_sensitivity": "structured-notes",
+    "funding_dv01": "structured-notes",
 }
 
 
@@ -1182,6 +1193,143 @@ TOPICS: list[Topic] = [
             "`field_provenance`); the engine's own swap fixtures use `Forward`. The leg "
             "overrides (`<leg>_overrides.schedule.date_generation_rule`) set it per trade.",
         ],
+    },
+    {
+        "slug": "structured-notes",
+        "title": "Structured notes: Monte Carlo set-up, payoff rules, quanto, seasoning, greeks",
+        "summary": (
+            "`POST /price-structured-note` prices notes on equity-index baskets by Monte "
+            "Carlo with one declarative payoff (observation events with optional autocall and "
+            "coupon triggers, a coupon carry rule, a capital-protection block); every product "
+            "shape is a configuration of those fields. The excerpts below are the engine's "
+            "own documentation and source at the pin."
+        ),
+        "statements": [
+            s(
+                "What the endpoint prices and where its market data comes from.",
+                c(
+                    HTTP_API,
+                    r"^## Structured notes",
+                    r'matrices of "Correlation matrices"\. Nothing product-specific is in',
+                ),
+            ),
+            s(
+                "The `StructuredNote` fields and their rules, as the engine documents them.",
+                c(
+                    HTTP_API,
+                    r"^`StructuredNote` \(one per entry of `notes`",
+                    r"^\| `monte_carlo` \|",
+                ),
+            ),
+            s(
+                "Response fields: price, standard error, legs, event probabilities, terms, "
+                "seasoning and model echoes.",
+                c(
+                    HTTP_API,
+                    r"^One row per note, in request order\.",
+                    r"^\| `market`, `decomposition`, `checks`",
+                ),
+            ),
+            s(
+                "Pricing conventions: process per underlying (quanto drift), time grid, random "
+                "numbers, discounting with the funding spread, seasoning, standard errors.",
+                c(
+                    HTTP_API,
+                    r"^### Pricing conventions",
+                    r"estimator; with Sobol it is an indication",
+                ),
+            ),
+            s(
+                "The payoff walk, one event on one path: accrual-only events add to the memory; "
+                "the call test, the coupon test (its own trigger or the call test), memory and "
+                "pay-only-on-call handling; at the final event the barrier test, the geared put "
+                "loss and the upside.",
+                c(SN_CPP, r"^EventOutcome stepEvent\(", r"^double basketPerformance\("),
+            ),
+            s(
+                "Discounting: a `ZeroSpreadedTermStructure` of the funding spread on the note "
+                "curve (Continuous, Annual, Actual/365 (Fixed)).",
+                c(
+                    SN_CPP,
+                    r"^/// The funding-spreaded discount curve of the note",
+                    r"^    return ts;",
+                ),
+            ),
+            s(
+                "Quanto: the underlying's dividend curve becomes QuantLib's "
+                "`QuantoTermStructure` (note curve as risk-free, the underlying currency's curve "
+                "as foreign, sigma_S at the initial level, sigma_FX at the FX spot, rho).",
+                c(
+                    QUANTO_CPP,
+                    r"// QuantoTermStructure\(underlyingDividendTS",
+                    r"dividend, noteRiskFree, localRiskFree",
+                ),
+            ),
+            s(
+                "Random sequence generators: Sobol with Brownian bridge (Diagonal, JoeKuoD7), "
+                "Sobol through the inverse normal, or pseudo-random.",
+                c(
+                    PATH_ENGINE_CPP,
+                    r"case PathEngineConfig::Sequence::Sobol:",
+                    r"make_sequence_generator\(dimension, config.seed\)",
+                ),
+            ),
+            s(
+                "Antithetic variates: `paths` must be even; a pair is one sample.",
+                c(PATH_ENGINE_CPP, r"const QuantLib::Size samples = config.antithetic", 1),
+            ),
+            s(
+                "Seasoning: events on or before the valuation date are resolved from "
+                "`historical_levels` through the same walk.",
+                c(SN_CPP, r"// --- seasoning: resolve the past through the same walk", 3),
+            ),
+            s(
+                "Greeks: bump-and-reprice on common random numbers (the same seed, paths, grid "
+                "and sequence as the price), and the number of simulations they cost.",
+                c(HTTP_API, r"^`greeks` in the request \(`\{\}` for the defaults", 7),
+            ),
+            s(
+                "The deadline that bounds a Greeks request.",
+                c(HTTP_API, r"^price\. The JSON gateway's RPC deadline is", 3),
+            ),
+            s(
+                "Units, standard errors and the definition of every sensitivity.",
+                c(HTTP_API, r"^sensitivity is in the note currency,", r"^\| `rho` \|"),
+            ),
+            s(
+                "What the engine rejects (400 naming the field, 404 for an unknown id).",
+                c(
+                    HTTP_API,
+                    r"^Each is a `400` naming the field \(`notes\[<i>\]",
+                    r"curve, FX spot or correlation id is a `404`\.",
+                ),
+            ),
+            s(
+                "Known limits of this version.",
+                c(HTTP_API, r"^### Known limits", r"never repaired; only the bumped matrix"),
+            ),
+        ],
+        "fields": [
+            s(
+                "`events[]`: observation date, payment date, autocall / coupon triggers, coupon.",
+                c(SN_FBS, r"^table ObservationEvent", r"^}"),
+            ),
+            s(
+                "`coupon_rule`: memory and pay-only-on-call.",
+                c(SN_FBS, r"^table CouponRule", r"^}"),
+            ),
+            s(
+                "`capital`: barrier, monitoring, put strike, participation, knocked_in.",
+                c(SN_FBS, r"^table CapitalProtection", r"^}"),
+            ),
+            s("`underlyings[].quanto`: the quanto block.", c(SN_FBS, r"^table QuantoSpec", r"^}")),
+            s(
+                "`monte_carlo`: paths, seed, sequence, antithetic, Brownian bridge, "
+                "steps per year.",
+                c(SN_FBS, r"^table MonteCarloSpec", r"^}"),
+            ),
+        ],
+        "gaps": [],
     },
     {
         "slug": "error-codes",

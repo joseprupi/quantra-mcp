@@ -48,7 +48,7 @@ def test_no_vendored_example_carries_a_vendor_reference() -> None:
     excluded = index["excluded_vendor_specific"]
     assert {e["path"] for e in excluded} == {"examples/data/swaption_ois_bbg_zerorate_request.json"}
     assert all(VENDOR_RE.search(e["matched"]) for e in excluded)
-    assert index["count"] == 239
+    assert index["count"] == 247
     assert not (EXAMPLES / "misc" / "swaption_ois_bbg_zerorate_request.json").exists()
 
 

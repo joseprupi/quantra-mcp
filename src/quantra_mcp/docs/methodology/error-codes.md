@@ -1,6 +1,6 @@
 # Error codes and what they mean
 
-_Generated from the engine's documentation and source at `v0.11.0` (`e2c160dc83e3`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.11.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.12.0` (`5b1c016739b1`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.12.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 400 = the request is wrong (missing field, bad date, unsupported combination); 422 = well-formed but unpriceable (a QuantLib-level failure); 404 = a referenced id is not in the request's pricing block. Retrying without changing the payload never helps. The `error` field carries the cause.
 
@@ -29,9 +29,9 @@ _Generated from the engine's documentation and source at `v0.11.0` (`e2c160dc83e
   you mean; supplying none is an error, and a genuine `0` is representable.
 ````
 
-Source: `docs/http-api.md@v0.11.0:L7-L24`
+Source: `docs/http-api.md@v0.12.0:L7-L24`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/http-api.md#L7-L24>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L7-L24>
 
 ### 2. Status code table.
 
@@ -61,9 +61,9 @@ means the request is well-formed but unpriceable.** Retrying either without
 changing the payload will not help.
 ````
 
-Source: `docs/http-api.md@v0.11.0:L26-L48`
+Source: `docs/http-api.md@v0.12.0:L26-L48`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/http-api.md#L26-L48>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L26-L48>
 
 ### 3. Error body: `error` is the field to read; `code` / `code_name` are the gRPC status; `message` repeats `error`.
 
@@ -86,9 +86,9 @@ Every non-2xx response is a JSON object:
 `message` repeats `error`.
 ````
 
-Source: `docs/http-api.md@v0.11.0:L50-L65`
+Source: `docs/http-api.md@v0.12.0:L50-L65`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/http-api.md#L50-L65>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L50-L65>
 
 ### 4. Which omissions are 400s (0.5.0 list).
 
@@ -108,9 +108,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/http-api.m
   credit-curves list are rejected (were silently first-wins).
 ````
 
-Source: `docs/versioning.md@v0.11.0:L521-L533`
+Source: `docs/versioning.md@v0.12.0:L636-L648`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/versioning.md#L521-L533>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L636-L648>
 
 ### 5. Headers: `X-Quantra-Api-Version` on every POST response; `X-Request-Id` echoed when sent.
 
@@ -126,11 +126,11 @@ Send an `X-Request-Id` on anything you may need to trace: it is the only way to
 correlate a client-side failure with the engine log lines that produced it.
 ````
 
-Source: `docs/http-api.md@v0.11.0:L67-L75`
+Source: `docs/http-api.md@v0.12.0:L67-L75`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/http-api.md#L67-L75>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L67-L75>
 
-## Not documented in engine v0.11.0
+## Not documented in engine v0.12.0
 
 - Nothing further: the excerpts above cover the behaviour the server relies on.
 - The engine source at this tag and the QuantLib source it is built on are readable with search_source / read_source (cite `<repo>:<path>@<tag>:L<a>-L<b>`); a point this page does not document is to be read there, never answered from memory.

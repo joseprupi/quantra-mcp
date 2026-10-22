@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.1.12 (2026-10-22)
+
+Engine pin v0.11.0 -> **v0.12.0** (`5b1c016`), QuantLib stays 1.44 (M5.10): structured notes.
+
+- **Pin.** Spec, docs, catalog and examples re-vendored by `pin_engine.py`: 27 POST
+  endpoints (+`/price-structured-note`), the additive `pricing.correlations` block and
+  4 new enums; 247 examples (+8 structured notes: autocallables, a reverse convertible,
+  greeks and diagnostics requests). `ROUTE_BY_PRODUCT` maps `structured_note`; the
+  structured-note catalog cell (npv, standard_error, three leg `pv`s, p_barrier_breach,
+  expected_life_years, memory_carried) is mapped to the response paths it names
+  (`legs.<bucket>.pv`, `seasoning.memory_carried`); `oracle_check` reads dotted paths.
+  `schema/SOURCES.lock` refreshed (engine 363 files at v0.12.0).
+- **`price_structured_note`** (tool 42): thin; the notes in the engine's `StructuredNote`
+  shape are sent as given (no preset, no defaults of this server), optional `greeks` /
+  `diagnostics`, REQUIRED `market_data_source`; the full request is echoed; `summary.notes[]`
+  selects npv, npv_pct_of_notional, standard_error, paths, seed, status, legs,
+  p_barrier_breach, expected_life_years, event_probabilities, greeks and the terms /
+  seasoning / model echoes; engine errors verbatim. The `market` object form accepts
+  `correlation_matrices` (-> `pricing.correlations.matrices`) and `fx_spots`
+  (-> `pricing.fx.spots`). `engine_request` accepts `/price-structured-note`.
+- **Methodology.** Pages regenerated at v0.12.0 (14 topics); new `structured-notes` page
+  (18 citations: endpoint scope, `StructuredNote` fields, response, pricing conventions,
+  the payoff walk, funding-spread discounting, `QuantoTermStructure`, Sobol / bridge /
+  pseudo-random generators, antithetic pairs, seasoning, greeks, rejected requests, known
+  limits). The connector page's hand-cited engine lines re-pointed (versioning.md L130 ->
+  L245).
+- **Instructions.** One line in the guidance names Monte Carlo structured notes; the
+  absolute market-data rule is unchanged and first; total stays under 2,000 chars.
+- Live on engine 0.12.0: every structured-note fixture prices via `engine_request` and via
+  `price_structured_note`, both JSON-equal to a direct replay (timing diagnostics
+  excluded); A/B of the 239 earlier examples 0.11.0 vs 0.12.0: all JSON-identical.
+
 ## 0.1.11 (2026-10-14)
 
 Curve tables pasted from a terminal screen are read as given (no retyping).

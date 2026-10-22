@@ -1,6 +1,6 @@
 # Schedules: date generation rules, stubs, end-of-month, conventions
 
-_Generated from the engine's documentation and source at `v0.11.0` (`e2c160dc83e3`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.11.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.12.0` (`5b1c016739b1`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.12.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 Every leg schedule is a QuantLib `Schedule` built from the request's `calendar`, `frequency`, `convention`, `termination_date_convention`, `date_generation_rule` and `end_of_month` (all required) plus the optional stub anchors `first_date` / `next_to_last_date`. The rule decides from which end the regular periods are counted, and therefore where an odd period (a stub) falls.
 
@@ -37,9 +37,9 @@ table Schedule {
 }
 ````
 
-Source: `flatbuffers/fbs/schedule.fbs@v0.11.0:L5-L30`
+Source: `flatbuffers/fbs/schedule.fbs@v0.12.0:L5-L30`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/flatbuffers/fbs/schedule.fbs#L5-L30>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/schedule.fbs#L5-L30>
 
 ### 2. Date generation rules available: Backward, CDS, Forward, OldCDS, ThirdWednesday, Twentieth, TwentiethIMM, Zero.
 
@@ -57,9 +57,9 @@ enum DateGenerationRule : byte {
 }
 ````
 
-Source: `flatbuffers/fbs/enums.fbs@v0.11.0:L135-L145`
+Source: `flatbuffers/fbs/enums.fbs@v0.12.0:L135-L145`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/flatbuffers/fbs/enums.fbs#L135-L145>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L135-L145>
 
 ### 3. Business-day conventions available (used for `convention`, `termination_date_convention` and the legs' `payment_convention`).
 
@@ -76,9 +76,9 @@ enum BusinessDayConvention : byte {
 }
 ````
 
-Source: `flatbuffers/fbs/enums.fbs@v0.11.0:L107-L116`
+Source: `flatbuffers/fbs/enums.fbs@v0.12.0:L107-L116`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/flatbuffers/fbs/enums.fbs#L107-L116>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L107-L116>
 
 ### 4. The code: every schedule field is presence-required; an omitted one is a 400 naming the field, never a default.
 
@@ -97,9 +97,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/flatbuffers/fbs
         QUANTRA_INVALID_ARGUMENT("Schedule.end_of_month is required");
 ````
 
-Source: `src/parsers/schedule_parser.cpp@v0.11.0:L34-L45`
+Source: `src/parsers/schedule_parser.cpp@v0.12.0:L34-L45`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/parsers/schedule_parser.cpp#L34-L45>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/schedule_parser.cpp#L34-L45>
 
 ### 5. The code: the stub anchors are optional and default to QuantLib's own `Date()` (no stub); when present they must lie strictly inside (effective_date, termination_date).
 
@@ -115,9 +115,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/parsers/sch
     const bool hasNextToLast = schedule->next_to_last_date() != NULL;
 ````
 
-Source: `src/parsers/schedule_parser.cpp@v0.11.0:L64-L72`
+Source: `src/parsers/schedule_parser.cpp@v0.12.0:L64-L72`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/parsers/schedule_parser.cpp#L64-L72>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/schedule_parser.cpp#L64-L72>
 
 ### 6. The code: some rules (e.g. `Zero`) reject stub anchors; QuantLib's reason is surfaced as a named 400.
 
@@ -129,9 +129,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/parsers/sch
     // take the unwrapped path below.
 ````
 
-Source: `src/parsers/schedule_parser.cpp@v0.11.0:L101-L105`
+Source: `src/parsers/schedule_parser.cpp@v0.12.0:L101-L105`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/parsers/schedule_parser.cpp#L101-L105>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/schedule_parser.cpp#L101-L105>
 
 ### 7. The code: the QuantLib `Schedule` constructor call, argument by argument (effective, termination, period from `frequency`, calendar, convention, termination-date convention, date-generation rule, end-of-month).
 
@@ -144,9 +144,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/parsers/sch
         schedule->end_of_month().value());
 ````
 
-Source: `src/parsers/schedule_parser.cpp@v0.11.0:L123-L128`
+Source: `src/parsers/schedule_parser.cpp@v0.12.0:L123-L128`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/parsers/schedule_parser.cpp#L123-L128>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/schedule_parser.cpp#L123-L128>
 
 ### 8. The code: each rule maps one-to-one onto `QuantLib::DateGeneration::Rule`.
 
@@ -172,9 +172,9 @@ QuantLib::DateGeneration::Rule DateGenerationToQL(
 }
 ````
 
-Source: `src/common/enum_convert.cpp@v0.11.0:L175-L193`
+Source: `src/common/enum_convert.cpp@v0.12.0:L175-L193`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/common/enum_convert.cpp#L175-L193>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/common/enum_convert.cpp#L175-L193>
 
 ### 9. 0.7.0 note: stub periods via `first_date` / `next_to_last_date` on every schedule-carrying product.
 
@@ -184,9 +184,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/src/common/enum
   schedule-carrying product.
 ````
 
-Source: `docs/versioning.md@v0.11.0:L602-L604`
+Source: `docs/versioning.md@v0.12.0:L717-L719`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/versioning.md#L602-L604>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L717-L719>
 
 ### 10. Documented usage (engine catalog): a 2-month short first coupon from Backward generation with a `first_date` two months after the effective date; an 18-month long first coupon likewise.
 
@@ -195,9 +195,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/docs/versioning
 | **EUR 5Y bond with a LONG first coupon (18-month stub)**<br><sub>The same 5Y EUR bond with a long first coupon: Backward date generation with a first_date 18 months after the effective date (2025-01-17 to 2026-07-17), so the first coupon accrues over ~18 months and is visibly larger than the regular annual coupons. Exercises the long-stub side of Schedule.first_date.</sub> | `long first coupon`, `Schedule.first_date`, `Backward generation`, `annual 30/360` | [frb_eur_5y_long_first_coupon.json](../../examples/data/bonds/frb_eur_5y_long_first_coupon.json) | 999,623.61 |
 ````
 
-Source: `tests/functional/CATALOG.md@v0.11.0:L77-L78`
+Source: `tests/functional/CATALOG.md@v0.12.0:L77-L78`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/tests/functional/CATALOG.md#L77-L78>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/tests/functional/CATALOG.md#L77-L78>
 
 ### 11. Documented usage (engine catalog): a short first period on both swap legs with Forward generation anchored by `first_date`.
 
@@ -205,9 +205,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/tests/functiona
 | **EUR 5Y payer swap with a short first period on both legs**<br><sub>The baseline 5Y EUR payer swap (fixed 30/360 annual vs Euribor 6M) with a short first period on both legs: Forward date generation with a first_date two months after the effective date (2025-01-17 to 2025-03-17) applied identically to the fixed and floating schedules. Exercises Schedule.first_date on a swap where both legs share the same stub anchor.</sub> | `short first period`, `Schedule.first_date`, `both legs stubbed`, `payer swap` | [irs_eur_5y_short_first_both_legs.json](../../examples/data/ir_swaps/irs_eur_5y_short_first_both_legs.json) | -47,079.51 |
 ````
 
-Source: `tests/functional/CATALOG.md@v0.11.0:L47-L47`
+Source: `tests/functional/CATALOG.md@v0.12.0:L47-L47`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/tests/functional/CATALOG.md#L47-L47>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/tests/functional/CATALOG.md#L47-L47>
 
 ## Request fields that control it
 
@@ -231,11 +231,11 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/tests/functiona
     /// Omit for no last stub (bit-identical to prior behaviour).
 ````
 
-Source: `flatbuffers/fbs/schedule.fbs@v0.11.0:L14-L28`
+Source: `flatbuffers/fbs/schedule.fbs@v0.12.0:L14-L28`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.11.0/flatbuffers/fbs/schedule.fbs#L14-L28>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/schedule.fbs#L14-L28>
 
-## Not documented in engine v0.11.0
+## Not documented in engine v0.12.0
 
 - Where Forward vs Backward places the odd period is not stated in engine prose; it is QuantLib's `Schedule` semantics for the rule the code passes through: `Backward` counts regular periods back from the termination date, so an off-grid tenor leaves the short (or, with `first_date`, long) period at the FRONT (a front stub, the market default for odd-dated swaps); `Forward` counts from the effective date, so the odd period falls at the END (a back stub). For an on-grid tenor (a spot-start 5Y annual / semiannual swap) the two rules generate identical dates. Test it with `reprice_with` on `swaps[0].<leg>.schedule.date_generation_rule`.
 - `termination_date_convention` is not described in engine prose; from source it is QuantLib's `terminationDateConvention`: the business-day rule applied to the termination date alone (`convention` adjusts every other date).

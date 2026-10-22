@@ -6,14 +6,14 @@ from quantra_mcp.schema.loader import SpecError, load_spec, normalize_endpoint, 
 
 def test_pin_matches_spec_version() -> None:
     p = pin()
-    assert p.tag == "v0.11.0"
+    assert p.tag == "v0.12.0"
     assert len(p.sha) == 40
-    assert load_spec().api_version == p.version == "0.11.0"
+    assert load_spec().api_version == p.version == "0.12.0"
 
 
 def test_26_post_endpoints_with_summaries() -> None:
     spec = load_spec()
-    assert len(spec.endpoints) == 26
+    assert len(spec.endpoints) == 27
     assert all(e.summary for e in spec.endpoints)
     assert "/price-ois-swap" in spec.endpoint_paths
     # engine 0.9.0: the two FX endpoints reach engine_request through the spec

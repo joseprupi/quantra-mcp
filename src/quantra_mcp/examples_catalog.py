@@ -144,6 +144,11 @@ def _first_item(row: dict[str, Any], response: Any) -> dict[str, Any] | None:
 def _find_field(response: Any, name: str) -> float | None:
     if not isinstance(response, dict):
         return None
+    if "." in name and "[" not in name:
+        node: Any = response
+        for part in name.split("."):
+            node = node.get(part) if isinstance(node, dict) else None
+        return float(node) if isinstance(node, int | float) else None
     value = response.get(name)
     if isinstance(value, int | float):
         return float(value)

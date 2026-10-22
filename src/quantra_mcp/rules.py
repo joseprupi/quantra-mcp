@@ -17,7 +17,7 @@ recalled data: ask instead.
 """
 
 EXAMPLE_SHAPE_RULE = """\
-The 239 vendored engine examples are request-SHAPE references only; a user's trade
+The 247 vendored engine examples are request-SHAPE references only; a user's trade
 market data MUST come from the user. Never reuse an example's market data for the
 user's trade, never say "the engine already ships this trade"; an example's own data
 runs only when the user explicitly asks for that example, reported as such. Without the

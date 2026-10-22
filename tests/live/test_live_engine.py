@@ -64,7 +64,7 @@ async def test_meta_and_health() -> None:
         health = await _call(client, "quantra_meta", {})
     assert meta["ok"] and meta["request"] is None
     # X-Quantra-Api-Version is stamped on POST responses only; GET /meta carries it in the body
-    assert meta["response"]["openapi_version"] == "0.11.0"
+    assert meta["response"]["openapi_version"] == "0.12.0"
     assert health["ok"] and health["response"]["status"] == "healthy"
     async with httpx.AsyncClient(base_url=ENGINE_URL) as http:
         assert (await http.get("/meta")).json() == meta["response"]

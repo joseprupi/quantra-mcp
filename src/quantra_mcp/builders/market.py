@@ -8,7 +8,8 @@ Accepted forms:
   (deep-copied), so a vendored example's ``pricing`` can be passed straight in;
 * a market object: ``{curves: [...], indices?: [...], swap_indices?,
   coupon_pricers?, vol_surfaces?, models?, credit_curves?, quotes?,
-  equity_underlyings?, inflation_indices?, inflation_curves?, options?}``
+  equity_underlyings?, inflation_indices?, inflation_curves?, fx_spots?,
+  correlation_matrices?, options?}``
   where ``curves`` items may be ``TermStructure`` objects, ``build_curve``
   results or session references.
 
@@ -40,6 +41,8 @@ SECTIONS: dict[str, tuple[tuple[str, ...], str]] = {
     "equity_underlyings": (("equity",), "equity_underlyings"),
     "inflation_indices": (("inflation",), "inflation_indices"),
     "inflation_curves": (("inflation",), "inflation_curves"),
+    "fx_spots": (("fx",), "spots"),
+    "correlation_matrices": (("correlations",), "matrices"),
 }
 
 

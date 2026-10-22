@@ -272,8 +272,41 @@ _SERIES_RE = re.compile(r"^([A-Z/a-z]+) series, (\d+) points$")
 _FIELD_RE = re.compile(r"^([a-z_]+)=([-+0-9.eE]+)$")
 
 
-def parse_oracle(compare: str, text: str, tolerance: float | None) -> dict[str, Any] | None:
+#: Engine 0.12.0 structured notes: the catalog cell lists the note's fields in this fixed
+#: order (``tests/functional`` prints them from the response); the three ``pv`` entries are
+#: the three ``legs`` buckets, ``memory_carried`` sits in ``seasoning``. Mapped to dotted
+#: response paths so the oracle reads the field it names.
+STRUCTURED_NOTE_FIELDS = (
+    ("npv", "npv"),
+    ("standard_error", "standard_error"),
+    ("pv", "legs.bond_redemption.pv"),
+    ("pv", "legs.coupons.pv"),
+    ("pv", "legs.capital_loss.pv"),
+    ("p_barrier_breach", "p_barrier_breach"),
+    ("expected_life_years", "expected_life_years"),
+    ("memory_carried", "seasoning.memory_carried"),
+)
+
+
+def parse_structured_note_oracle(text: str, tolerance: float | None) -> dict[str, Any] | None:
+    parts = [_FIELD_RE.match(p.strip()) for p in text.split(", ")]
+    if len(parts) != len(STRUCTURED_NOTE_FIELDS) or not all(parts):
+        raise SystemExit(f"structured note catalog cell not in the expected order: {text!r}")
+    values: dict[str, float] = {}
+    for m, (name, path) in zip(parts, STRUCTURED_NOTE_FIELDS, strict=True):
+        assert m is not None
+        if m.group(1) != name:
+            raise SystemExit(f"structured note catalog cell: expected {name}, got {m.group(1)}")
+        values[path] = float(m.group(2))
+    return {"kind": "fields", "values": values, "tolerance": tolerance or 1e-7, "sig": 6}
+
+
+def parse_oracle(
+    compare: str, text: str, tolerance: float | None, product: str | None = None
+) -> dict[str, Any] | None:
     """Turn a CATALOG.md value cell into a machine-checkable oracle, or None."""
+    if product == "structured_note" and compare == "fields":
+        return parse_structured_note_oracle(text, tolerance)
     if compare == "npv":
         if not _NPV_RE.match(text):
             return None
@@ -340,6 +373,7 @@ ROUTE_BY_PRODUCT: dict[str, str] = {
     "callable_fixed_rate_bond": "/price-callable-fixed-rate-bond",
     "fx_forward": "/price-fx-forward",
     "cross_currency_swap": "/price-cross-currency-swap",
+    "structured_note": "/price-structured-note",
 }
 
 
@@ -431,7 +465,7 @@ def vendor_examples(repo: Path, tag: str, sha: str) -> list[dict[str, Any]]:
                         if compare == "npv" and _NPV_RE.match(text)
                         else None
                     ),
-                    "oracle": parse_oracle(compare, text, case.get("tolerance")),
+                    "oracle": parse_oracle(compare, text, case.get("tolerance"), case["product"]),
                 }
             )
         else:

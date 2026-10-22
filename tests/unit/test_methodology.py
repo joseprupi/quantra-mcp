@@ -36,6 +36,7 @@ ENGINE_TOPICS = {
     "day-counters-and-compounding",
     "schedules-and-stubs",
     "error-codes",
+    "structured-notes",
 }
 CONNECTOR_TOPICS = {"connector-analytics"}
 BRIEF_TOPICS = ENGINE_TOPICS | CONNECTOR_TOPICS
@@ -206,7 +207,7 @@ def test_every_citation_exists_at_the_pin_in_the_engine_repo() -> None:
         ),
         (
             "docs/versioning.md",
-            130,
+            245,
             "`overnight_leg_npv`, `leg1_npv`, `leg2_npv`, the `*_bps` fields and the",
         ),
     ]:

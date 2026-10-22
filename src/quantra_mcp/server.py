@@ -33,6 +33,7 @@ from quantra_mcp.tools import (
     raw,
     reconcile,
     source,
+    structured_note,
 )
 from quantra_mcp.tools import session as session_tools
 from quantra_mcp.tools._meta import finish_schemas
@@ -42,12 +43,12 @@ log = logging.getLogger("quantra_mcp")
 SERVER_NAME = "quantra"
 
 GUIDANCE = """\
-Quantra pricing engine. Every number comes from the engine. With a business user speak
-in trade terms, not tool names: (1) can the trade be priced here; (2) which market data
-is missing, in paste-able form; (3) every convention assumed, with its source; (4) the
-engine's result against the user's number, causes tested with reprice_with, never
-asserted. State sign conventions and dates; turn refusals into what the user can
-supply; never alter an input to match or claim vendor data.
+Quantra pricing engine, Monte Carlo structured notes on equity baskets included; every
+number is the engine's. To a business user, in trade terms: (1) can the trade be priced
+here; (2) missing market data, in paste-able form; (3) every convention assumed, with
+its source; (4) the engine's result vs the user's number, causes tested with
+reprice_with, never asserted. State signs and dates; turn refusals into what the user
+can supply; never alter an input to match or claim vendor data.
 Developers: quantra://guide/developers.
 """
 
@@ -174,6 +175,7 @@ def build_server(
     raw.register(app, the_backend)
     curves.register(app, the_backend, the_store)
     pricing.register(app, the_backend, the_store)
+    structured_note.register(app, the_backend, the_store)
     analytics.register(app, the_backend, the_store, settings.max_concurrency)
     examples.register(app)
     explain.register(app)
