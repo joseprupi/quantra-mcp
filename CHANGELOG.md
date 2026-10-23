@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.1.14 (2026-10-22)
+
+Nothing issuer- or real-security-specific is reachable (operator rule). Trigger: in a
+public demo a model priced a user's SEC-filed note and passed off the vendored engine
+example of that same note (its trade-date market data and NPV) as "the engine's
+trade-date result".
+
+- **Examples:** the six issuer-named / ISIN / CUSIP-named engine structured-note
+  fixtures are no longer vendored (`bnp_quad_index_classic_autocall_xs2741509801` and
+  its `_diagnostics` / `_greeks` variants, `santander_quad_index_low_hurdle_autocall_xs3109492564`,
+  `jpm_review_notes_ndx_rty_spx_46661pt64`, `scotia_autocallable_trigger_ndx_rty_us06419jme72`);
+  recorded in `INDEX.json` `excluded_vendor_specific`. 247 -> 241 examples (the two
+  synthetic structured notes stay).
+- **Durable:** new `scripts/issuer_scrub.py` (stdlib only). `pin_engine.py` excludes any
+  fixture whose name carries an issuer token (bnp, santander, jpm, scotia, bns, goldman,
+  gs, ms, citi, barclays, ubs, hsbc, socgen, credit_suisse, ...) or an ISIN / CUSIP-like
+  token, or whose title / description names one; the engine docs it copies
+  (`http-api.md`, `versioning.md`, `engine-catalog.md`) are rewritten LINE FOR LINE (every
+  citation and permalink stays exact) and a re-pin with new issuer text fails loudly.
+- **Source tools:** `fetch_sources.py` applies the same scrub to the engine tree served by
+  `search_source` / `read_source` / `list_source` (`scrub_version` in the stamp and lock;
+  the Dockerfile copies the helper); `methodology_gen.py` reads through it and refuses a
+  page with issuer text. `search_source` for `06419JME7`, `scotia`, `XS2741509801`
+  returns nothing.
+
 ## 0.1.13 (2026-10-22)
 
 Sourced market data (operator decision 2026-10-22).

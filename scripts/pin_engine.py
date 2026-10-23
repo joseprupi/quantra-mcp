@@ -40,6 +40,7 @@ from __future__ import annotations
 import argparse
 import ast
 import contextlib
+import hashlib
 import json
 import keyword
 import re
@@ -50,6 +51,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import issuer_scrub
 import methodology_gen
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -72,8 +74,10 @@ MANIFEST_PATH = "tests/functional/manifest.py"
 CATALOG_PATH = "tests/functional/CATALOG.md"
 ROOT_CATEGORY = "misc"  # fixtures that sit directly under examples/data/
 
-#: Operator rule: nothing vendor-specific is shipped. An engine fixture whose file
-#: name, title or catalog description carries a vendor reference is NOT vendored.
+#: Operator rule: nothing vendor-, issuer- or real-security-specific is shipped. An engine
+#: fixture whose file name, title or catalog description carries a vendor reference, an
+#: issuer name or an ISIN / CUSIP-like token (``issuer_scrub``) is NOT vendored, and the
+#: engine docs copied below are scrubbed line for line (``issuer_scrub.scrub``).
 VENDOR_RE = re.compile(r"bbg|bloomberg|swpm|refinitiv|markit|icvs", re.IGNORECASE)
 
 #: The two blog examples (not from the engine repo) and their published oracles.
@@ -420,9 +424,24 @@ def vendor_examples(repo: Path, tag: str, sha: str) -> list[dict[str, Any]]:
             )
         )
         hit = VENDOR_RE.search(vendor_text)
-        if hit:
-            excluded.append({"path": path, "matched": hit.group(0)})
-            print(f"excluded (vendor reference {hit.group(0)!r}): {path}", file=sys.stderr)
+        matched = hit.group(0) if hit else issuer_scrub.excluded_name(rel)
+        if matched is None:
+            text_hit = issuer_scrub.ISSUER_TEXT_RE.search(vendor_text)
+            matched = text_hit.group(0) if text_hit else None
+        if matched:
+            print(f"excluded (vendor/issuer reference {matched!r}): {path}", file=sys.stderr)
+            if hit:
+                excluded.append({"path": path, "matched": matched})
+            else:
+                # the name itself is the issuer / security reference: record it without
+                # the name (sha256 of the engine path, so an audit can still match it)
+                excluded.append(
+                    {
+                        "path": f"{path.rsplit('/', 1)[0]}/<issuer or security named>",
+                        "matched": "issuer/security name",
+                        "path_sha256": hashlib.sha256(path.encode()).hexdigest(),
+                    }
+                )
             continue
         data = git_show(repo, tag, path)
         dest = EXAMPLES_DIR / category / f"{name}.json"
@@ -493,7 +512,7 @@ def vendor_examples(repo: Path, tag: str, sha: str) -> list[dict[str, Any]]:
     return rows
 
 
-#: Filled by vendor_examples(): fixtures left out under VENDOR_RE (recorded in INDEX.json).
+#: Filled by vendor_examples(): fixtures left out under VENDOR_RE / issuer_scrub (INDEX.json).
 EXCLUDED: list[dict[str, str]] = []
 
 _QL_VERSION_RE = re.compile(r"^\s*ARG\s+QUANTLIB_VERSION\s*=\s*([0-9][0-9.]*)\s*$", re.M)
@@ -521,7 +540,7 @@ def main(argv: list[str] | None = None) -> int:
     SCHEMA_DIR.mkdir(parents=True, exist_ok=True)
     DOCS_DIR.mkdir(parents=True, exist_ok=True)
     for src, dest in FILES.items():
-        data = git_show(repo, tag, src)
+        data = issuer_scrub.scrub(src, git_show(repo, tag, src))
         dest.write_bytes(data)
         print(f"{src} -> {dest.relative_to(ROOT)} ({len(data)} bytes)", file=sys.stderr)
 

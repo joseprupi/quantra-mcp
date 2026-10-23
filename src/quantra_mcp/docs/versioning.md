@@ -95,12 +95,12 @@ value), `distribution` (basket-performance and payout quantiles, a payout
 histogram, `sample_paths` individual paths), `timing` (milliseconds per
 stage). Every block is computed from the same paths as the price.
 
-**Examples.** `examples/data/structured_note/`: the two IDAD factsheet
-transcriptions (BNP Paribas Quad Index Classic Autocall June 2025,
-XS2741509801; Santander Quad Index Low Hurdle Autocall August 2025,
-XS3109492564) with PLACEHOLDER market data (the README there maps every
-factsheet line to a field and lists every placeholder), the BNP request
-with every diagnostic flag on, the BNP request with `greeks` on, a
+**Examples.** `examples/data/structured_note/`: the engine repository's
+issuer-named transcriptions are not served by this connector
+(nothing issuer- or security-specific is vendored); the vendored
+structured-note examples are synthetic,
+among them
+a
 single-underlying reverse convertible and a synthetic two-asset basket.
 
 **Verification.** Three layers: (1) C++ collapse tests against closed

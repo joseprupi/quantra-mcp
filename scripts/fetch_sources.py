@@ -29,12 +29,17 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import issuer_scrub  # stdlib only; copied beside this script in the image
+
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_DIR = ROOT / "src" / "quantra_mcp" / "schema"
 LOCK_PATH = SCHEMA_DIR / "SOURCES.lock"
 DEFAULT_DEST = ROOT / "vendor" / "sources"
 DEFAULT_CACHE = ROOT / "vendor" / "cache"
 STAMP = ".fetched.json"
+#: bump when issuer_scrub's rewrites change, so an extracted tree is re-extracted.
+SCRUB_VERSION = 1
 
 TEXT_SUFFIXES = {
     ".h",
@@ -65,6 +70,8 @@ REPOS: dict[str, dict[str, Any]] = {
             "README.md": None,
         },
         "skip": ["examples/data/ (already vendored under src/quantra_mcp/examples/)"],
+        # issuer / real-security passages rewritten line for line (scripts/issuer_scrub.py)
+        "scrub": True,
     },
     "quantlib": {
         "github": "lballabio/QuantLib",
@@ -126,9 +133,12 @@ def _allowed(rel: str, trees: dict[str, set[str] | None]) -> bool:
     return False
 
 
-def extract(tarball: Path, dest: Path, trees: dict[str, set[str] | None]) -> tuple[int, int]:
+def extract(
+    tarball: Path, dest: Path, trees: dict[str, set[str] | None], *, scrub: bool = False
+) -> tuple[int, int]:
     """Extract the allowed text files of ``tarball`` (GitHub layout: one top directory)
-    into ``dest``; returns ``(files, bytes)``."""
+    into ``dest``; returns ``(files, bytes)``. ``scrub``: issuer / real-security text is
+    rewritten line for line (``issuer_scrub.scrub``) before it is written."""
     files = 0
     total = 0
     if dest.exists():
@@ -152,6 +162,8 @@ def extract(tarball: Path, dest: Path, trees: dict[str, set[str] | None]) -> tup
             data = fh.read()
             if b"\x00" in data[:8192]:
                 continue  # not text after all
+            if scrub:
+                data = issuer_scrub.scrub(rel, data)
             target = dest / rel
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)
@@ -176,7 +188,11 @@ def fetch_one(
         entry = None
     if not force and stamp_path.is_file() and entry is not None:
         stamp = json.loads(stamp_path.read_text())
-        if stamp.get("sha256") == entry["sha256"] and stamp.get("tag") == tag:
+        if (
+            stamp.get("sha256") == entry["sha256"]
+            and stamp.get("tag") == tag
+            and stamp.get("scrub_version", 0) == (SCRUB_VERSION if spec.get("scrub") else 0)
+        ):
             print(
                 f"{key}: {tag} already extracted ({stamp['files']} files), skipping",
                 file=sys.stderr,
@@ -192,7 +208,8 @@ def fetch_one(
             f"{key}: sha256 of {tarball} is {digest}, lock says {entry['sha256']} for {tag}; "
             "refusing (delete the cached tarball to re-download, or update the lock on purpose)"
         )
-    files, nbytes = extract(tarball, dest, spec["trees"])
+    scrub = bool(spec.get("scrub"))
+    files, nbytes = extract(tarball, dest, spec["trees"], scrub=scrub)
     record = {
         "github": spec["github"],
         "tag": tag,
@@ -204,6 +221,8 @@ def fetch_one(
         "trees": sorted(spec["trees"]),
         "skipped": list(spec["skip"]),
     }
+    if scrub:
+        record["scrub_version"] = SCRUB_VERSION
     if entry is not None and entry.get("files") != files:
         print(
             f"{key}: file count {files} differs from the lock's {entry.get('files')} "
@@ -230,7 +249,12 @@ def check(dest_root: Path, lock: dict[str, Any]) -> int:
             rc = 1
             continue
         stamp = json.loads(stamp_path.read_text())
-        if stamp.get("sha256") != entry["sha256"] or stamp.get("tag") != tag:
+        want_scrub = SCRUB_VERSION if REPOS[key].get("scrub") else 0
+        if (
+            stamp.get("sha256") != entry["sha256"]
+            or stamp.get("tag") != tag
+            or stamp.get("scrub_version", 0) != want_scrub
+        ):
             print(f"{key}: extracted tree is stale against the lock", file=sys.stderr)
             rc = 1
             continue

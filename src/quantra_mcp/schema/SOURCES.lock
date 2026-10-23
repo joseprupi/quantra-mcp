@@ -1,8 +1,9 @@
 {
   "engine": {
-    "bytes": 2864223,
+    "bytes": 2859764,
     "files": 363,
     "github": "joseprupi/quantraserver",
+    "scrub_version": 1,
     "sha256": "8ad04f57355e88c1a8dc6f7b0bf15e0de081dacabe543e375bd752391659f35f",
     "skipped": [
       "examples/data/ (already vendored under src/quantra_mcp/examples/)"

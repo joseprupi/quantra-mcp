@@ -35,7 +35,7 @@ def _no_timing(response: Any) -> Any:
 
 
 def test_every_structured_note_fixture_is_vendored() -> None:
-    assert len(ROWS) == 8
+    assert len(ROWS) == 2  # synthetic only (0.1.14: issuer-named notes not vendored)
 
 
 @pytest.mark.parametrize("name", [r["name"] for r in ROWS])

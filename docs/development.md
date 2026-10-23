@@ -35,7 +35,7 @@ byte-equal to a direct HTTP replay of its echoed `request`; its M2 section
 builds the SOFR strip through `build_curve` and asserts the request is
 JSON-equal to the gold example and the 50Y DF matches the oracle, round-trips
 a discount value curve, bootstraps every preset (monotone DFs) and resolves a
-session reference; its M3 section sweeps all 247 vendored examples through
+session reference; its M3 section sweeps all 241 vendored examples through
 `engine_request` (status as indexed, reference values matched) and runs every
 pricing tool against its mapped fixture (built request JSON-equal, engine
 number equal to the oracle). `--sweep-table` prints one row per example.
@@ -102,7 +102,7 @@ src/quantra_mcp/
   prompts.py         price-a-swap, bootstrap-from-strip, holiday-check, explore-examples,
                      price-from-screen, reconcile-external-price
   examples_catalog.py  INDEX.json access + oracle checks
-  docs/, examples/   vendored engine docs, catalog and the 247 example requests;
+  docs/, examples/   vendored engine docs, catalog and the 241 example requests;
                      docs/methodology/ = the generated cited pages + INDEX.json
 scripts/             pin_engine.py (+ methodology_gen.py, methodology_rules.py), live_check.py, parity_ql.py
 tests/               unit, contract (vendored spec), live (real engine), golden/ requests

@@ -1036,9 +1036,9 @@ the shared `pricing` block: `EquityUnderlyingSpec` (spot, dividend curve,
 currency), `VolSurfaceSpec` with a `BlackVolSpec` payload (constant, term or
 strike x expiry surface), yield curves, `FxSpotSpec` and the correlation
 matrices of "Correlation matrices". Nothing product-specific is in
-`pricing`. The two factsheet transcriptions and the synthetic cases are in
-`examples/data/structured_note/` (its README maps every factsheet line to a
-field; every market number there is a placeholder).
+`pricing`. The synthetic cases are in
+`examples/data/structured_note/` (issuer-named and real-security examples
+there are not served by this connector).
 
 ### Request
 
@@ -1060,7 +1060,7 @@ field; every market number there is a placeholder).
                                                  "values": { "n_rows": 4, "n_cols": 4, "values": [ 1.0, 0.6, "..." ] } } ] } },
   "notes": [
     {
-      "trade_id": "XS2741509801",
+      "trade_id": "NOTE-1",
       "currency": "USD",
       "notional": 1000.0,
       "underlyings": [
@@ -1115,15 +1115,15 @@ Top-level: `greeks` (schema-ready, a `501` in this version) and `diagnostics`
 (`market`, `decomposition`, `checks`, `distribution`, `timing`, each false
 by default, and `sample_paths`, at most 100, only with `distribution`).
 
-### The two factsheets in short
+### Two product shapes in short
 
-Both IDAD notes are worst-of autocalls on SMI / SPX / SX5E / NKY in USD, so
-three underlyings carry a `quanto` block. BNP XS2741509801: 7 % per
+Take two worst-of autocalls on SMI / SPX / SX5E / NKY in USD, so
+three underlyings carry a `quanto` block. A semi-annual snowball: 7 % per
 half-year snowball coupon, first observation at 12 months, so one
 accrual-only event (`{observation_date, coupon: 0.07}`) precedes eleven dated
 events with `autocall_trigger: 1.0` (the coupon test is the call test), 60 %
 European barrier, `coupon_rule = {memory: true, pay_only_on_call: true}`.
-Santander XS3109492564: 2.5 % per quarter, three accrual-only events then
+A quarterly low hurdle: 2.5 % per quarter, three accrual-only events then
 twenty quarterly 100 % autocalls and a final event with `coupon_trigger: 0.8`
 and no `autocall_trigger` (the 80 % low hurdle: at the final observation a
 call and a coupon-plus-redemption pay the same amounts on the same date), 60 %
@@ -1243,13 +1243,13 @@ grid and random sequence as the price, so the per-path difference between
 the bumped and the base run is what is averaged, and its standard error is
 small even where the price's is not. Cost: `1 + 2N + N + 3` simulations for
 `N` underlyings (`1 + 2 + 1 + 2` for a single underlying, which has no
-correlation sensitivity): the BNP note (4 underlyings) is 16 runs, about
+correlation sensitivity): a four-underlying note is 16 runs, about
 21 s of engine time at 65 536 Sobol paths against 1.5 s for the plain
 price. The JSON gateway's RPC deadline is 10 s and a deployment adds its
 own (`QUANTRA_REQUEST_BUDGET_MS`, the proxy's route timeout; the engine
 checks the budget before every extra run and returns `504` when it has
-expired), so size the paths of a Greeks request to the deadline: the BNP
-Greeks example uses 16 384 paths (about 6 s through the gateway). Every
+expired), so size the paths of a Greeks request to the deadline: a
+four-underlying note at 16 384 paths takes about 6 s through the gateway. Every
 sensitivity is in the note currency,
 scaled to the unit move, and carries `<name>_standard_error`, the Monte
 Carlo standard error of the per-sample difference (the path engine's

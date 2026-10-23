@@ -43,6 +43,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import issuer_scrub
 import methodology_rules as rules
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -64,7 +65,9 @@ def git_show_lines(repo: Path, tag: str, path: str) -> list[str]:
         ).stdout
     except subprocess.CalledProcessError as exc:
         raise RuleError(f"{path} does not exist at {tag}: {exc.stderr.decode().strip()}") from None
-    return out.decode("utf-8", errors="replace").split("\n")
+    # Line-for-line scrub of issuer / real-security text (operator rule): an excerpt can
+    # never quote it, and the line numbers of every citation are unchanged.
+    return issuer_scrub.scrub_text(path, out.decode("utf-8", errors="replace")).split("\n")
 
 
 def locate(lines: list[str], cite: dict[str, Any]) -> tuple[int, int]:
@@ -313,6 +316,8 @@ def generate(repo: Path, tag: str, sha: str, out_dir: Path = OUT_DIR) -> dict[st
     topics_meta: list[dict[str, Any]] = []
     for topic in rules.TOPICS:
         page, meta = render_topic(topic, repo, tag, sha, cache)
+        if issuer_scrub.ISSUER_TEXT_RE.search(page):
+            raise RuleError(f"{meta['file']}: issuer/security text in a methodology page")
         (out_dir / meta["file"]).write_text(page)
         topics_meta.append(meta)
     conn_cache: dict[str, list[str]] = {}

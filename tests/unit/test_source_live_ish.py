@@ -148,3 +148,13 @@ async def test_list_source_browses_the_yield_directory(app: Any) -> None:
     )
     assert r["ok"] and PWYC in {e["path"] for e in r["entries"]}
     assert r["tree_url"].endswith(f"/tree/{quantlib_pin().tag}/ql/termstructures/yield")
+
+
+def test_issuer_and_real_security_text_is_not_searchable() -> None:
+    """0.1.14: the engine tree served by search_source / read_source carries no
+    issuer-named or real-security passage (scripts/issuer_scrub.py, line for line)."""
+    for query in ("06419JME7", "scotia", "XS2741509801", "XS3109492564", "46661PT64", "santander"):
+        r = _trees.search(query, "engine")
+        assert not r["hits"], (query, r["hits"][:2])
+    stamp = json.loads((default_sources_dir() / "engine" / ".fetched.json").read_text())
+    assert stamp.get("scrub_version", 0) >= 1

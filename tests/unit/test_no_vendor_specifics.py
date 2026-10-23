@@ -53,10 +53,65 @@ def test_no_vendored_example_carries_a_vendor_reference() -> None:
         rel = path.relative_to(EXAMPLES).as_posix()
         assert not VENDOR_RE.search(rel), rel
     excluded = index["excluded_vendor_specific"]
-    assert {e["path"] for e in excluded} == {"examples/data/swaption_ois_bbg_zerorate_request.json"}
-    assert all(VENDOR_RE.search(e["matched"]) for e in excluded)
-    assert index["count"] == 247
+    import hashlib
+
+    vendor = [e for e in excluded if "path_sha256" not in e]
+    assert {e["path"] for e in vendor} == {"examples/data/swaption_ois_bbg_zerorate_request.json"}
+    assert all(VENDOR_RE.search(e["matched"]) for e in vendor)
+    # issuer / security-named: recorded WITHOUT the name, matched by the path hash
+    issuer = [e for e in excluded if "path_sha256" in e]
+    assert {e["path_sha256"] for e in issuer} == {
+        hashlib.sha256(f"examples/data/structured_note/{n}.json".encode()).hexdigest()
+        for n in ISSUER_EXCLUDED
+    }
+    assert index["count"] == 241
     assert not (EXAMPLES / "misc" / "swaption_ois_bbg_zerorate_request.json").exists()
+
+
+#: 0.1.14: issuer-named / real-security engine examples (a public demo model reused one
+#: real note's trade-date market data and NPV as "the engine's result").
+ISSUER_EXCLUDED = (
+    "bnp_quad_index_classic_autocall_xs2741509801",
+    "bnp_quad_index_classic_autocall_xs2741509801_diagnostics",
+    "bnp_quad_index_classic_autocall_xs2741509801_greeks",
+    "jpm_review_notes_ndx_rty_spx_46661pt64",
+    "santander_quad_index_low_hurdle_autocall_xs3109492564",
+    "scotia_autocallable_trigger_ndx_rty_us06419jme72",
+)
+ISSUER_TEXT = re.compile(r"scotia|santander|bnp|jpm|06419|xs2741|xs3109|46661|idad", re.I)
+
+
+def test_no_issuer_or_real_security_example_or_text_ships() -> None:
+    names = {r["name"] for r in cat.rows()}
+    assert not names & set(ISSUER_EXCLUDED)
+    for name in ISSUER_EXCLUDED:
+        assert not (EXAMPLES / "structured_note" / f"{name}.json").exists()
+    assert {"synthetic_two_asset_worst_of_flat_vol_autocall"} <= names
+    pkg = EXAMPLES.parent
+    for path in pkg.rglob("*"):
+        if path.is_file() and path.suffix in {".md", ".json", ".py"}:
+            assert not ISSUER_TEXT.search(path.read_text()), path.relative_to(pkg)
+
+
+def test_issuer_scrub_rules() -> None:
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+    import issuer_scrub
+
+    for name in ISSUER_EXCLUDED:
+        assert issuer_scrub.excluded_name(name + ".json")
+    for name in ("goldman_phoenix_x", "ms_autocall", "citi_note", "note_us0378331005"):
+        assert issuer_scrub.excluded_name(name + ".json"), name
+    for row in cat.rows():  # no false positive on any vendored example
+        assert issuer_scrub.excluded_name(row["file"]) is None, row["file"]
+    text = "a\\nthe BNP note XS2741509801\\nb"
+    try:
+        issuer_scrub.scrub_text("docs/other.md", text)
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("issuer text must fail the scrub")
 
 
 def test_preset_provenance_cites_only_vendored_fixtures() -> None:

@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --no-editable
 # the engine source at the pinned tag + QuantLib at the pinned version (text files only,
 # verified against src/quantra_mcp/schema/SOURCES.lock); network at build time only
-COPY scripts/fetch_sources.py ./scripts/fetch_sources.py
+COPY scripts/fetch_sources.py scripts/issuer_scrub.py ./scripts/
 RUN python scripts/fetch_sources.py --dest /app/vendor/sources --cache /tmp/sources-cache \
     && rm -rf /tmp/sources-cache
 

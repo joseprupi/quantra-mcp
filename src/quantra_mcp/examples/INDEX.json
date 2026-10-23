@@ -2,8 +2,38 @@
   "engine_tag": "v0.12.0",
   "engine_sha": "5b1c016739b1411d21423acfb15901d56b91f8c2",
   "api_version": "0.12.0",
-  "count": 247,
+  "count": 241,
   "excluded_vendor_specific": [
+    {
+      "path": "examples/data/structured_note/<issuer or security named>",
+      "matched": "issuer/security name",
+      "path_sha256": "5250b80634b55ec40ae443f4355b9d33bf4bf1320d0aaaadf17d138f5c006467"
+    },
+    {
+      "path": "examples/data/structured_note/<issuer or security named>",
+      "matched": "issuer/security name",
+      "path_sha256": "e8496d4660d864fc099dbabf9a41f06ee7db99fb900dd5199a5b71ce5fdd25e8"
+    },
+    {
+      "path": "examples/data/structured_note/<issuer or security named>",
+      "matched": "issuer/security name",
+      "path_sha256": "b974cf6a4e3409d8415ef1e86f0ec68937a44e9f3777dd4b611f739ed5ab8a3a"
+    },
+    {
+      "path": "examples/data/structured_note/<issuer or security named>",
+      "matched": "issuer/security name",
+      "path_sha256": "6432eee25f289efa7a940719c0be7bd55f599e9f3e657d06b3af8c9aed6ca67f"
+    },
+    {
+      "path": "examples/data/structured_note/<issuer or security named>",
+      "matched": "issuer/security name",
+      "path_sha256": "c09631974e96368c4163866fb9f465d2c41e81d89f5bd28fec30a52b34cb82fb"
+    },
+    {
+      "path": "examples/data/structured_note/<issuer or security named>",
+      "matched": "issuer/security name",
+      "path_sha256": "b01fbde193ed686dfa3b9530eb86f3b8b1f654791458757797e490e65a3d5bfa"
+    },
     {
       "path": "examples/data/swaption_ois_bbg_zerorate_request.json",
       "matched": "bbg"
@@ -5924,213 +5954,6 @@
       "reference_text": "",
       "reference_value": null,
       "oracle": null
-    },
-    {
-      "name": "bnp_quad_index_classic_autocall_xs2741509801",
-      "category": "structured_note",
-      "file": "structured_note/bnp_quad_index_classic_autocall_xs2741509801.json",
-      "source": "quantraserver v0.12.0 (5b1c016739b1) examples/data/structured_note/bnp_quad_index_classic_autocall_xs2741509801.json",
-      "expected_status": 200,
-      "endpoint": "/price-structured-note",
-      "endpoint_source": "manifest",
-      "catalog_id": "structured_note_bnp_quad_index_classic_autocall_xs2741509801",
-      "family": "Structured Notes",
-      "title": "BNP Quad Index Classic Autocall June 2025 (XS2741509801), seasoned, 4 assets, 65 536 paths",
-      "description": "Worst-of autocallable on SMI, SPX, SX5E and NKY in USD: eleven semi-annual observations with a 100 % autocall trigger paying a 7 % snowball coupon (memory, paid only on call), 60 % European capital barrier with 1-for-1 loss, SOFR OIS discounting plus a 100 bp funding spread. Three indices are quanto (CHF, EUR, JPY curves, FX spots and vols, index/FX correlations). Valued on 2026-10-21 after one accrual-only period and one missed observation resolved from historical levels (memory carried 0.14). Sobol + Brownian bridge, antithetic, 65 536 paths, grid = the ten future observation dates. Every market number is a placeholder (see the examples README): a parity case, not a valuation.",
-      "exercises": [
-        "structured note",
-        "worst-of autocall",
-        "snowball coupon",
-        "quanto",
-        "seasoning from historical levels",
-        "OIS discounting + funding spread",
-        "Sobol Brownian bridge",
-        "same-stream Monte Carlo parity"
-      ],
-      "compare": "fields",
-      "list_key": null,
-      "tolerance": 1e-09,
-      "reference_text": "npv=877.263, standard_error=1.12315, pv=867.476, pv=147.525, pv=-137.739, p_barrier_breach=0.310699, expected_life_years=2.87963, memory_carried=0.14",
-      "reference_value": null,
-      "oracle": {
-        "kind": "fields",
-        "values": {
-          "npv": 877.263,
-          "standard_error": 1.12315,
-          "legs.bond_redemption.pv": 867.476,
-          "legs.coupons.pv": 147.525,
-          "legs.capital_loss.pv": -137.739,
-          "p_barrier_breach": 0.310699,
-          "expected_life_years": 2.87963,
-          "seasoning.memory_carried": 0.14
-        },
-        "tolerance": 1e-09,
-        "sig": 6
-      }
-    },
-    {
-      "name": "bnp_quad_index_classic_autocall_xs2741509801_diagnostics",
-      "category": "structured_note",
-      "file": "structured_note/bnp_quad_index_classic_autocall_xs2741509801_diagnostics.json",
-      "source": "quantraserver v0.12.0 (5b1c016739b1) examples/data/structured_note/bnp_quad_index_classic_autocall_xs2741509801_diagnostics.json",
-      "expected_status": 200,
-      "endpoint": "/price-structured-note",
-      "endpoint_source": "schema-match",
-      "catalog_id": null,
-      "family": null,
-      "title": "bnp quad index classic autocall xs2741509801 diagnostics",
-      "description": "Uncataloged engine example (no QuantLib reference value).",
-      "exercises": [],
-      "compare": null,
-      "list_key": null,
-      "tolerance": null,
-      "reference_text": "",
-      "reference_value": null,
-      "oracle": null
-    },
-    {
-      "name": "bnp_quad_index_classic_autocall_xs2741509801_greeks",
-      "category": "structured_note",
-      "file": "structured_note/bnp_quad_index_classic_autocall_xs2741509801_greeks.json",
-      "source": "quantraserver v0.12.0 (5b1c016739b1) examples/data/structured_note/bnp_quad_index_classic_autocall_xs2741509801_greeks.json",
-      "expected_status": 200,
-      "endpoint": "/price-structured-note",
-      "endpoint_source": "schema-match",
-      "catalog_id": null,
-      "family": null,
-      "title": "bnp quad index classic autocall xs2741509801 greeks",
-      "description": "Uncataloged engine example (no QuantLib reference value).",
-      "exercises": [],
-      "compare": null,
-      "list_key": null,
-      "tolerance": null,
-      "reference_text": "",
-      "reference_value": null,
-      "oracle": null
-    },
-    {
-      "name": "jpm_review_notes_ndx_rty_spx_46661pt64",
-      "category": "structured_note",
-      "file": "structured_note/jpm_review_notes_ndx_rty_spx_46661pt64.json",
-      "source": "quantraserver v0.12.0 (5b1c016739b1) examples/data/structured_note/jpm_review_notes_ndx_rty_spx_46661pt64.json",
-      "expected_status": 200,
-      "endpoint": "/price-structured-note",
-      "endpoint_source": "manifest",
-      "catalog_id": "structured_note_jpm_review_notes_ndx_rty_spx_46661pt64",
-      "family": "Structured Notes",
-      "title": "JPMorgan Review Notes on the least performing of NDX/RTY/SPX (real market data, issuer value 937.30)",
-      "description": "A public SEC-filed five-year note (CUSIP 46661PT64) priced on primary-source market data as of its 2026-10-19 pricing date: Treasury par curve, VXN/RVX/VIX closes as flat vols, one-year historical 3x3 correlation, QQQ/IWM/SPY trailing dividend yields, no funding spread. 49 monthly 100 % review dates with a step-up call premium from 8.8 % to 44 % expressed as memory coupons, 70 % European barrier, no upside. The filing states the issuer's estimated value, 937.30 per 1,000; the engine gives 911.8 +/- 0.9 (see examples/data/structured_note/README.md).",
-      "exercises": [
-        "structured note",
-        "worst-of",
-        "three underlyings",
-        "step-up call premium",
-        "memory coupons",
-        "real market data",
-        "issuer estimated value"
-      ],
-      "compare": "fields",
-      "list_key": null,
-      "tolerance": 1e-09,
-      "reference_text": "npv=911.796, standard_error=0.905335, pv=893.615, pv=92.6405, pv=-74.4598, p_barrier_breach=0.187042, expected_life_years=2.42171, memory_carried=0",
-      "reference_value": null,
-      "oracle": {
-        "kind": "fields",
-        "values": {
-          "npv": 911.796,
-          "standard_error": 0.905335,
-          "legs.bond_redemption.pv": 893.615,
-          "legs.coupons.pv": 92.6405,
-          "legs.capital_loss.pv": -74.4598,
-          "p_barrier_breach": 0.187042,
-          "expected_life_years": 2.42171,
-          "seasoning.memory_carried": 0.0
-        },
-        "tolerance": 1e-09,
-        "sig": 6
-      }
-    },
-    {
-      "name": "santander_quad_index_low_hurdle_autocall_xs3109492564",
-      "category": "structured_note",
-      "file": "structured_note/santander_quad_index_low_hurdle_autocall_xs3109492564.json",
-      "source": "quantraserver v0.12.0 (5b1c016739b1) examples/data/structured_note/santander_quad_index_low_hurdle_autocall_xs3109492564.json",
-      "expected_status": 200,
-      "endpoint": "/price-structured-note",
-      "endpoint_source": "manifest",
-      "catalog_id": "structured_note_santander_quad_index_low_hurdle_autocall_xs3109492564",
-      "family": "Structured Notes",
-      "title": "Santander Quad Index Low Hurdle Autocall August 2025 (XS3109492564), seasoned, 4 assets, 65 536 paths",
-      "description": "The quarterly sibling: twenty-one observations with a 100 % autocall trigger and a 2.5 % snowball coupon, and at the final observation an 80 % low hurdle (coupon_trigger with no call) before the 60 % European barrier. Three accrual-only periods and one missed observation precede the valuation date (memory carried 0.10). Twenty future observations, dimension 80 of the Sobol bridge sequence. Placeholder market data.",
-      "exercises": [
-        "structured note",
-        "low hurdle final coupon",
-        "quarterly observations",
-        "quanto",
-        "seasoning from historical levels",
-        "same-stream Monte Carlo parity"
-      ],
-      "compare": "fields",
-      "list_key": null,
-      "tolerance": 1e-09,
-      "reference_text": "npv=755.722, standard_error=0.977219, pv=837.267, pv=108.547, pv=-190.091, p_barrier_breach=0.422318, expected_life_years=3.59021, memory_carried=0.1",
-      "reference_value": null,
-      "oracle": {
-        "kind": "fields",
-        "values": {
-          "npv": 755.722,
-          "standard_error": 0.977219,
-          "legs.bond_redemption.pv": 837.267,
-          "legs.coupons.pv": 108.547,
-          "legs.capital_loss.pv": -190.091,
-          "p_barrier_breach": 0.422318,
-          "expected_life_years": 3.59021,
-          "seasoning.memory_carried": 0.1
-        },
-        "tolerance": 1e-09,
-        "sig": 6
-      }
-    },
-    {
-      "name": "scotia_autocallable_trigger_ndx_rty_us06419jme72",
-      "category": "structured_note",
-      "file": "structured_note/scotia_autocallable_trigger_ndx_rty_us06419jme72.json",
-      "source": "quantraserver v0.12.0 (5b1c016739b1) examples/data/structured_note/scotia_autocallable_trigger_ndx_rty_us06419jme72.json",
-      "expected_status": 200,
-      "endpoint": "/price-structured-note",
-      "endpoint_source": "manifest",
-      "catalog_id": "structured_note_scotia_autocallable_trigger_ndx_rty_us06419jme72",
-      "family": "Structured Notes",
-      "title": "Bank of Nova Scotia autocallable trigger notes on NDX/RTY (real market data, issuer value 973.52)",
-      "description": "A public SEC-filed note (CUSIP 06419JME7) priced on primary-source market data as of its 2026-09-30 trade date: Treasury par curve, VXN/RVX closes as flat vols, one-year historical correlation 0.747, QQQ/IWM trailing dividend yields, no funding spread. One 100 % autocall at year one with a 14.75 % premium, 75 % European trigger and 250 % upside participation at maturity. The filing states the issuer's initial estimated value, 973.52 per 1,000; the engine gives 965.6 +/- 0.4 (see examples/data/structured_note/README.md).",
-      "exercises": [
-        "structured note",
-        "worst-of",
-        "upside participation",
-        "real market data",
-        "issuer estimated value",
-        "same-stream Monte Carlo parity"
-      ],
-      "compare": "fields",
-      "list_key": null,
-      "tolerance": 1e-09,
-      "reference_text": "npv=965.582, standard_error=0.765869, pv=975.052, pv=57.7445, pv=-67.2139, p_barrier_breach=0.202484, expected_life_years=1.59511, memory_carried=0",
-      "reference_value": null,
-      "oracle": {
-        "kind": "fields",
-        "values": {
-          "npv": 965.582,
-          "standard_error": 0.765869,
-          "legs.bond_redemption.pv": 975.052,
-          "legs.coupons.pv": 57.7445,
-          "legs.capital_loss.pv": -67.2139,
-          "p_barrier_breach": 0.202484,
-          "expected_life_years": 1.59511,
-          "seasoning.memory_carried": 0.0
-        },
-        "tolerance": 1e-09,
-        "sig": 6
-      }
     },
     {
       "name": "single_underlying_reverse_convertible",
