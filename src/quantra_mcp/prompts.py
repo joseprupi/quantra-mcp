@@ -231,7 +231,8 @@ Step 2, list the inputs Quantra needs and the simplest form to paste each:
   the par quotes of the strip as `tenor, rate %`; discount and forward curves separately
   when they differ. Vendor curves are never available on this side and are never
   recalled from memory or taken from a shipped example (the absolute rule above): without
-  the user's market data, stop after this step.
+  the user's market data (pasted, or obtained from a cited trusted source or connected
+  data tool), stop after this step.
 - the vol: one number at the trade's expiry x tenor, or the ATM matrix;
 - the conventions the screen implies but does not show (day counts, payment lag,
   settlement method, fixing lag, calendar).

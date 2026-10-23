@@ -21,7 +21,14 @@ from quantra_mcp.backend.base import Backend
 from quantra_mcp.builders.products._common import BuiltTrade
 from quantra_mcp.session import ScratchStore
 from quantra_mcp.tools._dates import DateResolver
-from quantra_mcp.tools._market_source import SOURCE_DESCRIPTION, MarketDataSource, stamp
+from quantra_mcp.tools._market_source import (
+    SOURCE_DESCRIPTION,
+    SOURCES_DESCRIPTION,
+    MarketDataSource,
+    SourceRef,
+    source_refusal,
+    stamp,
+)
 from quantra_mcp.tools._meta import tool
 from quantra_mcp.tools._result import ToolResult, local_error_result
 from quantra_mcp.tools.calendar import CalendarOverride
@@ -190,6 +197,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price structured notes by Monte Carlo (POST /price-structured-note): autocallables,
         Phoenix, reverse convertibles, bonus / twin-win shapes as configurations of one payoff
@@ -201,6 +209,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
         terms / seasoning / model echoes (check ``terms`` before trusting a price). The
         diagnostic blocks stay in ``response``. Method: explain_method('structured-notes').
         """
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_structured_note_impl(
                 backend,
@@ -214,4 +224,5 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )

@@ -33,7 +33,14 @@ from quantra_mcp.schema.enums_generated import (
 )
 from quantra_mcp.schema.validate import validate_component, validate_request
 from quantra_mcp.session import ScratchStore, resolve_refs
-from quantra_mcp.tools._market_source import SOURCE_DESCRIPTION, MarketDataSource, stamp
+from quantra_mcp.tools._market_source import (
+    SOURCE_DESCRIPTION,
+    SOURCES_DESCRIPTION,
+    MarketDataSource,
+    SourceRef,
+    source_refusal,
+    stamp,
+)
 from quantra_mcp.tools._meta import tool
 from quantra_mcp.tools._result import ToolResult, local_error_result, new_request_id, run_post
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
@@ -428,6 +435,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Turn a quote strip into an engine curve spec (no engine call). Returns ``{ok, curve,
         indices, preset, notes, digest}``: ``curve`` is the TermStructure and ``indices`` the
@@ -436,6 +444,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
         canonical curve + indices JSON (pricing tools recognise it). Nothing is priced here.
         ``discount_curve`` names the OIS curve for a dual-curve (collateral-discounted) strip.
         """
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             build_curve_impl(
                 id,
@@ -448,6 +458,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 discount_curve=discount_curve,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Curve spec from explicit values (no engine call)", engine=False)
@@ -509,10 +520,13 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             Interpolator | None,
             Field(description="Default Linear (zero, forward) or LogLinear (discount)."),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """An interpolated curve from explicit zero rates, discount factors or forwards (no engine
         call). Returns ``{ok, curve, indices: [], preset, notes, digest}``.
         """
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             build_value_curve_impl(
                 id,
@@ -526,6 +540,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 interpolator,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Curve spec from a pasted table (no engine call)", engine=False)
@@ -628,6 +643,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
         interpolator: Annotated[
             Interpolator | None, Field(description="Override the builder default.")
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """A curve from a table the user pasted (a vendor curve screen, a spreadsheet, a ticket):
         parses it and calls build_value_curve (discount / zero) or build_curve (par quotes). No
@@ -640,6 +656,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
         numbers. With several value columns the header picks one (reported in ``notes``) or
         the call is refused.
         """
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             curve_from_pasted_table_impl(
                 text,
@@ -657,6 +675,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 rows,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Curve query spec (no engine call)", engine=False)

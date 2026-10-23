@@ -13,7 +13,14 @@ from pydantic import Field
 from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.schema.validate import validate_component
 from quantra_mcp.session import ScratchStore, SessionKind
-from quantra_mcp.tools._market_source import SOURCE_DESCRIPTION, MarketDataSource, check_source
+from quantra_mcp.tools._market_source import (
+    SOURCE_DESCRIPTION,
+    SOURCES_DESCRIPTION,
+    MarketDataSource,
+    SourceRef,
+    check_source,
+    check_sources,
+)
 from quantra_mcp.tools._meta import tool
 
 _COMPONENT = {"curve": "TermStructure", "index": "IndexDef", "market": "RatesMarketData"}
@@ -22,11 +29,21 @@ SessionAction = Literal["get", "list", "delete"]
 
 
 def session_put_impl(
-    store: ScratchStore, name: str, kind: str, value: Any, market_data_source: Any
+    store: ScratchStore,
+    name: str,
+    kind: str,
+    value: Any,
+    market_data_source: Any,
+    sources: Any = None,
 ) -> dict[str, Any]:
     try:
         source = check_source(market_data_source)
-        item, evicted = store.put(name, kind, value, source)
+        if not sources and isinstance(value, dict):
+            prov = value.get("provenance")
+            if isinstance(prov, dict) and prov.get("sources"):
+                sources = prov["sources"]  # a builder result carries its citations
+        cited = check_sources(source, sources)
+        item, evicted = store.put(name, kind, value, source, sources=cited)
     except LocalValidationError as exc:
         return {"ok": False, "error": exc.error, "problems": exc.problems}
     problems = [p.as_dict() for p in validate_component(_COMPONENT[kind], item.value)]
@@ -41,6 +58,10 @@ def session_put_impl(
         "ok": True,
         "item": item.summary(),
         "market_data_source": item.market_data_source,
+        "provenance": {
+            "market_data_source": item.market_data_source,
+            "sources": item.sources or [],
+        },
         "size": len(store),
         "max_items": store.max_items,
     }
@@ -114,6 +135,7 @@ def register(app: MCPServer, store: ScratchStore) -> None:
             Field(description="The object; validated against the engine schema."),
         ],
         market_data_source: Annotated[MarketDataSource, Field(description=SOURCE_DESCRIPTION)],
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> dict[str, Any]:
         """Store a curve, index or market block under a name and reference it later as
         ``{"session": "<name>"}`` in bootstrap_curve and the pricing tools (the stored
@@ -124,7 +146,7 @@ def register(app: MCPServer, store: ScratchStore) -> None:
         without a session id (single-exchange streamable HTTP, protocol 2026-07-28) the tool
         answers ``ok: false``: pass the built objects inline instead.
         """
-        return session_put_impl(store, name, kind, value, market_data_source)
+        return session_put_impl(store, name, kind, value, market_data_source, sources)
 
     @tool(app, "Read, list or delete session scratch", engine=False, writes=True)
     def session(

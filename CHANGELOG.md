@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.1.13 (2026-10-22)
+
+Sourced market data (operator decision 2026-10-22).
+
+- **`market_data_source=sourced`**: numbers obtained in the conversation from a trusted
+  public publisher (central bank, treasury, FRED, exchange, index administrator,
+  regulator filing, fund sponsor; any other site only after asking the user) with a web
+  or code tool, or from a market-data connector the user connected. Recalled, estimated
+  or invented numbers stay without a permitted value.
+- **`sources`** (optional on every tool that takes `market_data_source`, 24 tools):
+  `[{what, value, as_of, url | connector, derived?}]`; REQUIRED and non-empty with
+  `sourced`; every item needs `what`, a YYYY-MM-DD `as_of` and an http(s) `url` or a
+  `connector`. A bad or missing citation is refused before anything is sent (`ok: false`,
+  MCP tool error, one problem per field). Every result carries
+  `provenance: {market_data_source, meaning, sources}`; `session_put` stores the
+  citations with the item (and takes a builder result's), session references note them,
+  `reprice_with` carries those of the result it reprices. One shared helper
+  (`tools/_market_source.py`: `check_sources`, `source_refusal`, `stamp`).
+- **ABSOLUTE RULE rewritten** (still first, still absolute on memory / estimates /
+  invention): data only when pasted / attached, fetched from a trusted publisher (other
+  sites after asking) or from a connected data tool; every obtained value tabled with
+  URL or connector and as-of date; derived values computed with a code tool, method
+  shown; proxies labelled with their bias; no fetch tool or connector -> ask for a paste.
+  Example-shape rule and guidance shortened to keep INSTRUCTIONS under 2,000 characters.
+  Prompt, developers guide, README and docs/clients.md / docs/tools.md follow.
+
 ## 0.1.12 (2026-10-22)
 
 Engine pin v0.11.0 -> **v0.12.0** (`5b1c016`), QuantLib stays 1.44 (M5.10): structured notes.

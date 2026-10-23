@@ -33,8 +33,11 @@ from quantra_mcp.schema.loader import SpecError, load_spec, normalize_endpoint
 from quantra_mcp.schema.validate import validate_request
 from quantra_mcp.tools._market_source import (
     MARKET_DATA_SOURCES,
+    SOURCES_DESCRIPTION,
     MarketDataSource,
+    SourceRef,
     check_source,
+    check_sources,
     stamp,
 )
 from quantra_mcp.tools._meta import tool
@@ -554,6 +557,18 @@ def _resolve_source(result_or_request: Any, declared: Any) -> str:
     return carried
 
 
+def _resolve_sources(result_or_request: Any, declared: Any) -> Any:
+    """The citations of a reprice: the ones declared, else the ones the input result's
+    provenance carries."""
+    if declared:
+        return declared
+    if isinstance(result_or_request, dict):
+        prov = result_or_request.get("provenance")
+        if isinstance(prov, dict) and prov.get("sources"):
+            return prov["sources"]
+    return declared
+
+
 async def reprice_with_impl(
     backend: Backend,
     result_or_request: Any,
@@ -562,11 +577,13 @@ async def reprice_with_impl(
     validate: bool = True,
     request_id: str | None = None,
     market_data_source: Any = None,
+    sources: Any = None,
 ) -> dict[str, Any]:
     rid = request_id or new_request_id()
     spec = load_spec()
     try:
         source = _resolve_source(result_or_request, market_data_source)
+        sources = check_sources(source, _resolve_sources(result_or_request, sources))
         endpoint, base_body, base_result = _source(result_or_request)
         info = spec.endpoint(endpoint)
         if not changes:
@@ -595,7 +612,7 @@ async def reprice_with_impl(
             request_id=rid,
         )
         if market_data_source in MARKET_DATA_SOURCES:
-            stamp(rejected, str(market_data_source))
+            stamp(rejected, str(market_data_source), sources)
         return rejected
     if validate:
         problems = validate_request(info.path, changed_body, spec)
@@ -615,6 +632,7 @@ async def reprice_with_impl(
                     "changes_applied": applied,
                 },
                 source,
+                sources,
             )
     notes: list[str] = []
     if market_data_source is None:
@@ -649,7 +667,7 @@ async def reprice_with_impl(
         bad = changed_result if failed == "changed" else base_result
         out["error"] = f"{failed} request failed: {bad.get('error')}"
         out["status"] = bad.get("status")
-    return stamp(out, source)
+    return stamp(out, source, sources)
 
 
 # --------------------------------------------------------------------------
@@ -717,9 +735,11 @@ def register(app: MCPServer, backend: Backend) -> None:
             Field(
                 description=(
                     "Where the request's market numbers come from (user_pasted | user_file | "
-                    "engine_example | session; rule: quantra://guide/developers). A previous tool "
+                    "sourced | engine_example | session; rule: quantra://guide/developers). "
+                    "A previous tool "
                     "result carries its own declaration, reused (the argument may be omitted or "
-                    "must agree); for an explicit {endpoint, body} it is required. There is no "
+                    "must agree); for an explicit {endpoint, body} it is required. sourced "
+                    "needs `sources` (carried from a previous result's provenance). There is no "
                     "value for estimated, recalled or placeholder data; if you would have to "
                     "invent numbers, do not call this tool: ask the user for the data."
                 )
@@ -747,6 +767,7 @@ def register(app: MCPServer, backend: Backend) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> dict[str, Any]:
         """Test a hypothesis: change one or more fields of an echoed request and reprice. Returns
         ``changes_applied`` (before / after per change), ``request_diff`` (every leaf that
@@ -763,4 +784,5 @@ def register(app: MCPServer, backend: Backend) -> None:
             validate,
             request_id,
             market_data_source,
+            sources,
         )

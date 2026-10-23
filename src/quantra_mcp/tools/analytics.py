@@ -42,7 +42,14 @@ from quantra_mcp.errors import LocalValidationError
 from quantra_mcp.presets.registry import PresetError
 from quantra_mcp.schema.enums_generated import RateAveragingType, SwapType
 from quantra_mcp.session import ScratchStore
-from quantra_mcp.tools._market_source import SOURCE_DESCRIPTION, MarketDataSource, stamp
+from quantra_mcp.tools._market_source import (
+    SOURCE_DESCRIPTION,
+    SOURCES_DESCRIPTION,
+    MarketDataSource,
+    SourceRef,
+    source_refusal,
+    stamp,
+)
 from quantra_mcp.tools._meta import tool
 from quantra_mcp.tools._result import ToolResult, new_request_id
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
@@ -836,6 +843,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
                 )
             ),
         ] = False,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Parallel DV01 of a swap: reprice with every quote of the selected curve(s) bumped,
         through the same price_vanilla_swap / price_ois_swap path. Result: ``base_npv``,
@@ -845,6 +853,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
         request_diff). Nothing else is computed; the arithmetic is cited at
         quantra://methodology/connector-analytics.
         """
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await swap_dv01_impl(
                 backend,
@@ -861,6 +871,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
                 include_calls,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Key-rate DV01 ladder by bump and reprice", engine=True)
@@ -955,6 +966,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
                 )
             ),
         ] = False,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Key-rate DV01 ladder: one bump per pillar of a curve plus a parallel bump, each repriced
         through the swap's pricing tool. Result: ``ladder`` = [{pillar, quote_from, quote_up /
@@ -963,6 +975,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
         ``calls`` (include_calls) or ``base_request`` + ``reprices``. Reprices run concurrently,
         bounded by QUANTRA_MAX_CONCURRENCY.
         """
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await key_rate_ladder_impl(
                 backend,
@@ -979,6 +993,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
                 include_calls,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Scenario reprices of a swap", engine=True)
@@ -1057,12 +1072,15 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
                 )
             ),
         ] = False,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Reprice a swap under named market variants and tabulate NPV against the base. Result:
         ``table`` = [{name, npv, change = npv - base_npv, edits}] starting with base,
         ``definitions``, then ``calls`` (include_calls) or ``base_request`` + ``reprices`` with
         each row's request_diff.
         """
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await scenario_impl(
                 backend,
@@ -1077,6 +1095,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
                 include_calls,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Fair rate of a swap (engine output)", engine=True)
@@ -1134,17 +1153,21 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore, max_concurre
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """The engine's fair (par) rate of a swap, read from the pricing response: ``fair_rate`` /
         ``fair_spread`` exactly as returned (plus ``npv``); when the response carries neither,
         ``provided_by_engine`` is false and ``message`` says so (nothing is solved locally).
         ``calls[0]`` is the pricing.
         """
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await fair_rate_impl(
                 backend, store, market, trade, as_of, calendar_overrides, request_id
             ),
             market_data_source,
+            sources,
         )
 
 

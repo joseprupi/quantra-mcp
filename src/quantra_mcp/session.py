@@ -95,6 +95,8 @@ class SessionItem:
     #: the caller's declaration of where the numbers came from (user_pasted / user_file /
     #: engine_example / session); None only for items stored without one (direct API use)
     market_data_source: str | None = None
+    #: the citations that came with a sourced declaration (what, value, url, as_of)
+    sources: list[dict[str, Any]] | None = None
     #: sha256 of the canonical JSON of ``value`` (a curve item's digest equals the
     #: ``curve_digest`` of the build result it came from)
     digest: str | None = None
@@ -106,6 +108,7 @@ class SessionItem:
             "stored_at": self.stored_at,
             "size_bytes": self.size_bytes,
             "market_data_source": self.market_data_source,
+            "sources": self.sources or [],
             "digest": self.digest,
         }
         v = self.value
@@ -131,7 +134,13 @@ class ScratchStore(Protocol):
     def max_items(self) -> int: ...
 
     def put(
-        self, name: str, kind: str, value: Any, market_data_source: str | None = None
+        self,
+        name: str,
+        kind: str,
+        value: Any,
+        market_data_source: str | None = None,
+        *,
+        sources: list[dict[str, Any]] | None = None,
     ) -> tuple[SessionItem, str | None]: ...
 
     def delete(self, name: str) -> bool: ...
@@ -165,7 +174,13 @@ class SessionStore:
     # --- mutation ---------------------------------------------------------
 
     def put(
-        self, name: str, kind: str, value: Any, market_data_source: str | None = None
+        self,
+        name: str,
+        kind: str,
+        value: Any,
+        market_data_source: str | None = None,
+        *,
+        sources: list[dict[str, Any]] | None = None,
     ) -> tuple[SessionItem, str | None]:
         """Store (or replace) ``name``. Returns the item and the evicted names (comma-joined)
         if the item cap or the byte cap pushed older items out, else ``None``.
@@ -220,6 +235,7 @@ class SessionStore:
             stored_at=now,
             size_bytes=size,
             market_data_source=market_data_source,
+            sources=sources,
             digest=_digest(value),
         )
         if name in self._items:
@@ -370,10 +386,16 @@ class SessionStores:
     # --- SessionStore interface, delegated to the current session --------------
 
     def put(
-        self, name: str, kind: str, value: Any, market_data_source: str | None = None
+        self,
+        name: str,
+        kind: str,
+        value: Any,
+        market_data_source: str | None = None,
+        *,
+        sources: list[dict[str, Any]] | None = None,
     ) -> tuple[SessionItem, str | None]:
         k = self.key(current_session_id())
-        result = self.for_session(k).put(name, kind, value, market_data_source)
+        result = self.for_session(k).put(name, kind, value, market_data_source, sources=sources)
         self._enforce_budget(k)
         return result
 
@@ -394,6 +416,13 @@ class SessionStores:
 
     def __len__(self) -> int:
         return len(self.current())
+
+
+def _cited(item: SessionItem) -> str:
+    if not item.sources:
+        return ""
+    urls = sorted({str(s.get("url")) for s in item.sources})
+    return f", {len(item.sources)} cited values from {', '.join(urls)}"
 
 
 def is_ref(item: Any) -> bool:
@@ -427,7 +456,7 @@ def resolve_refs(
                 notes.append(
                     f"curves[{i}] <- session {name!r} (curve {got.value.get('id')}"
                     + (f", +{len(attached)} attached index" if attached else "")
-                    + f"; stored market_data_source={got.market_data_source})"
+                    + f"; stored market_data_source={got.market_data_source}{_cited(got)})"
                 )
             elif got.kind == "market":
                 cs = [c for c in got.value.get("curves") or [] if isinstance(c, dict)]
@@ -437,7 +466,7 @@ def resolve_refs(
                 notes.append(
                     f"curves[{i}] <- session {name!r} "
                     f"(market: {len(cs)} curves, {len(ixs)} indices; "
-                    f"stored market_data_source={got.market_data_source})"
+                    f"stored market_data_source={got.market_data_source}{_cited(got)})"
                 )
             else:
                 raise LocalValidationError(

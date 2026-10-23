@@ -21,7 +21,25 @@ from tests.product_cases import product_cases
 from tests.strips import STRIPS
 from tests.unit.test_pricing_tools import CANNED
 
-EXPECTED_VALUES = ["user_pasted", "user_file", "engine_example", "session"]
+EXPECTED_VALUES = ["user_pasted", "user_file", "sourced", "engine_example", "session"]
+
+#: a valid citation list (required with ``sourced``)
+SOURCES = [
+    {
+        "what": "SOFR overnight rate",
+        "value": 0.0431,
+        "as_of": "2025-01-15",
+        "url": "https://www.newyorkfed.org/markets/reference-rates/sofr",
+    }
+]
+
+
+def _src_args(source: str) -> dict[str, Any]:
+    out: dict[str, Any] = {"market_data_source": source}
+    if source == "sourced":
+        out["sources"] = SOURCES
+    return out
+
 
 GUARDED_TOOLS = {
     "build_curve",
@@ -70,7 +88,7 @@ def pricing_app():  # type: ignore[no-untyped-def]
     return build_server(Settings(engine_url="http://fake"), backend=FakeBackend(CANNED))
 
 
-def test_enum_is_exactly_the_four_values() -> None:
+def test_enum_is_exactly_the_five_values() -> None:
     assert list(MARKET_DATA_SOURCES) == EXPECTED_VALUES
     for v in EXPECTED_VALUES:
         assert check_source(v) == v
@@ -116,7 +134,7 @@ async def test_call_without_or_with_invalid_source_fails_validation(app: Any) ->
         for bad in ("estimated", "placeholder", "approximate", "from_memory"):
             r = await c.call_tool("build_curve", {**BUILD_ARGS, "market_data_source": bad})
             assert r.is_error and r.structured_content is None, bad
-            assert "'user_pasted', 'user_file', 'engine_example' or 'session'" in (
+            assert "'user_pasted', 'user_file', 'sourced', 'engine_example' or 'session'" in (
                 r.content[0].text  # type: ignore[union-attr]
             )
         # the same for a pricing tool and for session_put
@@ -133,7 +151,7 @@ async def test_call_without_or_with_invalid_source_fails_validation(app: Any) ->
 @pytest.mark.parametrize("source", EXPECTED_VALUES)
 async def test_curve_tools_echo_the_declared_source(app: Any, source: str) -> None:
     async with Client(app) as c:
-        built = _s(await c.call_tool("build_curve", {**BUILD_ARGS, "market_data_source": source}))
+        built = _s(await c.call_tool("build_curve", {**BUILD_ARGS, **_src_args(source)}))
         vc = _s(
             await c.call_tool(
                 "build_value_curve",
@@ -146,7 +164,7 @@ async def test_curve_tools_echo_the_declared_source(app: Any, source: str) -> No
                     ],
                     "reference_date": "2025-01-15",
                     "preset": "USD_SOFR_OIS",
-                    "market_data_source": source,
+                    **_src_args(source),
                 },
             )
         )
@@ -158,7 +176,7 @@ async def test_curve_tools_echo_the_declared_source(app: Any, source: str) -> No
                     "id": "P",
                     "kind": "discount",
                     "preset": "USD_SOFR_OIS",
-                    "market_data_source": source,
+                    **_src_args(source),
                 },
             )
         )
@@ -166,6 +184,8 @@ async def test_curve_tools_echo_the_declared_source(app: Any, source: str) -> No
         assert r["ok"], r
         assert r["market_data_source"] == source
         assert r["notes"][0].startswith(f"market_data_source={source} (declared by the caller")
+        assert r["provenance"]["market_data_source"] == source
+        assert r["provenance"]["sources"] == (SOURCES if source == "sourced" else [])
 
 
 async def test_pricing_tools_echo_the_declared_source(pricing_app: Any) -> None:
@@ -254,6 +274,12 @@ def test_store_and_impl_level_guards() -> None:
             "x",
         ],
         "market_data_source": "session",
+        "provenance": {
+            "market_data_source": "session",
+            "meaning": "a market previously stored in this session (which itself came "
+            "from one of the above)",
+            "sources": [],
+        },
     }
 
 

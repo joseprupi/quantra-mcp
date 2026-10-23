@@ -7,21 +7,23 @@ from __future__ import annotations
 from quantra_mcp.schema.loader import quantlib_pin
 
 ABSOLUTE_RULE = """\
-ABSOLUTE RULE on market data: Never type, estimate, recall or invent market data (quotes,
-discount factors, zero rates, vols, fixings). Not as a placeholder, not as a test run, not
-labelled as approximate. Market data for a user's trade exists only when the user has
-pasted or dictated it in this conversation. Until then: say what is needed, in paste-able
-form, and stop. Do not call any curve-building or pricing tool. Every curve-building and
-pricing tool requires a market_data_source declaration; none exists for estimated or
-recalled data: ask instead.
+ABSOLUTE RULE on market data: Never type, estimate, recall or invent market data
+(quotes, DFs, rates, vols, fixings, correlations), not even as a placeholder, test or
+approximation. Use only data (a) the user pasted or attached, (b) fetched in this
+conversation with a web or code tool from a trusted publisher (central bank, treasury,
+FRED, exchange, index administrator, SEC filing, fund sponsor; any other site only after
+asking the user), or (c) from a data connector the user connected. Table every obtained
+value with URL or connector and as-of date in the reply; derive values (correlation,
+yields) with a code tool, method shown; label proxies (Treasury yields for SOFR, a
+VIX-family index for a 2Y vol) with the bias. No fetch tool or connector: say so, ask for a
+paste. Without data: say what is needed and stop; no curve or pricing tool call.
+market_data_source has no value for estimated or recalled data; sourced needs `sources`.
 """
 
 EXAMPLE_SHAPE_RULE = """\
-The 247 vendored engine examples are request-SHAPE references only; a user's trade
-market data MUST come from the user. Never reuse an example's market data for the
-user's trade, never say "the engine already ships this trade"; an example's own data
-runs only when the user explicitly asks for that example, reported as such. Without the
-user's data, ask for it in paste-able form and stop there.
+The 247 vendored engine examples are request-SHAPE references only: never reuse their
+market data for a user's trade or say "the engine already ships this trade"; an
+example's data runs only when the user asks for that example.
 """
 
 SOURCE_RULE = f"""\

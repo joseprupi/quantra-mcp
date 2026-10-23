@@ -79,7 +79,14 @@ from quantra_mcp.schema.enums_generated import (
 from quantra_mcp.schema.validate import validate_request
 from quantra_mcp.session import ScratchStore
 from quantra_mcp.tools._dates import DateResolutionFailed, DateResolver
-from quantra_mcp.tools._market_source import SOURCE_DESCRIPTION, MarketDataSource, stamp
+from quantra_mcp.tools._market_source import (
+    SOURCE_DESCRIPTION,
+    SOURCES_DESCRIPTION,
+    MarketDataSource,
+    SourceRef,
+    source_refusal,
+    stamp,
+)
 from quantra_mcp.tools._meta import tool
 from quantra_mcp.tools._result import ToolResult, local_error_result, new_request_id, run_post
 from quantra_mcp.tools.calendar import CalendarOverride, overrides_to_wire
@@ -1376,6 +1383,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price a fixed-vs-IBOR swap (POST /price-vanilla-swap). The preset's vanilla_swap block
         supplies both legs' schedules, frequencies, day counters and payment conventions; every
@@ -1394,6 +1402,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             fixed_leg_overrides=fixed_leg_overrides,
             floating_leg_overrides=floating_leg_overrides,
         )
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_vanilla_swap_impl(
                 backend,
@@ -1409,6 +1419,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Price an OIS swap", engine=True)
@@ -1579,6 +1590,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price an OIS (fixed vs compounded overnight) swap (POST /price-ois-swap). The preset's
         ois_swap block supplies the schedules, day counters, payment conventions and the
@@ -1603,6 +1615,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             fixed_leg_overrides=fixed_leg_overrides,
             overnight_leg_overrides=overnight_leg_overrides,
         )
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_ois_swap_impl(
                 backend,
@@ -1618,6 +1632,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Price a fixed-rate bond", engine=True)
@@ -1745,6 +1760,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price a fixed-rate bond (POST /price-fixed-rate-bond). The preset's fixed_rate_bond
         block supplies settlement days, schedule, accrual day counter, redemption and the yield
@@ -1760,6 +1776,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             overrides=overrides,
             yield_overrides=yield_overrides,
         )
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_fixed_rate_bond_impl(
                 backend,
@@ -1775,6 +1793,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Price a floating-rate bond", engine=True)
@@ -1915,6 +1934,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price a floating-rate note (POST /price-floating-rate-bond). As price_fixed_rate_bond,
         plus the index spread, fixing days and in-arrears flag from the preset; an Ibor coupon
@@ -1934,6 +1954,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             in_arrears=in_arrears,
             overrides=overrides,
         )
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_floating_rate_bond_impl(
                 backend,
@@ -1951,6 +1973,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Price a zero-coupon bond", engine=True)
@@ -2062,6 +2085,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price a zero-coupon bond (POST /price-zero-coupon-bond). The preset's zero_coupon_bond
         block supplies settlement days, calendar, redemption and the yield quotation.
@@ -2076,6 +2100,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             redemption=redemption,
             yield_overrides=yield_overrides,
         )
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_zero_coupon_bond_impl(
                 backend,
@@ -2090,6 +2116,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Price a callable fixed-rate bond", engine=True)
@@ -2216,6 +2243,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price a callable / puttable fixed-rate bond on a Hull-White lattice (POST
         /price-callable-fixed-rate-bond). Bond conventions, lattice and tree steps from the
@@ -2233,6 +2261,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             overrides=overrides,
             tree_steps=tree_steps,
         )
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_callable_fixed_rate_bond_impl(
                 backend,
@@ -2247,6 +2277,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Price a FRA", engine=True)
@@ -2361,6 +2392,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price a forward rate agreement (POST /price-fra). Dates are resolved by the engine from
         spot with the preset's calendar and convention (echoed in ``date_resolution``).
@@ -2379,6 +2411,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             calendar=None,
             business_day_convention=business_day_convention,
         )
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_fra_impl(
                 backend,
@@ -2393,6 +2427,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Price a cap / floor", engine=True)
@@ -2548,6 +2583,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price an interest-rate cap, floor or collar (POST /price-cap-floor). The preset's
         cap_floor block supplies the schedule, frequency, day counter and the OptionletVolSpec
@@ -2569,6 +2605,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             schedule_overrides=schedule_overrides,
             include_details=include_details,
         )
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_cap_floor_impl(
                 backend,
@@ -2585,6 +2623,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Price a swaption", engine=True)
@@ -2758,6 +2797,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price a European, Bermudan or American swaption on a vanilla or OIS underlying (POST
         /price-swaption). The underlying is built from the preset's swap block, the vol surface
@@ -2775,6 +2815,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             underlying=underlying,
             underlying_type=underlying_type,
         )
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_swaption_impl(
                 backend,
@@ -2794,6 +2836,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Price a CDS", engine=True)
@@ -2961,6 +3004,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price a single-name CDS (POST /price-cds). The preset's cds block supplies the premium
         schedule (TwentiethIMM), accrual flags, the credit-curve helper conventions and the
@@ -2984,6 +3028,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             cash_settlement_days=cash_settlement_days,
             schedule_overrides=schedule_overrides,
         )
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_cds_impl(
                 backend,
@@ -3000,6 +3046,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Price an equity option", engine=True)
@@ -3135,6 +3182,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price a vanilla equity option (POST /price-equity-option). Flat rate and dividend curves
         are added as two-point InterpolatedZero curves, the vol as a constant BlackVolSpec, with
@@ -3152,6 +3200,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             trade_id=trade_id,
         )
         the_model: str | pe.EquityModel = model if model is not None else pe.EquityModel()
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_equity_option_impl(
                 backend,
@@ -3171,6 +3221,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Price a zero-coupon inflation swap", engine=True)
@@ -3282,6 +3333,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price a zero-coupon inflation swap (POST /price-zero-coupon-inflation-swap). The market
         must carry the inflation index and a ZeroInflation curve (pricing.inflation; see the
@@ -3297,6 +3349,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             maturity_date=maturity_date,
             tenor=tenor,
         )
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_zc_inflation_swap_impl(
                 backend,
@@ -3314,6 +3368,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Price a year-on-year inflation swap", engine=True)
@@ -3439,6 +3494,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price a year-on-year inflation swap (POST /price-year-on-year-inflation-swap). The
         market must carry the YoY inflation index and a YoYInflation curve; fixed and YoY legs
@@ -3455,6 +3511,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             frequency=frequency,
             schedule_overrides=schedule_overrides,
         )
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_yoy_inflation_swap_impl(
                 backend,
@@ -3472,6 +3530,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )
 
     @tool(app, "Price a year-on-year inflation cap / floor", engine=True)
@@ -3612,6 +3671,7 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 )
             ),
         ] = None,
+        sources: Annotated[list[SourceRef] | None, Field(description=SOURCES_DESCRIPTION)] = None,
     ) -> ToolResult:
         """Price a year-on-year inflation cap, floor or collar (POST
         /price-year-on-year-inflation-cap-floor). The YoYOptionletVolSpec the tool builds from
@@ -3631,6 +3691,8 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
             spread=spread,
             schedule_overrides=schedule_overrides,
         )
+        if (refusal := source_refusal(market_data_source, sources)) is not None:
+            return refusal
         return stamp(
             await price_yoy_inflation_cap_floor_impl(
                 backend,
@@ -3648,4 +3710,5 @@ def register(app: MCPServer, backend: Backend, store: ScratchStore) -> None:
                 request_id,
             ),
             market_data_source,
+            sources,
         )

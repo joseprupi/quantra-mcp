@@ -43,13 +43,10 @@ log = logging.getLogger("quantra_mcp")
 SERVER_NAME = "quantra"
 
 GUIDANCE = """\
-Quantra pricing engine, Monte Carlo structured notes on equity baskets included; every
-number is the engine's. To a business user, in trade terms: (1) can the trade be priced
-here; (2) missing market data, in paste-able form; (3) every convention assumed, with
-its source; (4) the engine's result vs the user's number, causes tested with
-reprice_with, never asserted. State signs and dates; turn refusals into what the user
-can supply; never alter an input to match or claim vendor data.
-Developers: quantra://guide/developers.
+Quantra engine (structured notes included); every number is the engine's. To a
+business user, in trade terms: can it be priced, what data is missing, conventions
+assumed with source, the result vs theirs, causes tested with reprice_with. Never
+alter an input to match. Developers: quantra://guide/developers.
 """
 
 #: order matters: the rule first, the example-shape rule second, the source rule third,

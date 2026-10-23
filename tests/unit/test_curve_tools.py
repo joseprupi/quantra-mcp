@@ -118,6 +118,7 @@ async def test_build_curve_tool_shape_and_no_engine_call(
         "indices",
         "preset",
         "notes",
+        "provenance",
         "market_data_source",
         "digest",
         "curve_digest",

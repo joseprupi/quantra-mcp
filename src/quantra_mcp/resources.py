@@ -89,11 +89,18 @@ MCP session, in memory, bounded, never persisted.
 
 market_data_source, required by every tool that takes market numbers: user_pasted (the
 user pasted or typed the numbers in this conversation), user_file (the user attached a
-file or screenshot the numbers were read from), engine_example (an engine example's
-pricing block, only when the user explicitly asked to run an example), session (a
-market stored earlier in this session, which itself came from one of the above). There
-is no value for estimated, recalled or placeholder data: a caller that would have to
-invent numbers must not call the tool and asks the user instead. Builder results carry
+file or screenshot the numbers were read from), sourced (obtained in this conversation
+from a trusted public publisher (central bank, treasury, FRED, exchange, index
+administrator, regulator filing, fund sponsor; any other site only after asking the
+user) with a web or code tool, or from a market-data connector the user connected),
+engine_example (an engine example's pricing block, only when the user explicitly asked
+to run an example), session (a market stored earlier in this session, which itself came
+from one of the above). sourced requires `sources`: one citation per value, {what,
+value, as_of (YYYY-MM-DD), url (http/https) or connector, derived? (the computation, for
+a value computed with a code tool from obtained data)}; a call without them is refused.
+Every result echoes the declaration and its citations in `provenance`. There is no value
+for estimated, recalled or placeholder data: a caller that would have to invent numbers
+must not call the tool and asks the user instead. Builder results carry
 a `digest` (sha256 of the canonical curve + indices JSON); a pricing tool notes whether
 each market curve matches a digest produced by a builder in this session.
 """

@@ -84,14 +84,18 @@ Catalog with every argument: [docs/tools.md](docs/tools.md).
 
 ## Rules
 
-- Market data comes from the user. The server has no market-data source and no
-  vendor data; licensed curves and vols are never available server-side. Every
-  tool that takes market numbers requires a `market_data_source` declaration
-  (`user_pasted`, `user_file`, `engine_example`, `session`); there is no value
-  for invented data. The assistant will
-  never type, estimate, recall or invent market data for a trade: until the
-  user has pasted or dictated it, it says what is needed, in paste-able form,
-  and stops.
+- Market data comes from the user or from a cited source. The server has no
+  market-data source and no vendor data; licensed curves and vols are never
+  available server-side. Every tool that takes market numbers requires a
+  `market_data_source` declaration (`user_pasted`, `user_file`, `sourced`,
+  `engine_example`, `session`); there is no value for invented data. `sourced`
+  = obtained in the conversation from a trusted public publisher (central bank,
+  treasury, FRED, exchange, index administrator, regulator filing, fund sponsor;
+  any other site only after asking the user) or a data connector the user
+  connected, and requires `sources` (what, value, as_of, url or connector,
+  derived?), echoed in the result's `provenance`. The assistant will
+  never type, estimate, recall or invent market data for a trade: without
+  pasted or cited data, it says what is needed, in paste-able form, and stops.
 - Every result echoes the exact `request` sent and the engine's `response`
   verbatim, so any number can be replayed with `curl` against the same engine.
   Engine errors pass through unchanged (`400` request wrong, `422` unpriceable);
