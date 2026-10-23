@@ -13,6 +13,7 @@ tmp
 tests
 scripts/*
 !scripts/fetch_sources.py
+!scripts/issuer_scrub.py
 docs
 vendor
 .env
