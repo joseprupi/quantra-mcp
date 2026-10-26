@@ -1,7 +1,7 @@
 {
-  "engine_tag": "v0.12.0",
-  "engine_sha": "5b1c016739b1411d21423acfb15901d56b91f8c2",
-  "connector_sha": "04b747d",
+  "engine_tag": "v0.14.0",
+  "engine_sha": "9df97fb2c17a2963ec5f0604bbcdee2a88d40c1a",
+  "connector_sha": "083561a",
   "repos": {
     "engine": "https://github.com/joseprupi/quantraserver",
     "connector": "https://github.com/joseprupi/quantra-mcp"
@@ -46,43 +46,54 @@
     "expected_life_years": "structured-notes",
     "event_probabilities": "structured-notes",
     "correlation_sensitivity": "structured-notes",
-    "funding_dv01": "structured-notes"
+    "funding_dv01": "structured-notes",
+    "implied_dividend_yield": "option-quotes-to-surface",
+    "implied_funding_bp": "option-quotes-to-surface",
+    "implied_discount_factor": "option-quotes-to-surface",
+    "fit_residual_rmse": "option-quotes-to-surface",
+    "rmse_vol": "option-quotes-to-surface",
+    "max_abs_error_vol": "option-quotes-to-surface",
+    "butterfly_min_g": "option-quotes-to-surface",
+    "vanilla_repricing": "option-quotes-to-surface"
   },
   "files": {
-    "docs/http-api.md": 1435,
-    "docs/versioning.md": 854,
+    "docs/http-api.md": 1937,
+    "docs/versioning.md": 1025,
     "flatbuffers/fbs/cds_response.fbs": 25,
     "flatbuffers/fbs/common.fbs": 60,
     "flatbuffers/fbs/curve_query.fbs": 53,
-    "flatbuffers/fbs/enums.fbs": 450,
+    "flatbuffers/fbs/enums.fbs": 460,
     "flatbuffers/fbs/fra_response.fbs": 19,
+    "flatbuffers/fbs/option_quotes.fbs": 73,
     "flatbuffers/fbs/price_swaption_request.fbs": 29,
     "flatbuffers/fbs/pricing.fbs": 109,
     "flatbuffers/fbs/schedule.fbs": 30,
-    "flatbuffers/fbs/structured_note.fbs": 263,
+    "flatbuffers/fbs/structured_note.fbs": 285,
     "flatbuffers/fbs/swap_leg.fbs": 151,
     "flatbuffers/fbs/swaption.fbs": 40,
-    "flatbuffers/fbs/swaption_response.fbs": 97,
+    "flatbuffers/fbs/swaption_response.fbs": 103,
     "flatbuffers/fbs/term_structure.fbs": 436,
     "flatbuffers/fbs/vanilla_swap_response.fbs": 73,
     "flatbuffers/fbs/volatility.fbs": 231,
-    "src/common/calendar_overrides.h": 74,
+    "src/common/calendar_overrides.h": 77,
     "src/common/enum_convert.cpp": 406,
     "src/domain/swaption_rebump.h": 37,
     "src/evaluators/equity_option_evaluator.cpp": 280,
     "src/evaluators/fixed_rate_bond_evaluator.cpp": 117,
-    "src/evaluators/ois_swap_evaluator.cpp": 62,
-    "src/evaluators/structured_note_evaluator.cpp": 1356,
+    "src/evaluators/implied_forwards_evaluator.h": 194,
+    "src/evaluators/ois_swap_evaluator.cpp": 59,
+    "src/evaluators/structured_note_evaluator.cpp": 1354,
     "src/evaluators/swap_leg_pricer.cpp": 273,
     "src/evaluators/swaption_evaluator.cpp": 768,
-    "src/evaluators/swaption_evaluator.h": 212,
-    "src/evaluators/vanilla_swap_evaluator.cpp": 64,
+    "src/evaluators/swaption_evaluator.h": 215,
+    "src/evaluators/vanilla_swap_evaluator.cpp": 61,
+    "src/evaluators/vol_surface_calibration_evaluator.cpp": 756,
     "src/market/quanto_builder.cpp": 47,
-    "src/mc/path_engine.cpp": 201,
+    "src/mc/path_engine.cpp": 283,
     "src/parsers/schedule_parser.cpp": 129,
-    "src/parsers/term_structure_parser.cpp": 584,
-    "src/parsers/term_structure_point_parser.cpp": 740,
-    "tests/functional/CATALOG.md": 296
+    "src/parsers/term_structure_parser.cpp": 587,
+    "src/parsers/term_structure_point_parser.cpp": 767,
+    "tests/functional/CATALOG.md": 301
   },
   "connector_files": {
     "src/quantra_mcp/builders/bumps.py": 237,
@@ -100,12 +111,12 @@
         {
           "source": "engine",
           "path": "src/evaluators/vanilla_swap_evaluator.cpp",
-          "start": 19,
-          "end": 27,
+          "start": 18,
+          "end": 26,
           "sha256": "d124d57397320a68b156b8b4df3cba55ab8c209101d58ba979c7bd2c6fdc8a3f",
           "kind": "statement",
-          "ref": "src/evaluators/vanilla_swap_evaluator.cpp@v0.12.0:L19-L27",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/vanilla_swap_evaluator.cpp#L19-L27"
+          "ref": "src/evaluators/vanilla_swap_evaluator.cpp@v0.14.0:L18-L26",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/vanilla_swap_evaluator.cpp#L18-L26"
         },
         {
           "source": "engine",
@@ -114,18 +125,18 @@
           "end": 265,
           "sha256": "5db5f1d3f8b08fc98f9be4779ff0fa47f910962253ed0dd2d6faaa681b38b2d3",
           "kind": "statement",
-          "ref": "src/evaluators/swap_leg_pricer.cpp@v0.12.0:L250-L265",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/swap_leg_pricer.cpp#L250-L265"
+          "ref": "src/evaluators/swap_leg_pricer.cpp@v0.14.0:L250-L265",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/swap_leg_pricer.cpp#L250-L265"
         },
         {
           "source": "engine",
           "path": "src/evaluators/ois_swap_evaluator.cpp",
-          "start": 19,
-          "end": 27,
+          "start": 18,
+          "end": 26,
           "sha256": "773a3f3838b2616da88feb290023f46a61b267f7f8d7d14ea3f6958f3531bb87",
           "kind": "statement",
-          "ref": "src/evaluators/ois_swap_evaluator.cpp@v0.12.0:L19-L27",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/ois_swap_evaluator.cpp#L19-L27"
+          "ref": "src/evaluators/ois_swap_evaluator.cpp@v0.14.0:L18-L26",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/ois_swap_evaluator.cpp#L18-L26"
         },
         {
           "source": "engine",
@@ -134,8 +145,8 @@
           "end": 49,
           "sha256": "83354c2ce49b37d9aedcd9a3c16511c48cce93931de1f525c2044eaacd4e9310",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/vanilla_swap_response.fbs@v0.12.0:L27-L49",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/vanilla_swap_response.fbs#L27-L49"
+          "ref": "flatbuffers/fbs/vanilla_swap_response.fbs@v0.14.0:L27-L49",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/vanilla_swap_response.fbs#L27-L49"
         },
         {
           "source": "engine",
@@ -144,8 +155,8 @@
           "end": 9,
           "sha256": "d084a9b4fea5dc0a6b922c777ed5d197e9505d89dfe5866a6fb4f91e8e432178",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/swaption_response.fbs@v0.12.0:L8-L9",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/swaption_response.fbs#L8-L9"
+          "ref": "flatbuffers/fbs/swaption_response.fbs@v0.14.0:L8-L9",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/swaption_response.fbs#L8-L9"
         },
         {
           "source": "engine",
@@ -154,8 +165,8 @@
           "end": 252,
           "sha256": "4eb74d0096774887fbd846e4a76fabe3dc26f6c9bca887f6c65de259d97629a9",
           "kind": "statement",
-          "ref": "src/evaluators/equity_option_evaluator.cpp@v0.12.0:L242-L252",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/equity_option_evaluator.cpp#L242-L252"
+          "ref": "src/evaluators/equity_option_evaluator.cpp@v0.14.0:L242-L252",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/equity_option_evaluator.cpp#L242-L252"
         },
         {
           "source": "engine",
@@ -164,8 +175,8 @@
           "end": 92,
           "sha256": "77ccfa7c77723f3350669098c0afef841535f6895a72c954f3d4fdd9aa3105e0",
           "kind": "statement",
-          "ref": "src/evaluators/fixed_rate_bond_evaluator.cpp@v0.12.0:L85-L92",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/fixed_rate_bond_evaluator.cpp#L85-L92"
+          "ref": "src/evaluators/fixed_rate_bond_evaluator.cpp@v0.14.0:L85-L92",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/fixed_rate_bond_evaluator.cpp#L85-L92"
         },
         {
           "source": "engine",
@@ -174,8 +185,8 @@
           "end": 16,
           "sha256": "dab14f53c4bc730114e29f5b7a2e43f375d81108a2575225882705f047934f32",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/cds_response.fbs@v0.12.0:L6-L16",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/cds_response.fbs#L6-L16"
+          "ref": "flatbuffers/fbs/cds_response.fbs@v0.14.0:L6-L16",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/cds_response.fbs#L6-L16"
         },
         {
           "source": "engine",
@@ -184,8 +195,8 @@
           "end": 11,
           "sha256": "3878ebc395c8d896a53ab0ebf91f1e38bda48a1386b95bd3703843dfe370c653",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/fra_response.fbs@v0.12.0:L4-L11",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/fra_response.fbs#L4-L11"
+          "ref": "flatbuffers/fbs/fra_response.fbs@v0.14.0:L4-L11",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/fra_response.fbs#L4-L11"
         },
         {
           "source": "engine",
@@ -194,8 +205,8 @@
           "end": 80,
           "sha256": "0dcaa5de50710757a8baa21dfc9c85a0feb48597743a835d8921b90f6bd961bc",
           "kind": "field",
-          "ref": "flatbuffers/fbs/pricing.fbs@v0.12.0:L79-L80",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/pricing.fbs#L79-L80"
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.14.0:L79-L80",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/pricing.fbs#L79-L80"
         },
         {
           "source": "engine",
@@ -204,8 +215,8 @@
           "end": 83,
           "sha256": "9d6e78792aeac5f75baf7959260a8d4602ded332e503e4f567aa9f8150cf4e00",
           "kind": "field",
-          "ref": "flatbuffers/fbs/pricing.fbs@v0.12.0:L82-L83",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/pricing.fbs#L82-L83"
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.14.0:L82-L83",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/pricing.fbs#L82-L83"
         },
         {
           "source": "engine",
@@ -214,8 +225,8 @@
           "end": 106,
           "sha256": "7595d6114f1df0151cf4f42066436078e938a41e4a2485fe6423a5f6f7ab9324",
           "kind": "field",
-          "ref": "flatbuffers/fbs/swap_leg.fbs@v0.12.0:L101-L106",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/swap_leg.fbs#L101-L106"
+          "ref": "flatbuffers/fbs/swap_leg.fbs@v0.14.0:L101-L106",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/swap_leg.fbs#L101-L106"
         },
         {
           "source": "engine",
@@ -224,8 +235,8 @@
           "end": 10,
           "sha256": "0360e28b844bc66482240868daa8638486a20382ee82ed2b71aacdb5f9ca484d",
           "kind": "field",
-          "ref": "flatbuffers/fbs/price_swaption_request.fbs@v0.12.0:L7-L10",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/price_swaption_request.fbs#L7-L10"
+          "ref": "flatbuffers/fbs/price_swaption_request.fbs@v0.14.0:L7-L10",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/price_swaption_request.fbs#L7-L10"
         }
       ],
       "gaps": [
@@ -243,22 +254,22 @@
         {
           "source": "engine",
           "path": "src/evaluators/vanilla_swap_evaluator.cpp",
-          "start": 29,
-          "end": 34,
+          "start": 28,
+          "end": 33,
           "sha256": "8def037f9429a5e54630d964fea6eda29cfac0f81bf5114ee11d6ea56a534c7b",
           "kind": "statement",
-          "ref": "src/evaluators/vanilla_swap_evaluator.cpp@v0.12.0:L29-L34",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/vanilla_swap_evaluator.cpp#L29-L34"
+          "ref": "src/evaluators/vanilla_swap_evaluator.cpp@v0.14.0:L28-L33",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/vanilla_swap_evaluator.cpp#L28-L33"
         },
         {
           "source": "engine",
           "path": "src/evaluators/vanilla_swap_evaluator.cpp",
-          "start": 36,
-          "end": 43,
+          "start": 35,
+          "end": 42,
           "sha256": "e626cebb54a21b1766f830d1b4698ccec8f257f51a794ee631fb68795f70d72f",
           "kind": "statement",
-          "ref": "src/evaluators/vanilla_swap_evaluator.cpp@v0.12.0:L36-L43",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/vanilla_swap_evaluator.cpp#L36-L43"
+          "ref": "src/evaluators/vanilla_swap_evaluator.cpp@v0.14.0:L35-L42",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/vanilla_swap_evaluator.cpp#L35-L42"
         },
         {
           "source": "engine",
@@ -267,28 +278,28 @@
           "end": 45,
           "sha256": "9c9297f0853d834a4be2405ce5747c16576a0cd89cc14d0d9f95d0e66abc3c91",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/vanilla_swap_response.fbs@v0.12.0:L31-L45",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/vanilla_swap_response.fbs#L31-L45"
+          "ref": "flatbuffers/fbs/vanilla_swap_response.fbs@v0.14.0:L31-L45",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/vanilla_swap_response.fbs#L31-L45"
         },
         {
           "source": "engine",
           "path": "src/evaluators/ois_swap_evaluator.cpp",
-          "start": 29,
-          "end": 42,
+          "start": 28,
+          "end": 41,
           "sha256": "0425cfbd019aef4b36c32dd6943a6644a923a3c6fb8781c20406868661c84d2c",
           "kind": "statement",
-          "ref": "src/evaluators/ois_swap_evaluator.cpp@v0.12.0:L29-L42",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/ois_swap_evaluator.cpp#L29-L42"
+          "ref": "src/evaluators/ois_swap_evaluator.cpp@v0.14.0:L28-L41",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/ois_swap_evaluator.cpp#L28-L41"
         },
         {
           "source": "engine",
           "path": "docs/versioning.md",
-          "start": 244,
-          "end": 246,
+          "start": 415,
+          "end": 417,
           "sha256": "90175f37e404f4b2180df4bcdfce158eb5d853bb392a12bf68619dc8dc7637b7",
           "kind": "statement",
-          "ref": "docs/versioning.md@v0.12.0:L244-L246",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L244-L246"
+          "ref": "docs/versioning.md@v0.14.0:L415-L417",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L415-L417"
         },
         {
           "source": "engine",
@@ -297,8 +308,8 @@
           "end": 12,
           "sha256": "9d571d436d5515e8fcb78e5b5eb4ab24304af0b9e6b9c8ce20f2fcae79b79282",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/cds_response.fbs@v0.12.0:L8-L12",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/cds_response.fbs#L8-L12"
+          "ref": "flatbuffers/fbs/cds_response.fbs@v0.14.0:L8-L12",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/cds_response.fbs#L8-L12"
         },
         {
           "source": "engine",
@@ -307,8 +318,8 @@
           "end": 7,
           "sha256": "d79f4b61ad63ebd1ae58c15a18914c4f354e3ff819b5096edd66d216e1434366",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/fra_response.fbs@v0.12.0:L6-L7",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/fra_response.fbs#L6-L7"
+          "ref": "flatbuffers/fbs/fra_response.fbs@v0.14.0:L6-L7",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/fra_response.fbs#L6-L7"
         },
         {
           "source": "engine",
@@ -317,8 +328,8 @@
           "end": 16,
           "sha256": "5b9d430eb8f52ab79741d598b5e8015bcbdc71a4a783e4cfccf751ce33881c62",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/swaption_response.fbs@v0.12.0:L13-L16",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/swaption_response.fbs#L13-L16"
+          "ref": "flatbuffers/fbs/swaption_response.fbs@v0.14.0:L13-L16",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/swaption_response.fbs#L13-L16"
         },
         {
           "source": "engine",
@@ -327,8 +338,8 @@
           "end": 639,
           "sha256": "9760981353d15de3ddf913dab7caa563be4512849cf9099295cb8bac5ecd76e9",
           "kind": "statement",
-          "ref": "src/evaluators/swaption_evaluator.cpp@v0.12.0:L636-L639",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/swaption_evaluator.cpp#L636-L639"
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.14.0:L636-L639",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/swaption_evaluator.cpp#L636-L639"
         },
         {
           "source": "engine",
@@ -337,8 +348,8 @@
           "end": 66,
           "sha256": "aff5775ced6ec43166d4c6dee14839463b755374d56f4bd77f631fcdf4685a75",
           "kind": "field",
-          "ref": "flatbuffers/fbs/pricing.fbs@v0.12.0:L62-L66",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/pricing.fbs#L62-L66"
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.14.0:L62-L66",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/pricing.fbs#L62-L66"
         }
       ],
       "gaps": [
@@ -356,22 +367,22 @@
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1371,
-          "end": 1383,
+          "start": 1873,
+          "end": 1885,
           "sha256": "ca3def52612be72abcf72810a6b5a72677f9c76cd300dd6b20ed4199ce5044f2",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1371-L1383",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1371-L1383"
+          "ref": "docs/http-api.md@v0.14.0:L1873-L1885",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1873-L1885"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1385,
-          "end": 1406,
+          "start": 1887,
+          "end": 1908,
           "sha256": "280aaaddb818ff4acca4f95bdcbf5ee0ccbf6f21bbd8ebdf2e18e382723f9302",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1385-L1406",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1385-L1406"
+          "ref": "docs/http-api.md@v0.14.0:L1887-L1908",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1887-L1908"
         },
         {
           "source": "engine",
@@ -380,8 +391,8 @@
           "end": 27,
           "sha256": "eb81c4d1de44e40f8fd641d8b49b9b6bd21054c64192729d1ce80aab930a5ff2",
           "kind": "statement",
-          "ref": "src/domain/swaption_rebump.h@v0.12.0:L16-L27",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/domain/swaption_rebump.h#L16-L27"
+          "ref": "src/domain/swaption_rebump.h@v0.14.0:L16-L27",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/domain/swaption_rebump.h#L16-L27"
         },
         {
           "source": "engine",
@@ -390,8 +401,8 @@
           "end": 104,
           "sha256": "26d5bc2f7ab40541205706ab00ea7b01f58b262f455e569b73620142bfa55cdb",
           "kind": "statement",
-          "ref": "src/evaluators/swaption_evaluator.h@v0.12.0:L91-L104",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/swaption_evaluator.h#L91-L104"
+          "ref": "src/evaluators/swaption_evaluator.h@v0.14.0:L91-L104",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/swaption_evaluator.h#L91-L104"
         },
         {
           "source": "engine",
@@ -400,8 +411,8 @@
           "end": 708,
           "sha256": "7688d4d8eb05dbc087cce93d8322636af3205a61486e0e966cad7d0913d960b1",
           "kind": "statement",
-          "ref": "src/evaluators/swaption_evaluator.cpp@v0.12.0:L696-L708",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/swaption_evaluator.cpp#L696-L708"
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.14.0:L696-L708",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/swaption_evaluator.cpp#L696-L708"
         },
         {
           "source": "engine",
@@ -410,28 +421,28 @@
           "end": 693,
           "sha256": "d6867a04dacfb0e240bb1dc8ecdc89058ef419f3f8760d513793d31f0bcce628",
           "kind": "statement",
-          "ref": "src/evaluators/swaption_evaluator.cpp@v0.12.0:L650-L693",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/swaption_evaluator.cpp#L650-L693"
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.14.0:L650-L693",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/swaption_evaluator.cpp#L650-L693"
         },
         {
           "source": "engine",
           "path": "docs/versioning.md",
-          "start": 461,
-          "end": 477,
+          "start": 632,
+          "end": 648,
           "sha256": "85caac98f0b1e38c8cf289573861aba804410be69ea13735b368c74922983fda",
           "kind": "statement",
-          "ref": "docs/versioning.md@v0.12.0:L461-L477",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L461-L477"
+          "ref": "docs/versioning.md@v0.14.0:L632-L648",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L632-L648"
         },
         {
           "source": "engine",
           "path": "docs/versioning.md",
-          "start": 394,
-          "end": 411,
+          "start": 565,
+          "end": 582,
           "sha256": "3bffafc9077b097f741ef707a7b9848703357389c2521a0c4dd70ce1b04a702b",
           "kind": "statement",
-          "ref": "docs/versioning.md@v0.12.0:L394-L411",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L394-L411"
+          "ref": "docs/versioning.md@v0.14.0:L565-L582",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L565-L582"
         },
         {
           "source": "engine",
@@ -440,8 +451,8 @@
           "end": 49,
           "sha256": "2c0ac9d8cd1513e909192d4f5a4deefeca8fd52d7baac1e117d52e70633cb622",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/swaption_response.fbs@v0.12.0:L19-L49",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/swaption_response.fbs#L19-L49"
+          "ref": "flatbuffers/fbs/swaption_response.fbs@v0.14.0:L19-L49",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/swaption_response.fbs#L19-L49"
         },
         {
           "source": "engine",
@@ -450,8 +461,8 @@
           "end": 252,
           "sha256": "c6f5d4b39c5b14f1431654c962b388d04e5c59b34facf00bbe8509d9e81204e4",
           "kind": "statement",
-          "ref": "src/evaluators/equity_option_evaluator.cpp@v0.12.0:L248-L252",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/equity_option_evaluator.cpp#L248-L252"
+          "ref": "src/evaluators/equity_option_evaluator.cpp@v0.14.0:L248-L252",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/equity_option_evaluator.cpp#L248-L252"
         },
         {
           "source": "engine",
@@ -460,8 +471,8 @@
           "end": 104,
           "sha256": "2b5fec935a9c6f3ac31c26bf2ccba253c1237eceb3e21d6322070be9ff43ab9e",
           "kind": "statement",
-          "ref": "src/evaluators/fixed_rate_bond_evaluator.cpp@v0.12.0:L88-L104",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/fixed_rate_bond_evaluator.cpp#L88-L104"
+          "ref": "src/evaluators/fixed_rate_bond_evaluator.cpp@v0.14.0:L88-L104",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/fixed_rate_bond_evaluator.cpp#L88-L104"
         },
         {
           "source": "engine",
@@ -470,8 +481,8 @@
           "end": 75,
           "sha256": "e2b59a200a17ec6124ef9aaf142cad9e13677d2437e36a38c879bb5d82f0456c",
           "kind": "field",
-          "ref": "flatbuffers/fbs/pricing.fbs@v0.12.0:L57-L75",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/pricing.fbs#L57-L75"
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.14.0:L57-L75",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/pricing.fbs#L57-L75"
         }
       ],
       "gaps": [
@@ -490,22 +501,22 @@
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1371,
-          "end": 1383,
+          "start": 1873,
+          "end": 1885,
           "sha256": "ca3def52612be72abcf72810a6b5a72677f9c76cd300dd6b20ed4199ce5044f2",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1371-L1383",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1371-L1383"
+          "ref": "docs/http-api.md@v0.14.0:L1873-L1885",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1873-L1885"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1394,
-          "end": 1402,
+          "start": 1896,
+          "end": 1904,
           "sha256": "a8d7e9b9f1afdd3e2972ef357577bc066ce8af7cbd06ea98d7f48efd1597cc74",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1394-L1402",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1394-L1402"
+          "ref": "docs/http-api.md@v0.14.0:L1896-L1904",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1896-L1904"
         },
         {
           "source": "engine",
@@ -514,8 +525,8 @@
           "end": 708,
           "sha256": "cf9feecb0678ccb876c54da3cb4d4c3f91fe1f54e0271a9b6c6b399ab3c75a18",
           "kind": "statement",
-          "ref": "src/evaluators/swaption_evaluator.cpp@v0.12.0:L707-L708",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/swaption_evaluator.cpp#L707-L708"
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.14.0:L707-L708",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/swaption_evaluator.cpp#L707-L708"
         },
         {
           "source": "engine",
@@ -524,8 +535,8 @@
           "end": 26,
           "sha256": "0f37581ee00343b818baf2c7676c85b9cef610e2b70e0435480b19f0b7b14d04",
           "kind": "statement",
-          "ref": "src/domain/swaption_rebump.h@v0.12.0:L25-L26",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/domain/swaption_rebump.h#L25-L26"
+          "ref": "src/domain/swaption_rebump.h@v0.14.0:L25-L26",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/domain/swaption_rebump.h#L25-L26"
         },
         {
           "source": "engine",
@@ -534,8 +545,8 @@
           "end": 99,
           "sha256": "94205b283bed18d000eebbafd04b27c8c57327aba298a0883059d2d51d1e963a",
           "kind": "statement",
-          "ref": "src/evaluators/swaption_evaluator.h@v0.12.0:L99-L99",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/swaption_evaluator.h#L99-L99"
+          "ref": "src/evaluators/swaption_evaluator.h@v0.14.0:L99-L99",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/swaption_evaluator.h#L99-L99"
         },
         {
           "source": "engine",
@@ -544,18 +555,18 @@
           "end": 58,
           "sha256": "efe5ffb04ac38e0c5589ce0b636a15e3cafafce0de61dee0a6d13a03ebdb0950",
           "kind": "statement",
-          "ref": "src/evaluators/swaption_evaluator.h@v0.12.0:L56-L58",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/swaption_evaluator.h#L56-L58"
+          "ref": "src/evaluators/swaption_evaluator.h@v0.14.0:L56-L58",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/swaption_evaluator.h#L56-L58"
         },
         {
           "source": "engine",
           "path": "docs/versioning.md",
-          "start": 479,
-          "end": 489,
+          "start": 650,
+          "end": 660,
           "sha256": "cf6f19cde38e65f150bdd5d9fc315057cd9a96646af56138e033e60d6e055aae",
           "kind": "statement",
-          "ref": "docs/versioning.md@v0.12.0:L479-L489",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L479-L489"
+          "ref": "docs/versioning.md@v0.14.0:L650-L660",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L650-L660"
         },
         {
           "source": "engine",
@@ -564,8 +575,8 @@
           "end": 677,
           "sha256": "ad59b01a33e3080d5562c97c952882e188e054bfbf502c27198617d955900d89",
           "kind": "statement",
-          "ref": "src/evaluators/swaption_evaluator.cpp@v0.12.0:L677-L677",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/swaption_evaluator.cpp#L677-L677"
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.14.0:L677-L677",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/swaption_evaluator.cpp#L677-L677"
         },
         {
           "source": "engine",
@@ -574,18 +585,18 @@
           "end": 251,
           "sha256": "53001a9413ff33dd06d15c28dbdf19831ef99130edbe8a8d9a6dea547e747bd3",
           "kind": "statement",
-          "ref": "src/evaluators/equity_option_evaluator.cpp@v0.12.0:L251-L251",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/equity_option_evaluator.cpp#L251-L251"
+          "ref": "src/evaluators/equity_option_evaluator.cpp@v0.14.0:L251-L251",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/equity_option_evaluator.cpp#L251-L251"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1408,
-          "end": 1420,
+          "start": 1910,
+          "end": 1922,
           "sha256": "63c532e2d8c378bf4bf59f0a418d42244feef061c83f669a564d7c2d47d19601",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1408-L1420",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1408-L1420"
+          "ref": "docs/http-api.md@v0.14.0:L1910-L1922",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1910-L1922"
         },
         {
           "source": "engine",
@@ -594,8 +605,8 @@
           "end": 74,
           "sha256": "97b404702011fb65ddccec599acfb21163023c9291f225d41e8989caab4831b7",
           "kind": "field",
-          "ref": "flatbuffers/fbs/pricing.fbs@v0.12.0:L62-L74",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/pricing.fbs#L62-L74"
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.14.0:L62-L74",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/pricing.fbs#L62-L74"
         }
       ],
       "gaps": [
@@ -617,18 +628,18 @@
           "end": 434,
           "sha256": "3a4e8190d2b44bdb5c2d6240b83f3496c448ede9a9a6af28b96b36ddc5209468",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/term_structure.fbs@v0.12.0:L422-L434",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/term_structure.fbs#L422-L434"
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.14.0:L422-L434",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/term_structure.fbs#L422-L434"
         },
         {
           "source": "engine",
           "path": "docs/versioning.md",
-          "start": 614,
-          "end": 634,
+          "start": 785,
+          "end": 805,
           "sha256": "14c85acaea4f89461c71ebe671e4c390e0811cb2273aa708e393de8675ace5c4",
           "kind": "statement",
-          "ref": "docs/versioning.md@v0.12.0:L614-L634",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L614-L634"
+          "ref": "docs/versioning.md@v0.14.0:L785-L805",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L785-L805"
         },
         {
           "source": "engine",
@@ -637,8 +648,8 @@
           "end": 29,
           "sha256": "77d716ad023167e734e1d373b6a1bf312bd7872947a923322a18a19c1f77eeab",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/enums.fbs@v0.12.0:L22-L29",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L22-L29"
+          "ref": "flatbuffers/fbs/enums.fbs@v0.14.0:L22-L29",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/enums.fbs#L22-L29"
         },
         {
           "source": "engine",
@@ -647,8 +658,8 @@
           "end": 415,
           "sha256": "64d249707995d484780dc29059c4148b52df272198410cc90f5e675a1f734ee9",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/term_structure.fbs@v0.12.0:L400-L415",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/term_structure.fbs#L400-L415"
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.14.0:L400-L415",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/term_structure.fbs#L400-L415"
         },
         {
           "source": "engine",
@@ -657,18 +668,18 @@
           "end": 24,
           "sha256": "9268011dfb74cc45fb6201e6e71cd1121c2afb5c329aaa58a5b2d9cd45e1999c",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L22-L24",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L22-L24"
+          "ref": "docs/http-api.md@v0.14.0:L22-L24",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L22-L24"
         },
         {
           "source": "engine",
           "path": "docs/versioning.md",
-          "start": 550,
-          "end": 569,
+          "start": 721,
+          "end": 740,
           "sha256": "9b99615766c841dee2bd956781cf4ee8f3499b5745e6870ffb59fc8afb1af1ec",
           "kind": "statement",
-          "ref": "docs/versioning.md@v0.12.0:L550-L569",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L550-L569"
+          "ref": "docs/versioning.md@v0.14.0:L721-L740",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L721-L740"
         },
         {
           "source": "engine",
@@ -677,8 +688,8 @@
           "end": 134,
           "sha256": "ec273084dad4fc0a11d21220a0626ec612738ec7d26f73e68ad44868d2972a44",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/term_structure.fbs@v0.12.0:L119-L134",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/term_structure.fbs#L119-L134"
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.14.0:L119-L134",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/term_structure.fbs#L119-L134"
         },
         {
           "source": "engine",
@@ -687,68 +698,68 @@
           "end": 89,
           "sha256": "abf3ad5d17b3b68efc08234f63b588b264381ad5ce6fee0c77d0adeefa703916",
           "kind": "statement",
-          "ref": "src/parsers/term_structure_parser.cpp@v0.12.0:L79-L89",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_parser.cpp#L79-L89"
+          "ref": "src/parsers/term_structure_parser.cpp@v0.14.0:L79-L89",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_parser.cpp#L79-L89"
         },
         {
           "source": "engine",
           "path": "src/parsers/term_structure_parser.cpp",
           "start": 317,
-          "end": 344,
-          "sha256": "e67f3829caeb009a1ae8648faa33d3944f0c3d0ad43f2fa6a9b14eb2844cf935",
+          "end": 347,
+          "sha256": "d245d09ff2baae566b383e0ed042573657f573bcd8150c8e07cc4490b0ff0ed6",
           "kind": "statement",
-          "ref": "src/parsers/term_structure_parser.cpp@v0.12.0:L317-L344",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_parser.cpp#L317-L344"
+          "ref": "src/parsers/term_structure_parser.cpp@v0.14.0:L317-L347",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_parser.cpp#L317-L347"
         },
         {
           "source": "engine",
           "path": "src/parsers/term_structure_parser.cpp",
-          "start": 356,
-          "end": 369,
+          "start": 359,
+          "end": 372,
           "sha256": "94dfc8662d9e66c3ed8ca72ba13f2f84dab9503c15df7dfe866a26615f44169b",
           "kind": "statement",
-          "ref": "src/parsers/term_structure_parser.cpp@v0.12.0:L356-L369",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_parser.cpp#L356-L369"
+          "ref": "src/parsers/term_structure_parser.cpp@v0.14.0:L359-L372",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_parser.cpp#L359-L372"
         },
         {
           "source": "engine",
           "path": "src/parsers/term_structure_parser.cpp",
-          "start": 424,
-          "end": 438,
+          "start": 427,
+          "end": 441,
           "sha256": "7f50ffb47cf8b9d4484034faa28d6533cec1cca6597d1d11f398ac0743693601",
           "kind": "statement",
-          "ref": "src/parsers/term_structure_parser.cpp@v0.12.0:L424-L438",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_parser.cpp#L424-L438"
+          "ref": "src/parsers/term_structure_parser.cpp@v0.14.0:L427-L441",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_parser.cpp#L427-L441"
         },
         {
           "source": "engine",
           "path": "src/parsers/term_structure_parser.cpp",
-          "start": 442,
-          "end": 457,
+          "start": 445,
+          "end": 460,
           "sha256": "f7b1397670ff20d08c47dc10a3706bfb9ce68887dfa8865f75df430fc17e8b21",
           "kind": "statement",
-          "ref": "src/parsers/term_structure_parser.cpp@v0.12.0:L442-L457",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_parser.cpp#L442-L457"
+          "ref": "src/parsers/term_structure_parser.cpp@v0.14.0:L445-L460",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_parser.cpp#L445-L460"
         },
         {
           "source": "engine",
           "path": "src/parsers/term_structure_point_parser.cpp",
-          "start": 376,
-          "end": 411,
+          "start": 403,
+          "end": 438,
           "sha256": "3146af0b5bcffaf0b2674d501913923e54abbeb72fc8f136b339c703ab2f43f2",
           "kind": "statement",
-          "ref": "src/parsers/term_structure_point_parser.cpp@v0.12.0:L376-L411",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_point_parser.cpp#L376-L411"
+          "ref": "src/parsers/term_structure_point_parser.cpp@v0.14.0:L403-L438",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_point_parser.cpp#L403-L438"
         },
         {
           "source": "engine",
           "path": "src/parsers/term_structure_point_parser.cpp",
-          "start": 267,
-          "end": 273,
+          "start": 294,
+          "end": 300,
           "sha256": "c1aa82c5f5753200887efc93557c0e6ac01005a35cbfaee634f24f92903091e3",
           "kind": "statement",
-          "ref": "src/parsers/term_structure_point_parser.cpp@v0.12.0:L267-L273",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_point_parser.cpp#L267-L273"
+          "ref": "src/parsers/term_structure_point_parser.cpp@v0.14.0:L294-L300",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_point_parser.cpp#L294-L300"
         },
         {
           "source": "engine",
@@ -757,8 +768,8 @@
           "end": 434,
           "sha256": "71c9840923afc7f104de6d141e41337f3d9d0e365ea4fc71fc5c62011939fbc4",
           "kind": "field",
-          "ref": "flatbuffers/fbs/term_structure.fbs@v0.12.0:L423-L434",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/term_structure.fbs#L423-L434"
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.14.0:L423-L434",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/term_structure.fbs#L423-L434"
         }
       ],
       "gaps": [
@@ -780,8 +791,8 @@
           "end": 219,
           "sha256": "7b162e200733879a461bc53f0903a03181af68f4076e30d1957b92ddef63f55a",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/term_structure.fbs@v0.12.0:L205-L219",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/term_structure.fbs#L205-L219"
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.14.0:L205-L219",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/term_structure.fbs#L205-L219"
         },
         {
           "source": "engine",
@@ -790,8 +801,8 @@
           "end": 234,
           "sha256": "36fdfbce37b40f73e9ea2e1417095b538a037d11f52139101a9f87917285e28d",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/term_structure.fbs@v0.12.0:L221-L234",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/term_structure.fbs#L221-L234"
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.14.0:L221-L234",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/term_structure.fbs#L221-L234"
         },
         {
           "source": "engine",
@@ -800,18 +811,18 @@
           "end": 253,
           "sha256": "5ec1d295def6f3bc73d41f00dbd48f71875bfefec178663fb20e87faaff9a741",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/term_structure.fbs@v0.12.0:L236-L253",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/term_structure.fbs#L236-L253"
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.14.0:L236-L253",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/term_structure.fbs#L236-L253"
         },
         {
           "source": "engine",
           "path": "docs/versioning.md",
-          "start": 622,
-          "end": 634,
+          "start": 793,
+          "end": 805,
           "sha256": "a6bf4724fdb40d797689e484ade1e2cd9c3d367b876dcd0e86b2d4299bcc2b7a",
           "kind": "statement",
-          "ref": "docs/versioning.md@v0.12.0:L622-L634",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L622-L634"
+          "ref": "docs/versioning.md@v0.14.0:L793-L805",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L793-L805"
         },
         {
           "source": "engine",
@@ -820,8 +831,8 @@
           "end": 42,
           "sha256": "08fe6b8b28eee88ac76011cd2c3068fd2690dfdad14f1a4adf80c9834febf88a",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/curve_query.fbs@v0.12.0:L24-L42",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/curve_query.fbs#L24-L42"
+          "ref": "flatbuffers/fbs/curve_query.fbs@v0.14.0:L24-L42",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/curve_query.fbs#L24-L42"
         },
         {
           "source": "engine",
@@ -830,8 +841,8 @@
           "end": 45,
           "sha256": "1740318338fdaa15fa819445ca719583dd580471ad7fd23b96529c9420bdc5c2",
           "kind": "field",
-          "ref": "flatbuffers/fbs/enums.fbs@v0.12.0:L37-L45",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L37-L45"
+          "ref": "flatbuffers/fbs/enums.fbs@v0.14.0:L37-L45",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/enums.fbs#L37-L45"
         }
       ],
       "gaps": [
@@ -852,28 +863,28 @@
           "end": 38,
           "sha256": "9c3c15ff2131e71e7f00a8f0150495799868e84e7b629d005a5369f9442c25f9",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/swaption.fbs@v0.12.0:L20-L38",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/swaption.fbs#L20-L38"
+          "ref": "flatbuffers/fbs/swaption.fbs@v0.14.0:L20-L38",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/swaption.fbs#L20-L38"
         },
         {
           "source": "engine",
           "path": "flatbuffers/fbs/enums.fbs",
-          "start": 240,
-          "end": 244,
+          "start": 250,
+          "end": 254,
           "sha256": "5af340fd0ca80e492ddab25c50450e1faa0a239ccf6f83a602167dcf97e4e7e8",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/enums.fbs@v0.12.0:L240-L244",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L240-L244"
+          "ref": "flatbuffers/fbs/enums.fbs@v0.14.0:L250-L254",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/enums.fbs#L250-L254"
         },
         {
           "source": "engine",
           "path": "flatbuffers/fbs/enums.fbs",
-          "start": 246,
-          "end": 252,
+          "start": 256,
+          "end": 262,
           "sha256": "5cd0ee1bca1e05f63a61db28f0deb99807da334b4887d7a3d9aac2ade3d83241",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/enums.fbs@v0.12.0:L246-L252",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L246-L252"
+          "ref": "flatbuffers/fbs/enums.fbs@v0.14.0:L256-L262",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/enums.fbs#L256-L262"
         },
         {
           "source": "engine",
@@ -882,8 +893,8 @@
           "end": 229,
           "sha256": "eb2209fac6b435f021557440d8798b6017d24ee092ae31664c3a1da4ea8de119",
           "kind": "statement",
-          "ref": "src/common/enum_convert.cpp@v0.12.0:L217-L229",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/common/enum_convert.cpp#L217-L229"
+          "ref": "src/common/enum_convert.cpp@v0.14.0:L217-L229",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/common/enum_convert.cpp#L217-L229"
         },
         {
           "source": "engine",
@@ -892,8 +903,8 @@
           "end": 170,
           "sha256": "9459195f1263f85664be62cfc30f4a7443bc97f19bb77cce75b116c94956a8e3",
           "kind": "statement",
-          "ref": "src/evaluators/swaption_evaluator.cpp@v0.12.0:L156-L170",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/swaption_evaluator.cpp#L156-L170"
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.14.0:L156-L170",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/swaption_evaluator.cpp#L156-L170"
         },
         {
           "source": "engine",
@@ -902,8 +913,8 @@
           "end": 83,
           "sha256": "9d6e78792aeac5f75baf7959260a8d4602ded332e503e4f567aa9f8150cf4e00",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/pricing.fbs@v0.12.0:L82-L83",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/pricing.fbs#L82-L83"
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.14.0:L82-L83",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/pricing.fbs#L82-L83"
         },
         {
           "source": "engine",
@@ -912,8 +923,8 @@
           "end": 29,
           "sha256": "ee56349862c70e6fee4f4076818e5796a0d664b0217e0ca2c1f4003898784655",
           "kind": "field",
-          "ref": "flatbuffers/fbs/swaption.fbs@v0.12.0:L25-L29",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/swaption.fbs#L25-L29"
+          "ref": "flatbuffers/fbs/swaption.fbs@v0.14.0:L25-L29",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/swaption.fbs#L25-L29"
         }
       ],
       "gaps": [
@@ -931,12 +942,12 @@
         {
           "source": "engine",
           "path": "flatbuffers/fbs/enums.fbs",
-          "start": 260,
-          "end": 265,
+          "start": 270,
+          "end": 275,
           "sha256": "d7595460f6b7c0f3e060d6937b59c9053e559059a7bfa6c790703245325f3053",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/enums.fbs@v0.12.0:L260-L265",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L260-L265"
+          "ref": "flatbuffers/fbs/enums.fbs@v0.14.0:L270-L275",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/enums.fbs#L270-L275"
         },
         {
           "source": "engine",
@@ -945,8 +956,8 @@
           "end": 43,
           "sha256": "5b8d854607c7848e87b62c1c92342fd90b3689b499bda7e0e2ae2b7d862fe2ca",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/volatility.fbs@v0.12.0:L27-L43",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/volatility.fbs#L27-L43"
+          "ref": "flatbuffers/fbs/volatility.fbs@v0.14.0:L27-L43",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/volatility.fbs#L27-L43"
         },
         {
           "source": "engine",
@@ -955,8 +966,8 @@
           "end": 55,
           "sha256": "c94f50b65640ac6fc1af0b118e5f9b0a19aa2baf5d30dc6a9a67ef3acd1766cd",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/volatility.fbs@v0.12.0:L45-L55",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/volatility.fbs#L45-L55"
+          "ref": "flatbuffers/fbs/volatility.fbs@v0.14.0:L45-L55",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/volatility.fbs#L45-L55"
         },
         {
           "source": "engine",
@@ -965,8 +976,8 @@
           "end": 686,
           "sha256": "1dcfb00f1d32e4a993d9ce8627e70752c25f003681329f088e786f27290112d6",
           "kind": "statement",
-          "ref": "src/evaluators/swaption_evaluator.cpp@v0.12.0:L671-L686",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/swaption_evaluator.cpp#L671-L686"
+          "ref": "src/evaluators/swaption_evaluator.cpp@v0.14.0:L671-L686",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/swaption_evaluator.cpp#L671-L686"
         },
         {
           "source": "engine",
@@ -975,8 +986,8 @@
           "end": 404,
           "sha256": "247f98ef04a77a44b2293016f6978006e3ab71deba0c20ff149d46b1d63bfc00",
           "kind": "statement",
-          "ref": "src/common/enum_convert.cpp@v0.12.0:L395-L404",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/common/enum_convert.cpp#L395-L404"
+          "ref": "src/common/enum_convert.cpp@v0.14.0:L395-L404",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/common/enum_convert.cpp#L395-L404"
         },
         {
           "source": "engine",
@@ -985,18 +996,18 @@
           "end": 11,
           "sha256": "6d96cb3956827a234e77b7fa878222dabdac2b08d51d57bc2e55842f9ea6330b",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/swaption_response.fbs@v0.12.0:L10-L11",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/swaption_response.fbs#L10-L11"
+          "ref": "flatbuffers/fbs/swaption_response.fbs@v0.14.0:L10-L11",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/swaption_response.fbs#L10-L11"
         },
         {
           "source": "engine",
           "path": "tests/functional/CATALOG.md",
-          "start": 105,
-          "end": 106,
+          "start": 106,
+          "end": 107,
           "sha256": "e180d90de3313d82b6f848bf975a93c767bfb35278e929780d242fc77ecce24c",
           "kind": "statement",
-          "ref": "tests/functional/CATALOG.md@v0.12.0:L105-L106",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/tests/functional/CATALOG.md#L105-L106"
+          "ref": "tests/functional/CATALOG.md@v0.14.0:L106-L107",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/tests/functional/CATALOG.md#L106-L107"
         },
         {
           "source": "engine",
@@ -1005,8 +1016,8 @@
           "end": 39,
           "sha256": "70ccbb1ad7a0e3a702d49a3b31b4b74f1263d472235dcef0d0eec9775a45c6d6",
           "kind": "field",
-          "ref": "flatbuffers/fbs/volatility.fbs@v0.12.0:L34-L39",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/volatility.fbs#L34-L39"
+          "ref": "flatbuffers/fbs/volatility.fbs@v0.14.0:L34-L39",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/volatility.fbs#L34-L39"
         }
       ],
       "gaps": [
@@ -1028,8 +1039,8 @@
           "end": 116,
           "sha256": "523fc48ef47518a812c604dcfef03d3812d806ff923059fff2d38a00483116f9",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/enums.fbs@v0.12.0:L107-L116",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L107-L116"
+          "ref": "flatbuffers/fbs/enums.fbs@v0.14.0:L107-L116",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/enums.fbs#L107-L116"
         },
         {
           "source": "engine",
@@ -1038,8 +1049,8 @@
           "end": 145,
           "sha256": "e6b30fabbeaf2aa5105075a2943fc0fe063c016a31edd59ff8d033b9b70f2a83",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/enums.fbs@v0.12.0:L135-L145",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L135-L145"
+          "ref": "flatbuffers/fbs/enums.fbs@v0.14.0:L135-L145",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/enums.fbs#L135-L145"
         },
         {
           "source": "engine",
@@ -1048,58 +1059,58 @@
           "end": 28,
           "sha256": "f9510dc5e4826a41e154f2cca8b6aef024b3434c53296183aaa63b2ce9eec4bf",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/schedule.fbs@v0.12.0:L14-L28",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/schedule.fbs#L14-L28"
+          "ref": "flatbuffers/fbs/schedule.fbs@v0.14.0:L14-L28",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/schedule.fbs#L14-L28"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 77,
-          "end": 98,
+          "start": 85,
+          "end": 106,
           "sha256": "a0ba2e91d67654b260e684b1105c15139368e350f5de4ec8c209b2b1af9df77f",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L77-L98",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L77-L98"
+          "ref": "docs/http-api.md@v0.14.0:L85-L106",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L85-L106"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 143,
-          "end": 155,
+          "start": 151,
+          "end": 163,
           "sha256": "4f45af60dcc0e30e500515f20ed6662d0ff2f8fcbcbef34482cd6b8f5318e7a1",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L143-L155",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L143-L155"
+          "ref": "docs/http-api.md@v0.14.0:L151-L163",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L151-L163"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 157,
-          "end": 177,
+          "start": 165,
+          "end": 185,
           "sha256": "af7b7cfff6b39842af959aee2ee3a1701e2fffd5b5104f79d8cf9571375ae380",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L157-L177",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L157-L177"
+          "ref": "docs/http-api.md@v0.14.0:L165-L185",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L165-L185"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 179,
-          "end": 194,
+          "start": 187,
+          "end": 202,
           "sha256": "21be8be04d50f997415d5ff61a4563bdcace07f5d5308585dcb352c39933abe6",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L179-L194",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L179-L194"
+          "ref": "docs/http-api.md@v0.14.0:L187-L202",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L187-L202"
         },
         {
           "source": "engine",
           "path": "src/common/calendar_overrides.h",
           "start": 5,
           "end": 12,
-          "sha256": "6a4e47ccb7c142d70c564c05fdf4f13fd0f778793c7258ed7d9fd025a634cb7a",
+          "sha256": "87f90e2dd55bb4d311874bc676dbcaa3afb9030dc20d5d73be486468d90d4fb0",
           "kind": "statement",
-          "ref": "src/common/calendar_overrides.h@v0.12.0:L5-L12",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/common/calendar_overrides.h#L5-L12"
+          "ref": "src/common/calendar_overrides.h@v0.14.0:L5-L12",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/common/calendar_overrides.h#L5-L12"
         },
         {
           "source": "engine",
@@ -1108,8 +1119,8 @@
           "end": 97,
           "sha256": "6af3460438102a129e4247f923b896adc5ca4b6f56673ace02e2067c2c9f0adb",
           "kind": "field",
-          "ref": "flatbuffers/fbs/pricing.fbs@v0.12.0:L95-L97",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/pricing.fbs#L95-L97"
+          "ref": "flatbuffers/fbs/pricing.fbs@v0.14.0:L95-L97",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/pricing.fbs#L95-L97"
         }
       ],
       "gaps": []
@@ -1128,8 +1139,8 @@
           "end": 20,
           "sha256": "80f1bd0bf91a281ef2f5de45cb5bde28ad63fcb522b09ab245922f4c6e9221e8",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/enums.fbs@v0.12.0:L3-L20",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L3-L20"
+          "ref": "flatbuffers/fbs/enums.fbs@v0.14.0:L3-L20",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/enums.fbs#L3-L20"
         },
         {
           "source": "engine",
@@ -1138,8 +1149,8 @@
           "end": 189,
           "sha256": "1159a9e4597b5dacf033f9075c9365116c6a9607201b6405d0a03972c633f3f1",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/enums.fbs@v0.12.0:L183-L189",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L183-L189"
+          "ref": "flatbuffers/fbs/enums.fbs@v0.14.0:L183-L189",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/enums.fbs#L183-L189"
         },
         {
           "source": "engine",
@@ -1148,8 +1159,8 @@
           "end": 19,
           "sha256": "0b56ed6309bf5e6cfa9975de21f565f403df5ca9599957cd6713269eede94f02",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/common.fbs@v0.12.0:L14-L19",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/common.fbs#L14-L19"
+          "ref": "flatbuffers/fbs/common.fbs@v0.14.0:L14-L19",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/common.fbs#L14-L19"
         },
         {
           "source": "engine",
@@ -1158,8 +1169,8 @@
           "end": 89,
           "sha256": "00f2ed85f91d59597fa0f8abcb4fc183d8f7f3eba073e7a4042b92efbbccda07",
           "kind": "statement",
-          "ref": "src/evaluators/fixed_rate_bond_evaluator.cpp@v0.12.0:L89-L89",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/fixed_rate_bond_evaluator.cpp#L89-L89"
+          "ref": "src/evaluators/fixed_rate_bond_evaluator.cpp@v0.14.0:L89-L89",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/fixed_rate_bond_evaluator.cpp#L89-L89"
         },
         {
           "source": "engine",
@@ -1168,8 +1179,8 @@
           "end": 218,
           "sha256": "df1274da4658fbbacdb0ad1523f4f086f8cd1cdf4bee30466738d3d818941994",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/term_structure.fbs@v0.12.0:L215-L218",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/term_structure.fbs#L215-L218"
+          "ref": "flatbuffers/fbs/term_structure.fbs@v0.14.0:L215-L218",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/term_structure.fbs#L215-L218"
         },
         {
           "source": "engine",
@@ -1178,8 +1189,8 @@
           "end": 30,
           "sha256": "7274fe6435862f8f50076f7afbab6f3d048cdee7b964c31f73e55ef2ddeb71d6",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/curve_query.fbs@v0.12.0:L25-L30",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/curve_query.fbs#L25-L30"
+          "ref": "flatbuffers/fbs/curve_query.fbs@v0.14.0:L25-L30",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/curve_query.fbs#L25-L30"
         },
         {
           "source": "engine",
@@ -1188,28 +1199,28 @@
           "end": 21,
           "sha256": "5e9e3b9d71f4b8b90be0b8b1361589a6dfa40bdd84533f1b764d86ee7981704c",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L16-L21",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L16-L21"
+          "ref": "docs/http-api.md@v0.14.0:L16-L21",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L16-L21"
         },
         {
           "source": "engine",
           "path": "docs/versioning.md",
-          "start": 580,
-          "end": 583,
+          "start": 751,
+          "end": 754,
           "sha256": "148b6da45af0b01cc239db3cc4bd6995a355afa0b718d6e1a61ff48d004e67fb",
           "kind": "statement",
-          "ref": "docs/versioning.md@v0.12.0:L580-L583",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L580-L583"
+          "ref": "docs/versioning.md@v0.14.0:L751-L754",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L751-L754"
         },
         {
           "source": "engine",
           "path": "docs/versioning.md",
-          "start": 666,
-          "end": 668,
+          "start": 837,
+          "end": 839,
           "sha256": "a1fbd6f11eca3a17f22c935632bd7e6d6a6356c6bda66f89ee075c448f9b34be",
           "kind": "statement",
-          "ref": "docs/versioning.md@v0.12.0:L666-L668",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L666-L668"
+          "ref": "docs/versioning.md@v0.14.0:L837-L839",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L837-L839"
         },
         {
           "source": "engine",
@@ -1218,8 +1229,8 @@
           "end": 53,
           "sha256": "59f4acbc8793624601e3c5bc7ea0c05664a172ea0d776251608f7e1d30769670",
           "kind": "field",
-          "ref": "flatbuffers/fbs/curve_query.fbs@v0.12.0:L46-L53",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/curve_query.fbs#L46-L53"
+          "ref": "flatbuffers/fbs/curve_query.fbs@v0.14.0:L46-L53",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/curve_query.fbs#L46-L53"
         }
       ],
       "gaps": [
@@ -1240,8 +1251,8 @@
           "end": 30,
           "sha256": "908430e51d8cba5b6e458948f2234993d794c70411dbe30578d16ffacf7ae7f3",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/schedule.fbs@v0.12.0:L5-L30",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/schedule.fbs#L5-L30"
+          "ref": "flatbuffers/fbs/schedule.fbs@v0.14.0:L5-L30",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/schedule.fbs#L5-L30"
         },
         {
           "source": "engine",
@@ -1250,8 +1261,8 @@
           "end": 145,
           "sha256": "e6b30fabbeaf2aa5105075a2943fc0fe063c016a31edd59ff8d033b9b70f2a83",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/enums.fbs@v0.12.0:L135-L145",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L135-L145"
+          "ref": "flatbuffers/fbs/enums.fbs@v0.14.0:L135-L145",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/enums.fbs#L135-L145"
         },
         {
           "source": "engine",
@@ -1260,8 +1271,8 @@
           "end": 116,
           "sha256": "523fc48ef47518a812c604dcfef03d3812d806ff923059fff2d38a00483116f9",
           "kind": "statement",
-          "ref": "flatbuffers/fbs/enums.fbs@v0.12.0:L107-L116",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L107-L116"
+          "ref": "flatbuffers/fbs/enums.fbs@v0.14.0:L107-L116",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/enums.fbs#L107-L116"
         },
         {
           "source": "engine",
@@ -1270,8 +1281,8 @@
           "end": 45,
           "sha256": "ebc1cd28eb61537455dcd943f45d51ca213694b4729ad2f3d1a04d2d0cf33358",
           "kind": "statement",
-          "ref": "src/parsers/schedule_parser.cpp@v0.12.0:L34-L45",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/schedule_parser.cpp#L34-L45"
+          "ref": "src/parsers/schedule_parser.cpp@v0.14.0:L34-L45",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/schedule_parser.cpp#L34-L45"
         },
         {
           "source": "engine",
@@ -1280,8 +1291,8 @@
           "end": 72,
           "sha256": "c952035b4ad0dad7c05912b6cf9cd68149787e29e242e36b385ce751dde507c5",
           "kind": "statement",
-          "ref": "src/parsers/schedule_parser.cpp@v0.12.0:L64-L72",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/schedule_parser.cpp#L64-L72"
+          "ref": "src/parsers/schedule_parser.cpp@v0.14.0:L64-L72",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/schedule_parser.cpp#L64-L72"
         },
         {
           "source": "engine",
@@ -1290,8 +1301,8 @@
           "end": 105,
           "sha256": "9fbe647ac5d765185dbe4ef48301571abc6d8d4ed74348318d3452c676025ac9",
           "kind": "statement",
-          "ref": "src/parsers/schedule_parser.cpp@v0.12.0:L101-L105",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/schedule_parser.cpp#L101-L105"
+          "ref": "src/parsers/schedule_parser.cpp@v0.14.0:L101-L105",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/schedule_parser.cpp#L101-L105"
         },
         {
           "source": "engine",
@@ -1300,8 +1311,8 @@
           "end": 128,
           "sha256": "110f487b019e86014d3256c57b21e59900f8baa5e8d628ced7e129fc7525a0bc",
           "kind": "statement",
-          "ref": "src/parsers/schedule_parser.cpp@v0.12.0:L123-L128",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/schedule_parser.cpp#L123-L128"
+          "ref": "src/parsers/schedule_parser.cpp@v0.14.0:L123-L128",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/schedule_parser.cpp#L123-L128"
         },
         {
           "source": "engine",
@@ -1310,18 +1321,18 @@
           "end": 193,
           "sha256": "43b5178b45f26c893f4adb24d9da68d31a2e52f08d78e985c215c596048ee924",
           "kind": "statement",
-          "ref": "src/common/enum_convert.cpp@v0.12.0:L175-L193",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/common/enum_convert.cpp#L175-L193"
+          "ref": "src/common/enum_convert.cpp@v0.14.0:L175-L193",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/common/enum_convert.cpp#L175-L193"
         },
         {
           "source": "engine",
           "path": "docs/versioning.md",
-          "start": 717,
-          "end": 719,
+          "start": 888,
+          "end": 890,
           "sha256": "11e822bfbf4f2573948b600c7f53bf2dd00b867f5dfcaaa476c53f092acd90cb",
           "kind": "statement",
-          "ref": "docs/versioning.md@v0.12.0:L717-L719",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L717-L719"
+          "ref": "docs/versioning.md@v0.14.0:L888-L890",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L888-L890"
         },
         {
           "source": "engine",
@@ -1330,8 +1341,8 @@
           "end": 78,
           "sha256": "0a23ff119ad9fc34e095bc60bc7e02de8e0aa599b22620a6c9fe47a5e7d373be",
           "kind": "statement",
-          "ref": "tests/functional/CATALOG.md@v0.12.0:L77-L78",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/tests/functional/CATALOG.md#L77-L78"
+          "ref": "tests/functional/CATALOG.md@v0.14.0:L77-L78",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/tests/functional/CATALOG.md#L77-L78"
         },
         {
           "source": "engine",
@@ -1340,8 +1351,8 @@
           "end": 47,
           "sha256": "e61a27e59e03fadb3af2f6dd1ad295ac8b3964830a28efc9c25d9b83a112e1e4",
           "kind": "statement",
-          "ref": "tests/functional/CATALOG.md@v0.12.0:L47-L47",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/tests/functional/CATALOG.md#L47-L47"
+          "ref": "tests/functional/CATALOG.md@v0.14.0:L47-L47",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/tests/functional/CATALOG.md#L47-L47"
         },
         {
           "source": "engine",
@@ -1350,8 +1361,8 @@
           "end": 28,
           "sha256": "f9510dc5e4826a41e154f2cca8b6aef024b3434c53296183aaa63b2ce9eec4bf",
           "kind": "field",
-          "ref": "flatbuffers/fbs/schedule.fbs@v0.12.0:L14-L28",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/schedule.fbs#L14-L28"
+          "ref": "flatbuffers/fbs/schedule.fbs@v0.14.0:L14-L28",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/schedule.fbs#L14-L28"
         }
       ],
       "gaps": [
@@ -1372,62 +1383,62 @@
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1025,
-          "end": 1038,
+          "start": 1095,
+          "end": 1108,
           "sha256": "978e973788a21084e288ed329c28cc7fbae8556965850dfc559ace99c398dadb",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1025-L1038",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1025-L1038"
+          "ref": "docs/http-api.md@v0.14.0:L1095-L1108",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1095-L1108"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1095,
-          "end": 1112,
-          "sha256": "ae5f04480e8adbf1618ebd73a9260d1e6d4407ac10f3ee65d1e3388e1593b3d2",
+          "start": 1165,
+          "end": 1182,
+          "sha256": "c22b6c2cf270509754a3c62b84f9cd75dc6d7c6ece321380500f0ac5178dbedf",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1095-L1112",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1095-L1112"
+          "ref": "docs/http-api.md@v0.14.0:L1165-L1182",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1165-L1182"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1136,
-          "end": 1149,
-          "sha256": "79a48f645e668d39e27f2773cddcabd899355b09e0a40b656e6d023ef8b61428",
+          "start": 1210,
+          "end": 1223,
+          "sha256": "435e0b95f69cbd410d47bb4919f97b4b4f8af04ce36752fed18045cab2c6b4a8",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1136-L1149",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1136-L1149"
+          "ref": "docs/http-api.md@v0.14.0:L1210-L1223",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1210-L1223"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1283,
-          "end": 1321,
+          "start": 1357,
+          "end": 1395,
           "sha256": "30dc58186990353470ce5ad8ebb1ae444b2e8e8e27c749cf311ebb99a2d25a86",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1283-L1321",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1283-L1321"
+          "ref": "docs/http-api.md@v0.14.0:L1357-L1395",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1357-L1395"
         },
         {
           "source": "engine",
           "path": "src/evaluators/structured_note_evaluator.cpp",
           "start": 63,
-          "end": 118,
-          "sha256": "f4e048b0c6283df533721100b975df199e2179e755b666080ecb0990ca550cee",
+          "end": 123,
+          "sha256": "4d41fc9422d6432cdf4e9f99f736cdbac52acb1f9d0ae841c49c765110ebae91",
           "kind": "statement",
-          "ref": "src/evaluators/structured_note_evaluator.cpp@v0.12.0:L63-L118",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/structured_note_evaluator.cpp#L63-L118"
+          "ref": "src/evaluators/structured_note_evaluator.cpp@v0.14.0:L63-L123",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/structured_note_evaluator.cpp#L63-L123"
         },
         {
           "source": "engine",
           "path": "src/evaluators/structured_note_evaluator.cpp",
-          "start": 166,
-          "end": 174,
+          "start": 171,
+          "end": 179,
           "sha256": "bd1089235aadb6bb071253e66bda019e038f10b00c6042ec72dc996f574f5770",
           "kind": "statement",
-          "ref": "src/evaluators/structured_note_evaluator.cpp@v0.12.0:L166-L174",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/structured_note_evaluator.cpp#L166-L174"
+          "ref": "src/evaluators/structured_note_evaluator.cpp@v0.14.0:L171-L179",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/structured_note_evaluator.cpp#L171-L179"
         },
         {
           "source": "engine",
@@ -1436,118 +1447,118 @@
           "end": 43,
           "sha256": "ba9c7de8c167fff41f9040f661e092cf81e7fd05e021705f164483c9f5dfc9dc",
           "kind": "statement",
-          "ref": "src/market/quanto_builder.cpp@v0.12.0:L36-L43",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/market/quanto_builder.cpp#L36-L43"
+          "ref": "src/market/quanto_builder.cpp@v0.14.0:L36-L43",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/market/quanto_builder.cpp#L36-L43"
         },
         {
           "source": "engine",
           "path": "src/mc/path_engine.cpp",
-          "start": 177,
-          "end": 194,
+          "start": 259,
+          "end": 276,
           "sha256": "05af347a0552a2f3406c92c4fe5e6a673114f564069c0549f99c1d3dd6b3804a",
           "kind": "statement",
-          "ref": "src/mc/path_engine.cpp@v0.12.0:L177-L194",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/mc/path_engine.cpp#L177-L194"
+          "ref": "src/mc/path_engine.cpp@v0.14.0:L259-L276",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/mc/path_engine.cpp#L259-L276"
         },
         {
           "source": "engine",
           "path": "src/mc/path_engine.cpp",
-          "start": 43,
-          "end": 43,
+          "start": 108,
+          "end": 108,
           "sha256": "c72c43795844482119e84ccf3e16951f33e09f9fa1b57ec36cfccdd5277a1ac7",
           "kind": "statement",
-          "ref": "src/mc/path_engine.cpp@v0.12.0:L43-L43",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/mc/path_engine.cpp#L43-L43"
+          "ref": "src/mc/path_engine.cpp@v0.14.0:L108-L108",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/mc/path_engine.cpp#L108-L108"
         },
         {
           "source": "engine",
           "path": "src/evaluators/structured_note_evaluator.cpp",
-          "start": 610,
-          "end": 612,
+          "start": 616,
+          "end": 618,
           "sha256": "75489ffd8b0e9f6ed464ac46b99c4bb5f0ae2027b81ac1e068aefaf06f754ead",
           "kind": "statement",
-          "ref": "src/evaluators/structured_note_evaluator.cpp@v0.12.0:L610-L612",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/structured_note_evaluator.cpp#L610-L612"
+          "ref": "src/evaluators/structured_note_evaluator.cpp@v0.14.0:L616-L618",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/structured_note_evaluator.cpp#L616-L618"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1238,
-          "end": 1244,
+          "start": 1312,
+          "end": 1318,
           "sha256": "3809931431e3480069ff3f3af56331d02f35fc631ddbba821271f10a9d54f20b",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1238-L1244",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1238-L1244"
+          "ref": "docs/http-api.md@v0.14.0:L1312-L1318",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1312-L1318"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1248,
-          "end": 1250,
+          "start": 1322,
+          "end": 1324,
           "sha256": "10f66889902c7af1d080a8f8291fb86367bbdd8e4915a526286904ef168ef08e",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1248-L1250",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1248-L1250"
+          "ref": "docs/http-api.md@v0.14.0:L1322-L1324",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1322-L1324"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1253,
-          "end": 1269,
+          "start": 1327,
+          "end": 1343,
           "sha256": "a613ac6135f04d0930a2f96b03231c8bb94c8ad2137a389698c163222e6dbeda",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1253-L1269",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1253-L1269"
+          "ref": "docs/http-api.md@v0.14.0:L1327-L1343",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1327-L1343"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1325,
-          "end": 1355,
-          "sha256": "5eb83ac9fec94b69c1c86fb3b49a549b5fdca466ade3f47104cf6298a4baf5ab",
+          "start": 1399,
+          "end": 1432,
+          "sha256": "bdc946e39bc4e8c74f66cce09359427368a820bfc54a77f2f84924da1fdc7beb",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1325-L1355",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1325-L1355"
+          "ref": "docs/http-api.md@v0.14.0:L1399-L1432",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1399-L1432"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 1357,
-          "end": 1368,
+          "start": 1434,
+          "end": 1445,
           "sha256": "7af3d744bd8136fe5e351e2f953535af0e5164ee5fe2285227b9313e78deaa41",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L1357-L1368",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1357-L1368"
+          "ref": "docs/http-api.md@v0.14.0:L1434-L1445",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1434-L1445"
         },
         {
           "source": "engine",
           "path": "flatbuffers/fbs/structured_note.fbs",
-          "start": 99,
-          "end": 124,
-          "sha256": "48c26378b70cd5477b7521f6df6206fccfcf92fc2862b6cd670445a129920727",
+          "start": 111,
+          "end": 146,
+          "sha256": "e8cd5316a0983abd25096bbea5f263d4c6aa7094d9a3b8ecae064892a314d17a",
           "kind": "field",
-          "ref": "flatbuffers/fbs/structured_note.fbs@v0.12.0:L99-L124",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/structured_note.fbs#L99-L124"
+          "ref": "flatbuffers/fbs/structured_note.fbs@v0.14.0:L111-L146",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/structured_note.fbs#L111-L146"
         },
         {
           "source": "engine",
           "path": "flatbuffers/fbs/structured_note.fbs",
-          "start": 127,
-          "end": 139,
+          "start": 149,
+          "end": 161,
           "sha256": "5d1efbf0483fd3e0c431c48395024bb0e7bee4b60ea1ec5e3c0921036478822e",
           "kind": "field",
-          "ref": "flatbuffers/fbs/structured_note.fbs@v0.12.0:L127-L139",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/structured_note.fbs#L127-L139"
+          "ref": "flatbuffers/fbs/structured_note.fbs@v0.14.0:L149-L161",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/structured_note.fbs#L149-L161"
         },
         {
           "source": "engine",
           "path": "flatbuffers/fbs/structured_note.fbs",
-          "start": 147,
-          "end": 164,
+          "start": 169,
+          "end": 186,
           "sha256": "28e51e2d20b677eecfdebb8702cb9d57707f07f859f74f897eb489174261bd4f",
           "kind": "field",
-          "ref": "flatbuffers/fbs/structured_note.fbs@v0.12.0:L147-L164",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/structured_note.fbs#L147-L164"
+          "ref": "flatbuffers/fbs/structured_note.fbs@v0.14.0:L169-L186",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/structured_note.fbs#L169-L186"
         },
         {
           "source": "engine",
@@ -1556,18 +1567,198 @@
           "end": 34,
           "sha256": "7795584c065ebc8ab1c65558b4b25027d2ce1a5b6dbe6070713dc527ffd84b84",
           "kind": "field",
-          "ref": "flatbuffers/fbs/structured_note.fbs@v0.12.0:L13-L34",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/structured_note.fbs#L13-L34"
+          "ref": "flatbuffers/fbs/structured_note.fbs@v0.14.0:L13-L34",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/structured_note.fbs#L13-L34"
         },
         {
           "source": "engine",
           "path": "flatbuffers/fbs/structured_note.fbs",
-          "start": 183,
-          "end": 207,
+          "start": 205,
+          "end": 229,
           "sha256": "2af8dece0e9c6ff3a748b4a98764c6186bbd9df24e9f12e91e7ce406f4d62f90",
           "kind": "field",
-          "ref": "flatbuffers/fbs/structured_note.fbs@v0.12.0:L183-L207",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/structured_note.fbs#L183-L207"
+          "ref": "flatbuffers/fbs/structured_note.fbs@v0.14.0:L205-L229",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/structured_note.fbs#L205-L229"
+        }
+      ],
+      "gaps": []
+    },
+    {
+      "slug": "option-quotes-to-surface",
+      "title": "Option quotes to implied forwards, dividends and a Black vol surface",
+      "summary": "`POST /calibrate-implied-forwards` fits put-call parity per expiry of a listed European option quote sheet (implied forward, implied discount factor, funding spread, dividend yield, a ready dividend curve); `POST /calibrate-vol-surface` inverts the out-of-the-money mids to Black vols and fits AndreasenHuge or one SVI slice per expiry, checks butterfly and calendar arbitrage and reprices every used quote on the returned surface. The excerpts below are the engine's own documentation and source at the pin.",
+      "source": "engine",
+      "file": "option-quotes-to-surface.md",
+      "citations": [
+        {
+          "source": "engine",
+          "path": "docs/http-api.md",
+          "start": 1448,
+          "end": 1458,
+          "sha256": "fdddfde77fe5746a378aba5459300d4fe889bd2ad1f5e52f6374be6d26189caa",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.14.0:L1448-L1458",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1448-L1458"
+        },
+        {
+          "source": "engine",
+          "path": "docs/http-api.md",
+          "start": 1494,
+          "end": 1502,
+          "sha256": "a78c924fb987da06a36082b14154f90752ed5d5df8098821ab9970a48ffac66a",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.14.0:L1494-L1502",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1494-L1502"
+        },
+        {
+          "source": "engine",
+          "path": "src/evaluators/implied_forwards_evaluator.h",
+          "start": 11,
+          "end": 60,
+          "sha256": "7be564b8af1f6112bd966d011476449cf9d8e8121080835cc756f504ad276769",
+          "kind": "statement",
+          "ref": "src/evaluators/implied_forwards_evaluator.h@v0.14.0:L11-L60",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/implied_forwards_evaluator.h#L11-L60"
+        },
+        {
+          "source": "engine",
+          "path": "docs/http-api.md",
+          "start": 1586,
+          "end": 1601,
+          "sha256": "58e3bcd06752fa731fad834e2167c1bcec9ae564be1ed75cda201df1e220680d",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.14.0:L1586-L1601",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1586-L1601"
+        },
+        {
+          "source": "engine",
+          "path": "docs/http-api.md",
+          "start": 1664,
+          "end": 1675,
+          "sha256": "806017b484a7c3455c6bfb8d5311c04340db24b084aa0d50b25b354dd93411d2",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.14.0:L1664-L1675",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1664-L1675"
+        },
+        {
+          "source": "engine",
+          "path": "src/evaluators/vol_surface_calibration_evaluator.cpp",
+          "start": 84,
+          "end": 95,
+          "sha256": "c787261dff46bd63f8ea872bd1549c05c1ebe404eea18eeec56e4646706e3f12",
+          "kind": "statement",
+          "ref": "src/evaluators/vol_surface_calibration_evaluator.cpp@v0.14.0:L84-L95",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/vol_surface_calibration_evaluator.cpp#L84-L95"
+        },
+        {
+          "source": "engine",
+          "path": "docs/http-api.md",
+          "start": 1677,
+          "end": 1697,
+          "sha256": "ddc70620f7852514a4a9930e6a874cd9e32df40c826669cee5d5a2a2f775da72",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.14.0:L1677-L1697",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1677-L1697"
+        },
+        {
+          "source": "engine",
+          "path": "src/evaluators/vol_surface_calibration_evaluator.cpp",
+          "start": 456,
+          "end": 490,
+          "sha256": "ae0fb784969a932b96e65b128cfd9bafc4f04ba7bb16eb5b4ee9cc6ef8c94c65",
+          "kind": "statement",
+          "ref": "src/evaluators/vol_surface_calibration_evaluator.cpp@v0.14.0:L456-L490",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/vol_surface_calibration_evaluator.cpp#L456-L490"
+        },
+        {
+          "source": "engine",
+          "path": "docs/http-api.md",
+          "start": 1699,
+          "end": 1716,
+          "sha256": "7c926b093abdaefaa250817f05743c22849fc2ce3b329800b29b2d8b18fdb6c7",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.14.0:L1699-L1716",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1699-L1716"
+        },
+        {
+          "source": "engine",
+          "path": "src/evaluators/vol_surface_calibration_evaluator.cpp",
+          "start": 182,
+          "end": 195,
+          "sha256": "394fa48dca1c9f6d38f20e287dcf1067776db92468df686e4ec8d9f4cc26adc8",
+          "kind": "statement",
+          "ref": "src/evaluators/vol_surface_calibration_evaluator.cpp@v0.14.0:L182-L195",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/vol_surface_calibration_evaluator.cpp#L182-L195"
+        },
+        {
+          "source": "engine",
+          "path": "src/evaluators/vol_surface_calibration_evaluator.cpp",
+          "start": 567,
+          "end": 585,
+          "sha256": "f9420207db00d42d0cf9ff8ba6fad00299b5841617053e1ab5ebc35a1bfb2222",
+          "kind": "statement",
+          "ref": "src/evaluators/vol_surface_calibration_evaluator.cpp@v0.14.0:L567-L585",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/vol_surface_calibration_evaluator.cpp#L567-L585"
+        },
+        {
+          "source": "engine",
+          "path": "docs/http-api.md",
+          "start": 1718,
+          "end": 1724,
+          "sha256": "6893b6bb2f6f081dd391ea51f254fcb95f7b04e74ff61a9f52c0338d6df838b9",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.14.0:L1718-L1724",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1718-L1724"
+        },
+        {
+          "source": "engine",
+          "path": "docs/http-api.md",
+          "start": 1726,
+          "end": 1740,
+          "sha256": "b629e12da22fdd248758b27726b7cdbca5ba39aae1c9cb4e0283aee53ba4e0e9",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.14.0:L1726-L1740",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1726-L1740"
+        },
+        {
+          "source": "engine",
+          "path": "src/evaluators/vol_surface_calibration_evaluator.cpp",
+          "start": 716,
+          "end": 726,
+          "sha256": "77da5675c6958c777c0038368b4b03b8dbb20b6014919d2a1b74132fee904efe",
+          "kind": "statement",
+          "ref": "src/evaluators/vol_surface_calibration_evaluator.cpp@v0.14.0:L716-L726",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/vol_surface_calibration_evaluator.cpp#L716-L726"
+        },
+        {
+          "source": "engine",
+          "path": "docs/http-api.md",
+          "start": 1794,
+          "end": 1807,
+          "sha256": "a1ad646c7e62640d9a7b67a6037d9706317e9a6fa7b682aabd248117457428bb",
+          "kind": "statement",
+          "ref": "docs/http-api.md@v0.14.0:L1794-L1807",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1794-L1807"
+        },
+        {
+          "source": "engine",
+          "path": "flatbuffers/fbs/option_quotes.fbs",
+          "start": 15,
+          "end": 31,
+          "sha256": "9f80ed20d1cbd1f36b4103e41a2ac919ef09add985bc6f046de366996786f444",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/option_quotes.fbs@v0.14.0:L15-L31",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/option_quotes.fbs#L15-L31"
+        },
+        {
+          "source": "engine",
+          "path": "flatbuffers/fbs/option_quotes.fbs",
+          "start": 57,
+          "end": 73,
+          "sha256": "b9d5c476808985991ccd7cf67211e87e4b9588cf7ef1f061e8478ff0429ca5a6",
+          "kind": "field",
+          "ref": "flatbuffers/fbs/option_quotes.fbs@v0.14.0:L57-L73",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/option_quotes.fbs#L57-L73"
         }
       ],
       "gaps": []
@@ -1586,8 +1777,8 @@
           "end": 24,
           "sha256": "4c5005e36d797e4f64aa8e060bc80f40d223bf200b8af3de7ddeb40e004d09ff",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L7-L24",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L7-L24"
+          "ref": "docs/http-api.md@v0.14.0:L7-L24",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L7-L24"
         },
         {
           "source": "engine",
@@ -1596,8 +1787,8 @@
           "end": 48,
           "sha256": "843909f5c32d4a8e38747b28c3bc65859c091c4aa9d70d6d650cfff1a465ca57",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L26-L48",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L26-L48"
+          "ref": "docs/http-api.md@v0.14.0:L26-L48",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L26-L48"
         },
         {
           "source": "engine",
@@ -1606,28 +1797,28 @@
           "end": 65,
           "sha256": "8675cf9d3e0c287f1a8064363f50e3504acbf66abe7b026f0131c991d0ce773c",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L50-L65",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L50-L65"
+          "ref": "docs/http-api.md@v0.14.0:L50-L65",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L50-L65"
         },
         {
           "source": "engine",
           "path": "docs/versioning.md",
-          "start": 636,
-          "end": 648,
+          "start": 807,
+          "end": 819,
           "sha256": "dfe5f3934290daf5e68698dba4581502d890f3131284e3ae482b6675abfc6d88",
           "kind": "statement",
-          "ref": "docs/versioning.md@v0.12.0:L636-L648",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L636-L648"
+          "ref": "docs/versioning.md@v0.14.0:L807-L819",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L807-L819"
         },
         {
           "source": "engine",
           "path": "docs/http-api.md",
-          "start": 67,
-          "end": 75,
+          "start": 75,
+          "end": 83,
           "sha256": "12d8740c7a4cb561db968ef3ba95acdb0896b9ed3d449ceffc5739b82be77cd8",
           "kind": "statement",
-          "ref": "docs/http-api.md@v0.12.0:L67-L75",
-          "url": "https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L67-L75"
+          "ref": "docs/http-api.md@v0.14.0:L75-L83",
+          "url": "https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L75-L83"
         }
       ],
       "gaps": []
@@ -1646,8 +1837,8 @@
           "end": 9,
           "sha256": "0632e0894fb50513b09911e52a851b1d6996a517e9938245addf2225d4d4b2d3",
           "kind": "statement",
-          "ref": "src/quantra_mcp/builders/bumps.py@04b747d:L1-L9",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/builders/bumps.py#L1-L9"
+          "ref": "src/quantra_mcp/builders/bumps.py@083561a:L1-L9",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/builders/bumps.py#L1-L9"
         },
         {
           "source": "connector",
@@ -1656,8 +1847,8 @@
           "end": 37,
           "sha256": "bda6cc26f5c7b2ab73eb0ebf16c97d0321a667a4f4b86b281090de685f612583",
           "kind": "statement",
-          "ref": "src/quantra_mcp/builders/bumps.py@04b747d:L25-L37",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/builders/bumps.py#L25-L37"
+          "ref": "src/quantra_mcp/builders/bumps.py@083561a:L25-L37",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/builders/bumps.py#L25-L37"
         },
         {
           "source": "connector",
@@ -1666,8 +1857,8 @@
           "end": 43,
           "sha256": "01da58033ca3f27d2ee1a6fad371978ff52b68f11436d53bd7e9749a4ddc2e31",
           "kind": "statement",
-          "ref": "src/quantra_mcp/builders/bumps.py@04b747d:L39-L43",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/builders/bumps.py#L39-L43"
+          "ref": "src/quantra_mcp/builders/bumps.py@083561a:L39-L43",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/builders/bumps.py#L39-L43"
         },
         {
           "source": "connector",
@@ -1676,8 +1867,8 @@
           "end": 197,
           "sha256": "fec01aa423f3be7c768ed8d8f128723e204562fc0e0c06443e148fc37c352a79",
           "kind": "statement",
-          "ref": "src/quantra_mcp/builders/bumps.py@04b747d:L184-L197",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/builders/bumps.py#L184-L197"
+          "ref": "src/quantra_mcp/builders/bumps.py@083561a:L184-L197",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/builders/bumps.py#L184-L197"
         },
         {
           "source": "connector",
@@ -1686,8 +1877,8 @@
           "end": 218,
           "sha256": "fa07a3248f0195c18cbea4c34485d8ca8289ac7a442fb9cdd4386dddecd9fcd2",
           "kind": "statement",
-          "ref": "src/quantra_mcp/builders/bumps.py@04b747d:L203-L218",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/builders/bumps.py#L203-L218"
+          "ref": "src/quantra_mcp/builders/bumps.py@083561a:L203-L218",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/builders/bumps.py#L203-L218"
         },
         {
           "source": "connector",
@@ -1696,8 +1887,8 @@
           "end": 183,
           "sha256": "c4a1f449c1d442b2b7dff3b294709aae9b34cac31c0678645577c989c0c0e987",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@04b747d:L176-L183",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L176-L183"
+          "ref": "src/quantra_mcp/tools/analytics.py@083561a:L176-L183",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L176-L183"
         },
         {
           "source": "connector",
@@ -1706,8 +1897,8 @@
           "end": 250,
           "sha256": "db15046ef5b054ded2befdf781e1fc5cc4da963afed6f17473f4bd86b7f0af66",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@04b747d:L246-L250",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L246-L250"
+          "ref": "src/quantra_mcp/tools/analytics.py@083561a:L246-L250",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L246-L250"
         },
         {
           "source": "connector",
@@ -1716,8 +1907,8 @@
           "end": 268,
           "sha256": "f940bd1a337a0c2494bd3b5c1d720a1d71c6294d37023d920467c60e3bd6647e",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@04b747d:L253-L268",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L253-L268"
+          "ref": "src/quantra_mcp/tools/analytics.py@083561a:L253-L268",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L253-L268"
         },
         {
           "source": "connector",
@@ -1726,8 +1917,8 @@
           "end": 281,
           "sha256": "17be651244d7238f236924661ab260401f67556ca2a41a36b59bea31cc82e84d",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@04b747d:L275-L281",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L275-L281"
+          "ref": "src/quantra_mcp/tools/analytics.py@083561a:L275-L281",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L275-L281"
         },
         {
           "source": "connector",
@@ -1736,8 +1927,8 @@
           "end": 294,
           "sha256": "5d767494f740606ef4bc2fcbe8589e143ea11c92f66c028c1434ecfcef0c1f91",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@04b747d:L284-L294",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L284-L294"
+          "ref": "src/quantra_mcp/tools/analytics.py@083561a:L284-L294",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L284-L294"
         },
         {
           "source": "connector",
@@ -1746,8 +1937,8 @@
           "end": 546,
           "sha256": "4ebcbe80e2e934233e075eac6acb1fe8590cb1fb495eed438a91126b32a530a9",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@04b747d:L519-L546",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L519-L546"
+          "ref": "src/quantra_mcp/tools/analytics.py@083561a:L519-L546",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L519-L546"
         },
         {
           "source": "connector",
@@ -1756,8 +1947,8 @@
           "end": 589,
           "sha256": "2261743a697ffd1ee17e98905ab880103d48aa13c3cb2834033298074b900111",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@04b747d:L581-L589",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L581-L589"
+          "ref": "src/quantra_mcp/tools/analytics.py@083561a:L581-L589",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L581-L589"
         },
         {
           "source": "connector",
@@ -1766,8 +1957,8 @@
           "end": 618,
           "sha256": "d1e4ca92b0c5c41c22a10d66dc4644cc21b001f1c7f0307583ec639b6191e1c6",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@04b747d:L601-L618",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L601-L618"
+          "ref": "src/quantra_mcp/tools/analytics.py@083561a:L601-L618",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L601-L618"
         },
         {
           "source": "connector",
@@ -1776,8 +1967,8 @@
           "end": 708,
           "sha256": "670c14ebd95af6833e73fef30267415dc6c0ef7aeac403427f13e1dd47119cbc",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@04b747d:L692-L708",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L692-L708"
+          "ref": "src/quantra_mcp/tools/analytics.py@083561a:L692-L708",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L692-L708"
         },
         {
           "source": "connector",
@@ -1786,8 +1977,8 @@
           "end": 743,
           "sha256": "2d57d2d144bab47b425cb8c6a82d4f92e9a7b1360f718077d7653d0a89d70131",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@04b747d:L731-L743",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L731-L743"
+          "ref": "src/quantra_mcp/tools/analytics.py@083561a:L731-L743",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L731-L743"
         },
         {
           "source": "connector",
@@ -1796,8 +1987,8 @@
           "end": 415,
           "sha256": "0824788fc973dbb1aa608e12455182a740bebd98e17364c02f99bb57371f19de",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/analytics.py@04b747d:L405-L415",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L405-L415"
+          "ref": "src/quantra_mcp/tools/analytics.py@083561a:L405-L415",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L405-L415"
         },
         {
           "source": "connector",
@@ -1806,8 +1997,8 @@
           "end": 436,
           "sha256": "3e30bf6b9a4e12c977398a1998d862a9300a08738fe1a99cbeda3c7ee40920f8",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/reconcile.py@04b747d:L408-L436",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/reconcile.py#L408-L436"
+          "ref": "src/quantra_mcp/tools/reconcile.py@083561a:L408-L436",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/reconcile.py#L408-L436"
         },
         {
           "source": "connector",
@@ -1816,8 +2007,8 @@
           "end": 441,
           "sha256": "b587360486a65ef0e6ec369751d3bc3a80b084e748a4d294b42e9838d45543b9",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/reconcile.py@04b747d:L440-L441",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/reconcile.py#L440-L441"
+          "ref": "src/quantra_mcp/tools/reconcile.py@083561a:L440-L441",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/reconcile.py#L440-L441"
         },
         {
           "source": "connector",
@@ -1826,8 +2017,8 @@
           "end": 497,
           "sha256": "d341632a3e7bcc8deae8736949234462da0e26f276ba69a16237471f9a010c55",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/reconcile.py@04b747d:L464-L497",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/reconcile.py#L464-L497"
+          "ref": "src/quantra_mcp/tools/reconcile.py@083561a:L464-L497",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/reconcile.py#L464-L497"
         },
         {
           "source": "connector",
@@ -1836,8 +2027,8 @@
           "end": 278,
           "sha256": "0ae96d44c1e03ae39460be9125d20c8e1ff1c744c39d30ef8ab11263c98bf3d8",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/reconcile.py@04b747d:L277-L278",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/reconcile.py#L277-L278"
+          "ref": "src/quantra_mcp/tools/reconcile.py@083561a:L277-L278",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/reconcile.py#L277-L278"
         },
         {
           "source": "connector",
@@ -1846,8 +2037,8 @@
           "end": 108,
           "sha256": "b01c64a829155c5b69e12c22686eaf0428e1ab68049e6a37773a9b1c860ae486",
           "kind": "statement",
-          "ref": "src/quantra_mcp/tools/reconcile.py@04b747d:L53-L108",
-          "url": "https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/reconcile.py#L53-L108"
+          "ref": "src/quantra_mcp/tools/reconcile.py@083561a:L53-L108",
+          "url": "https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/reconcile.py#L53-L108"
         }
       ],
       "gaps": [

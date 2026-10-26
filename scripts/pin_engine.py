@@ -305,12 +305,34 @@ def parse_structured_note_oracle(text: str, tolerance: float | None) -> dict[str
     return {"kind": "fields", "values": values, "tolerance": tolerance or 1e-7, "sig": 6}
 
 
+#: Engine 0.14.0 option-quote calibrations: the catalog cell prints per-expiry rows
+#: (expiries, forwards, SVI slices, repricing quotes, dividend-curve zeros) as one flat
+#: ``name=value`` list, not in the response's key order.
+LIST_FIELD_PRODUCTS = frozenset({"calibrate_implied_forwards", "calibrate_vol_surface"})
+
+
+def parse_field_lists_oracle(text: str, tolerance: float | None) -> dict[str, Any] | None:
+    """``{name: [values in catalog order]}``; checked as an in-order subsequence of every
+    value under that key in the response (depth-first), so a name printed for one array
+    only still matches when the response repeats it in a second array."""
+    values: dict[str, list[float]] = {}
+    for part in text.split(", "):
+        m = _FIELD_RE.match(part.strip())
+        if m:
+            values.setdefault(m.group(1), []).append(float(m.group(2)))
+    if not values:
+        return None
+    return {"kind": "field_lists", "values": values, "tolerance": tolerance or 1e-7, "sig": 6}
+
+
 def parse_oracle(
     compare: str, text: str, tolerance: float | None, product: str | None = None
 ) -> dict[str, Any] | None:
     """Turn a CATALOG.md value cell into a machine-checkable oracle, or None."""
     if product == "structured_note" and compare == "fields":
         return parse_structured_note_oracle(text, tolerance)
+    if product in LIST_FIELD_PRODUCTS and compare == "fields":
+        return parse_field_lists_oracle(text, tolerance)
     if compare == "npv":
         if not _NPV_RE.match(text):
             return None
@@ -378,6 +400,8 @@ ROUTE_BY_PRODUCT: dict[str, str] = {
     "fx_forward": "/price-fx-forward",
     "cross_currency_swap": "/price-cross-currency-swap",
     "structured_note": "/price-structured-note",
+    "calibrate_implied_forwards": "/calibrate-implied-forwards",
+    "calibrate_vol_surface": "/calibrate-vol-surface",
 }
 
 

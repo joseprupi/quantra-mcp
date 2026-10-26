@@ -26,6 +26,177 @@ first release that promises wire stability.
 3. Create tag `vX.Y.Z`
 4. Publish release notes
 
+## Version 0.14.0 (October 2026) — Option quotes to implied forwards and a volatility surface
+
+`v0.14.0` is a MINOR, additive release: two calibration endpoints, one
+market-data payload, a converter tool and examples. No existing request or
+response changes; every 0.13.1 request is a valid 0.14.0 request with the
+same answer. QuantLib stays at 1.44.
+
+**`POST /calibrate-implied-forwards`.** From a sheet of listed European
+option quotes (`OptionQuoteSheet`: per line expiry, strike, call bid/ask,
+put bid/ask, optional volume and open interest; `QuoteFilter` with
+`max_relative_spread`, `min_quotes_per_expiry`, `moneyness_window`,
+`min_open_interest`) the per-expiry weighted least-squares put-call-parity
+fit gives the implied forward, the implied discount factor (the index's
+funding), the funding spread against the request's discounting curve in bp,
+the continuous dividend yield and the fit residuals, every dropped line
+with its reason, and a ready-to-paste `InterpolatedZero` dividend curve
+that reproduces the forwards exactly. `docs/http-api.md`, "Implied forwards
+and dividends from option quotes".
+
+**`POST /calibrate-vol-surface`.** The same sheet (plus, optionally, the
+pasted forwards of the first endpoint) to a Black implied-vol surface on a
+moneyness x expiry grid converted to absolute strikes with the spot,
+returned as a complete `VolSurfaceSpec` (`BlackVolSpec`, `SmileCube3D`,
+NullCalendar / Unadjusted / Act/365F, calendar-day expiries, bilinear,
+extrapolation allowed) for `pricing.volatility.vol_surfaces`. Two methods
+(`VolSurfaceFitMethod`): `AndreasenHuge` (QuantLib
+`AndreasenHugeVolatilityInterpl`, arbitrage-free by construction) and
+`SviPerExpiry` (QuantLib `SviInterpolation` per expiry, Durrleman butterfly
+check with a penalized refit, calendar check with a clip). The response
+carries the forwards used, a per-expiry report (quotes used and dropped
+with reasons, RMSE and max error in vol units, SVI parameters, arbitrage
+findings and actions) and the vanilla repricing of every used quote on the
+returned surface (inside the bid/ask or not, largest price and vol
+excursions). `docs/http-api.md`, "Volatility surface from option quotes".
+
+**Tools and examples.** `tools/option_quotes/cboe_eod_to_quote_sheet.py`
+converts a Cboe DataShop end-of-day file into a quote sheet (vendor data is
+never committed); `tests/tools/make_synthetic_quote_sheet.py` generates the
+committed synthetic sheets (polynomial smile, SSVI surface, flat) from
+stated inputs. Examples: `examples/data/implied_forwards/`,
+`examples/data/vol_surface/` (one request per method) and
+a structured-note example on synthetic surfaces (an issuer-named
+note, not served by this connector, under Dupire local vol). Functional
+catalog rows: `impfwd_synthetic_ndx_like_2026_09_30`,
+`volsurf_synthetic_svi_sheet_andreasen_huge`,
+`volsurf_synthetic_svi_sheet_svi_per_expiry`,
+and one structured-note row.
+
+**Schema additions (all new tables; `enums.fbs` gains
+`VolSurfaceFitMethod`; the `ExerciseType` comment widens).**
+`option_quotes.fbs` (`OptionQuote`, `OptionQuoteSheet`, `QuoteFilter`),
+`calibrate_implied_forwards_request.fbs` / `_response.fbs`
+(`DroppedQuote`, `ImpliedForwardExpiry`, `ImpliedForwardPoint`),
+`calibrate_vol_surface_request.fbs` (`VolSurfaceOutputGrid`,
+`SviFitOptions`) / `_response.fbs` (`VolSurfaceForward`, `SviParameters`,
+`AndreasenHugeCalibrationError`, `VolSurfaceExpiryReport`,
+`VanillaRepricePoint`, `VanillaRepricing`). OpenAPI regenerated.
+
+## Version 0.13.1 (October 2026) — Non-finite responses, holiday valuation with deposit helpers, bounded Hull-White calibration
+
+`v0.13.1` is a PATCH release: three fixes, no request shape changes. Every
+0.13.0 request is a valid 0.13.1 request; the two optional request fields and
+the four optional response fields below are additive and default to the
+previous behaviour where the fix does not apply. QuantLib stays at 1.44.
+
+**Non-finite values are never shipped in a JSON body (`500` naming the
+field).** FlatBuffers prints an infinite or NaN double as a bare `inf` /
+`-inf` / `nan`, which is not JSON; 0.13.0 returned such bodies with HTTP
+200 (for example `"npv": inf` for a bond on an `InterpolatedZero` curve
+whose discount factors overflow). The gateway now scans every generated
+response and answers `500` with `{"error": "non-finite value in response at
+<path>"}` (`bonds[0].npv`, `results[0].series[0].values[1]`) plus a server
+log line. Strings containing `inf` / `nan` are never flagged. Documented in
+`docs/http-api.md`, "Error body".
+
+**Valuation on a holiday with deposit helpers (QuantLib ≥ 1.44) is a `400`
+with the remedy.** With `as_of_date` on a holiday of a `DepositHelper`'s
+calendar and `fixing_days > 0`, 0.11.0–0.13.0 failed deep inside the
+bootstrap with `422 "Missing no-fix3M … fixing"` (the helper's internal
+index needs a fixing before the valuation date that no request field can
+supply; see `docs/quantlib-upgrades/1.41-to-1.44.md` § 3.1). The pillar is
+now rejected when it is built: `400 rates.curves['<id>'].points[<j>]
+(DepositHelper): the evaluation date 2025-05-01 is not a business day of the
+helper's calendar TARGET and fixing_days is 2 … Value on a business day of
+TARGET, or set fixing_days: 0 on the DepositHelper`. The date is not rolled.
+`fixing_days: 0` pillars and business-day valuation dates are unchanged
+(gate-pinned to the 0.13.0 numbers on the upgrade-notes probe: `fair_rate`
+0.03, leg NPVs ∓57,389.296863753894).
+
+**Joint Hull-White calibration is bounded in `a` and reports its
+flatness.** The joint `(a, sigma)` Levenberg-Marquardt fit was unconstrained
+on an objective that is flat in `a` below ~1e-3, so the fitted `a` was
+engine noise (2.3× apart between two QuantLib builds on the same request).
+Additive request fields on `SwaptionHwCalibrationSpec`: `a_lower` (default
+0.001) and `a_upper` (default 1.0), applied only when `calibrate_a` is true;
+`a_init` is clipped into the box; invalid bounds are `400` naming the field.
+Additive response fields, present iff `calibrate_a`: `a_flatness`
+(`1 - rmse / max(rmse(2a), rmse(a/2))` at the calibrated sigma, in `[0, 1]`)
+and `a_poorly_identified` (`a_flatness < 0.01`) on
+`CalibrateSwaptionModelResponse`, and `used_hw_a_flatness` /
+`used_hw_a_poorly_identified` on an inline-calibrated swaption. A sigma-only
+fit (`calibrate_a: false`) is unchanged and recommended for production use
+with a market `a`; see `docs/http-api.md`, "Hull-White calibration". The
+in-process Hull-White calibration cache key now includes the bounds
+(`hw-calib:v2`).
+
+Observable changes on the shipped examples where the bound binds (every
+other calibration example and every functional-catalog row is unchanged;
+`CATALOG.md` is identical):
+
+| Request | Field | 0.13.0 | 0.13.1 |
+| --- | --- | --- | --- |
+| `calibrate_swaption_model_request.json` (and the `hull_white_calibration_a_and_sigma` upgrade probe's market) | `hw_a` | 0.000278081655 | 0.001000003603 |
+| | `hw_sigma` | 0.006631481998 | 0.006646865746 |
+| | `rmse` | 0.019048784649 | 0.019114130326 (+0.34 %) |
+| | `a_flatness` / `a_poorly_identified` | — | 0.004168989254 / true |
+| `swaption_bermudan_hw_calibrated.json` (and the `swaption_bermudan_hull_white_lattice_calibrated` probe) | `npv` | 8415.43462984673 | 8420.416773859031 |
+| | `used_hw_a` / `used_hw_sigma` / `used_hw_rmse` | as above | as above |
+| `vol/hwcal_eur_atm_matrix_roundtrip.json` (catalog row) | `hw_a`, `hw_sigma`, `rmse` | 0.049999969129, 0.0079999992, 1.899e-09 | unchanged (`a_flatness` 0.999999941, not flagged) |
+
+## Version 0.13.0 (October 2026) — Final-observation marker, collars, exact-step Monte Carlo
+
+`v0.13.0` is a backward-compatible MINOR release: two additive request
+fields and one previously rejected enum value now priced. No request
+shape changes: every 0.12.0 request is a valid 0.13.0 request with the
+same response values. QuantLib stays at 1.44.
+
+**`ObservationEvent.is_final` (structured notes, additive).** A maturity-
+only observation: when true, only the capital protection block (and
+`upside`, if present) is tested at that event; there is no coupon test and
+no call test, so unpaid coupons in the memory are not paid there.
+`coupon`, `coupon_trigger` and `autocall_trigger` must be absent (`400`
+naming the field), `payment_date` is required and must equal
+`maturity_payment_date` (`400`), and the event must be the last one
+(`400`). Absent, the 0.12.0 rules stand (the last event must carry a
+trigger; a final event with a trigger behaves as before). A final
+observation that also tests a coupon or a call (an 80 % low hurdle, a
+100 % call at maturity) keeps using triggers. The terms echo gains
+`StructuredNoteTermsEvent.is_final` (false for every 0.12.0 request). The
+trigger-note example's last event is now `{observation_date, payment_date,
+is_final: true}` instead of `coupon_trigger 0.0, coupon 0.0`; the price is
+bit-identical on the same stream (the always-true zero coupon test paid
+nothing), and the event no longer reports a `p_coupon` (there is no coupon
+test). `event_probabilities[].p_coupon` stays "present iff a coupon test".
+
+**`price-cap-floor`: `Collar` priced.** `cap_floor_type: Collar` was a
+`400` ("Collar not yet supported"); it now builds
+`QuantLib::Collar(leg, {strike}, {floor_strike})` with the same engine as
+a cap or a floor. New field `CapFloor.floor_strike` (additive): required
+with `Collar` and `<= strike` (the cap strike), must be absent for a `Cap`
+or a `Floor` (`400` each). The response is unchanged in shape: `npv` (the
+cap's minus the floor's, held to 1e-10 relative by a gate test),
+`atm_rate`, and with `include_details` one `cap_floor_lets[]` row per
+unpaid period (the same period for the caplet and the floorlet; the row's
+`strike` / `price` fields stay unpopulated as before). One new example
+(`examples/data/cap_floor/collar_eur_5y_cap_4pct_floor_2pct_euribor3m.json`)
+and one functional-catalog row.
+
+**Internal, no wire change.** Exact-step table in the Monte Carlo core:
+for constant / term vols on the observation-date grid the paths are
+generated from a precomputed per-step drift / standard-deviation table
+with the array's own pseudo-square-root, bit-identical to QuantLib's
+`MultiPathGenerator` paths (a gate test compares every level) and 28x
+cheaper per step; a four-underlying example round trip through the JSON gateway
+goes from 1.5 s to 0.21 s. Debug `std::cout` NPV prints removed from the
+swap, FRA, FX, cap/floor, swaption and structured-note evaluators.
+Per-request guards (roll offset, calendar overrides) are `thread_local`.
+Zero-rate sampling at or before a curve's reference date returns the
+curve's t -> 0 limit instead of the one-day-out rate (bootstrap-curves
+`zero_rates` only; no catalog value moved).
+
 ## Version 0.12.0 (October 2026) — Structured notes on index baskets (Monte Carlo)
 
 `v0.12.0` is a backward-compatible MINOR release: one new endpoint, one new

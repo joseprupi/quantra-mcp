@@ -43,7 +43,8 @@ def register(app: MCPServer) -> None:
                 description="npv, fair-rate, greeks-bump-and-reprice, theta, curve-bootstrap, "
                 "value-curves, settlement-and-cash-settlement, volatility-types, "
                 "calendars-and-overrides, day-counters-and-compounding, schedules-and-stubs, "
-                "error-codes, structured-notes (engine pages) or connector-analytics (what "
+                "error-codes, structured-notes, option-quotes-to-surface (engine pages) or "
+                "connector-analytics (what "
                 "this server computes on top of engine outputs)."
             ),
         ],

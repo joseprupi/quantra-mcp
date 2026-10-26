@@ -519,6 +519,63 @@ async def m3_tools(client: Client, http: httpx.AsyncClient, rows: list[Row]) -> 
     return failed
 
 
+#: M5.11 (engine 0.14.0): fixture field -> tool argument for the option-quote tools
+OPTION_QUOTE_TOOLS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "/calibrate-implied-forwards": ("calibrate_implied_forwards", ("dividend_curve_id", "filter")),
+    "/calibrate-vol-surface": (
+        "calibrate_vol_surface",
+        ("vol_surface_id", "method", "filter", "forwards", "output_grid", "svi"),
+    ),
+}
+
+
+async def m511_option_quotes(client: Client, http: httpx.AsyncClient, rows: list[Row]) -> bool:
+    """Every implied-forwards / vol-surface fixture through its tool: request JSON-equal
+    to the fixture, response byte-equal to a direct replay, catalog oracle."""
+    failed = False
+    for row in cat.rows():
+        spec = OPTION_QUOTE_TOOLS.get(str(row.get("endpoint")))
+        if spec is None:
+            continue
+        tool_name, optional = spec
+        body = cat.load_body(row)
+        args: dict[str, Any] = {
+            "market": body["pricing"],
+            "sheet": body["sheet"],
+            "discounting_curve": body["discounting_curve"],
+            "market_data_source": "engine_example",
+            **{k: body[k] for k in optional if k in body},
+        }
+        data = await _tool(client, tool_name, args)
+        if not data.get("ok"):
+            failed = True
+            rows.append(
+                Row(tool_name, "-", f"FAIL {data.get('status')}", "-", str(data.get("error"))[:80])
+            )
+            continue
+        same = await _replay_equal(http, data)
+        json_equal = data["request"] == body
+        check = cat.oracle_check(row, data["response"])
+        ok = same and json_equal and bool(check["ok"])
+        failed |= not ok
+        summary = data.get("summary") or {}
+        rep = summary.get("vanilla_repricing") or {}
+        rows.append(
+            Row(
+                f"{tool_name} <-> {row['name']}",
+                data["endpoint"],
+                "ok" if ok else "FAIL",
+                "byte-equal" if same else "MISMATCH",
+                f"json_equal={json_equal} oracle={check['ok']} "
+                f"fitted={summary.get('expiries_fitted')}/{summary.get('expiries_total')}"
+                + (
+                    f" inside_bid_ask={rep.get('inside_bid_ask')}/{rep.get('count')}" if rep else ""
+                ),
+            )
+        )
+    return failed
+
+
 async def m59a_sources(client: Client, http: httpx.AsyncClient, rows: list[Row]) -> bool:
     """M5.9a: the vendored source trees are present (fetched once, cached under
     ``vendor/``), the engine's QuantLib version equals ``QUANTLIB_PIN``, and the three
@@ -682,6 +739,7 @@ async def main() -> int:
         sweep_failed, summary = await m3_sweep(client, rows, sweep_rows)
         failed |= sweep_failed
         failed |= await m3_tools(client, http, rows)
+        failed |= await m511_option_quotes(client, http, rows)
         failed |= await m59a_sources(client, http, rows)
 
     if sweep_table:

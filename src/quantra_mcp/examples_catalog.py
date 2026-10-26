@@ -162,6 +162,19 @@ def _find_field(response: Any, name: str) -> float | None:
     return None
 
 
+def _collect_numbers(node: Any, names: set[str], out: dict[str, list[float]]) -> None:
+    """Every numeric value under a key in ``names``, depth-first in document order."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key in names and isinstance(value, int | float) and not isinstance(value, bool):
+                out.setdefault(key, []).append(float(value))
+            else:
+                _collect_numbers(value, names, out)
+    elif isinstance(node, list):
+        for value in node:
+            _collect_numbers(value, names, out)
+
+
 def oracle_check(row: dict[str, Any], response: Any) -> dict[str, Any]:
     """Compare an engine response with the example's catalog oracle.
 
@@ -250,6 +263,30 @@ def oracle_check(row: dict[str, Any], response: Any) -> dict[str, Any]:
             "kind": kind,
             "expected": oracle["values"],
             "actual": actual_f,
+        }
+    if kind == "field_lists":
+        found: dict[str, list[float]] = {}
+        _collect_numbers(response, set(oracle["values"]), found)
+        ok = True
+        missing: dict[str, int] = {}
+        for name, expected_list in oracle["values"].items():
+            got_list = found.get(name, [])
+            j = 0
+            for expected in expected_list:
+                tol = max(float(oracle.get("tolerance") or 1e-7), abs(expected) * 1e-5)
+                while j < len(got_list) and abs(got_list[j] - expected) > tol:
+                    j += 1
+                if j == len(got_list):
+                    ok = False
+                    missing[name] = missing.get(name, 0) + 1
+                else:
+                    j += 1
+        return {
+            "checked": True,
+            "ok": ok,
+            "kind": kind,
+            "expected": {k: len(v) for k, v in oracle["values"].items()},
+            "actual": {"unmatched": missing},
         }
     if kind == "last_df":
         results = response.get("results") if isinstance(response, dict) else None

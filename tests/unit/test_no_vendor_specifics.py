@@ -64,7 +64,7 @@ def test_no_vendored_example_carries_a_vendor_reference() -> None:
         hashlib.sha256(f"examples/data/structured_note/{n}.json".encode()).hexdigest()
         for n in ISSUER_EXCLUDED
     }
-    assert index["count"] == 241
+    assert index["count"] == 245
     assert not (EXAMPLES / "misc" / "swaption_ois_bbg_zerorate_request.json").exists()
 
 
@@ -77,6 +77,8 @@ ISSUER_EXCLUDED = (
     "jpm_review_notes_ndx_rty_spx_46661pt64",
     "santander_quad_index_low_hurdle_autocall_xs3109492564",
     "scotia_autocallable_trigger_ndx_rty_us06419jme72",
+    # 0.1.15 (engine 0.14.0): the same note on synthetic surfaces
+    "scotia_autocallable_trigger_ndx_rty_us06419jme72_with_synthetic_surface",
 )
 ISSUER_TEXT = re.compile(r"scotia|santander|bnp|jpm|06419|xs2741|xs3109|46661|idad", re.I)
 

@@ -30,7 +30,7 @@ async def test_lists_tools_and_resources(app: Any) -> None:
     async with Client(app) as c:
         listed = (await c.list_tools()).tools
         tools = {t.name for t in listed}
-        assert len(listed) == 42
+        assert len(listed) == 44
         assert tools == {
             "quantra_meta",
             "engine_schema",
@@ -62,6 +62,8 @@ async def test_lists_tools_and_resources(app: Any) -> None:
             "price_yoy_inflation_swap",
             "price_yoy_inflation_cap_floor",
             "price_structured_note",
+            "calibrate_implied_forwards",
+            "calibrate_vol_surface",
             "list_examples",
             "get_example",
             "swap_dv01",
@@ -283,7 +285,7 @@ async def test_discovery_tools(app: Any) -> None:
         enums = _structured(await c.call_tool("list_enums", {"name": "TimeUnit"}))
         bad_enum = _structured(await c.call_tool("list_enums", {"name": "Nope"}))
         bad_ep = _structured(await c.call_tool("engine_schema", {"endpoint": "/nope"}))
-    assert eps["count"] == 27 and eps["endpoints"][0]["endpoint"] == "/price-fixed-rate-bond"
+    assert eps["count"] == 29 and eps["endpoints"][0]["endpoint"] == "/price-fixed-rate-bond"
     assert schema["required"] == ["date"]
     assert schema["request_schema"]["properties"]["tenor_unit"]["enum"] == enums["values"]
     assert "advanced_date" in schema["response_schema"]["properties"]
@@ -305,5 +307,5 @@ async def test_resources(app: Any, ois_example: dict[str, Any]) -> None:
     assert json.loads(enum.contents[0].text)["values"][0] == "Argentina"  # type: ignore[union-attr]
     assert json.loads(schema.contents[0].text)["endpoint"] == "/price-ois-swap"  # type: ignore[union-attr]
     assert doc.contents[0].text.startswith("# HTTP API Contract")  # type: ignore[union-attr]
-    assert "0.12.0" in versioning.contents[0].text  # type: ignore[union-attr]
-    assert json.loads(pin.contents[0].text)["tag"] == "v0.12.0"  # type: ignore[union-attr]
+    assert "0.14.0" in versioning.contents[0].text  # type: ignore[union-attr]
+    assert json.loads(pin.contents[0].text)["tag"] == "v0.14.0"  # type: ignore[union-attr]

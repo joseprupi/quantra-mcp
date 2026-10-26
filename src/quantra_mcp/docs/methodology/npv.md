@@ -1,6 +1,6 @@
 # NPV: what the engine's `npv` is
 
-_Generated from the engine's documentation and source at `v0.12.0` (`5b1c016739b1`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.12.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.14.0` (`9df97fb2c17a`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.14.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 Every `npv` the engine returns is QuantLib's `NPV()` of the instrument it built from the request, discounted on the curve the request names. The engine adds no adjustment of its own; the sign is QuantLib's for the side the request states.
 
@@ -20,9 +20,9 @@ Every `npv` the engine returns is QuantLib's `NPV()` of the instrument it built 
     out.npv = out.legs[0].npv + out.legs[1].npv;
 ````
 
-Source: `src/evaluators/vanilla_swap_evaluator.cpp@v0.12.0:L19-L27`
+Source: `src/evaluators/vanilla_swap_evaluator.cpp@v0.14.0:L18-L26`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/vanilla_swap_evaluator.cpp#L19-L27>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/vanilla_swap_evaluator.cpp#L18-L26>
 
 ### 2. A leg is valued as QuantLib's `DiscountingSwapEngine` values a leg: `CashFlows::npv` as of the discount curve's reference date, flows on that date excluded; the leg's value is then signed -1 when the party pays it (`Pay`), +1 when it receives it.
 
@@ -45,9 +45,9 @@ SwapLegPerLeg SignedLegResult(
     out.npv = leg.sign() * built.npvOwn;
 ````
 
-Source: `src/evaluators/swap_leg_pricer.cpp@v0.12.0:L250-L265`
+Source: `src/evaluators/swap_leg_pricer.cpp@v0.14.0:L250-L265`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/swap_leg_pricer.cpp#L250-L265>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/swap_leg_pricer.cpp#L250-L265>
 
 ### 3. An OIS swap is priced the same way: fixed leg and overnight leg built and valued separately, `npv` = sum of the signed leg values.
 
@@ -63,9 +63,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/
     out.npv = out.legs[0].npv + out.legs[1].npv;
 ````
 
-Source: `src/evaluators/ois_swap_evaluator.cpp@v0.12.0:L19-L27`
+Source: `src/evaluators/ois_swap_evaluator.cpp@v0.14.0:L18-L26`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/ois_swap_evaluator.cpp#L19-L27>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/ois_swap_evaluator.cpp#L18-L26>
 
 ### 4. The swap response: `npv` (sum of the legs, positive in favour of the reported party), optional `fair_rate` / `fair_spread`, and `legs[]` with each leg's signed `npv` and optional flows. No per-leg BPS since engine 0.10.0.
 
@@ -95,9 +95,9 @@ table VanillaSwapResponse {
     legs:[SwapLegResult] (required);
 ````
 
-Source: `flatbuffers/fbs/vanilla_swap_response.fbs@v0.12.0:L27-L49`
+Source: `flatbuffers/fbs/vanilla_swap_response.fbs@v0.14.0:L27-L49`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/vanilla_swap_response.fbs#L27-L49>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/vanilla_swap_response.fbs#L27-L49>
 
 ### 5. A swaption's `npv` is "the present value of the swaption under the selected model and market inputs".
 
@@ -106,9 +106,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs
     npv:double;
 ````
 
-Source: `flatbuffers/fbs/swaption_response.fbs@v0.12.0:L8-L9`
+Source: `flatbuffers/fbs/swaption_response.fbs@v0.14.0:L8-L9`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/swaption_response.fbs#L8-L9>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/swaption_response.fbs#L8-L9>
 
 ### 6. An equity option's `npv` is the instrument's `NPV()` multiplied by the trade `quantity`; the greeks are scaled the same way.
 
@@ -126,9 +126,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs
     out.rho = safeGreek([&]() { return oneAssetOption->rho() * quantity; });
 ````
 
-Source: `src/evaluators/equity_option_evaluator.cpp@v0.12.0:L242-L252`
+Source: `src/evaluators/equity_option_evaluator.cpp@v0.14.0:L242-L252`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/equity_option_evaluator.cpp#L242-L252>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/equity_option_evaluator.cpp#L242-L252>
 
 ### 7. A fixed-rate bond's `npv` is the bond's `NPV()`; clean / dirty price, accrued and yield are only computed when `bond_pricing_details` is set.
 
@@ -143,9 +143,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/
             out.accruedAmount = trade.bond->accruedAmount();
 ````
 
-Source: `src/evaluators/fixed_rate_bond_evaluator.cpp@v0.12.0:L85-L92`
+Source: `src/evaluators/fixed_rate_bond_evaluator.cpp@v0.14.0:L85-L92`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/fixed_rate_bond_evaluator.cpp#L85-L92>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/fixed_rate_bond_evaluator.cpp#L85-L92>
 
 ### 8. A CDS response carries `npv`, the protection (`default_leg_npv`) and premium leg NPVs; `fair_spread` is absent when QuantLib cannot express one.
 
@@ -163,9 +163,9 @@ table CDSValues {
     premium_leg_npv:double;
 ````
 
-Source: `flatbuffers/fbs/cds_response.fbs@v0.12.0:L6-L16`
+Source: `flatbuffers/fbs/cds_response.fbs@v0.14.0:L6-L16`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/cds_response.fbs#L6-L16>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/cds_response.fbs#L6-L16>
 
 ### 9. A FRA response: `npv`, the curve-implied `forward_rate`, the value at settlement and the settlement date.
 
@@ -180,9 +180,9 @@ table FRAResponse {
     settlement_date:string;
 ````
 
-Source: `flatbuffers/fbs/fra_response.fbs@v0.12.0:L4-L11`
+Source: `flatbuffers/fbs/fra_response.fbs@v0.14.0:L4-L11`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/fra_response.fbs#L4-L11>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/fra_response.fbs#L4-L11>
 
 ## Request fields that control it
 
@@ -193,9 +193,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs
     as_of_date:string (required);
 ````
 
-Source: `flatbuffers/fbs/pricing.fbs@v0.12.0:L79-L80`
+Source: `flatbuffers/fbs/pricing.fbs@v0.14.0:L79-L80`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/pricing.fbs#L79-L80>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/pricing.fbs#L79-L80>
 
 - `pricing.settlement_date` applies to bonds only.
 
@@ -204,9 +204,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs
     settlement_date:string;
 ````
 
-Source: `flatbuffers/fbs/pricing.fbs@v0.12.0:L82-L83`
+Source: `flatbuffers/fbs/pricing.fbs@v0.14.0:L82-L83`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/pricing.fbs#L82-L83>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/pricing.fbs#L82-L83>
 
 - Swaps (engine 0.10.0+): each leg names its own `discounting_curve` (and, on a floating leg, its `forwarding_curve`) in `pricing.rates.curves` by id.
 
@@ -219,9 +219,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs
     discounting_curve:string (required);
 ````
 
-Source: `flatbuffers/fbs/swap_leg.fbs@v0.12.0:L101-L106`
+Source: `flatbuffers/fbs/swap_leg.fbs@v0.14.0:L101-L106`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/swap_leg.fbs#L101-L106>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/swap_leg.fbs#L101-L106>
 
 - A swaption takes its curves from the underlying swap's legs (both legs must name the same discounting curve).
 
@@ -232,11 +232,11 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs
 /// `forwarding_curve`); every reference is by id into `pricing`.
 ````
 
-Source: `flatbuffers/fbs/price_swaption_request.fbs@v0.12.0:L7-L10`
+Source: `flatbuffers/fbs/price_swaption_request.fbs@v0.14.0:L7-L10`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/price_swaption_request.fbs#L7-L10>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/price_swaption_request.fbs#L7-L10>
 
-## Not documented in engine v0.12.0
+## Not documented in engine v0.14.0
 
 - Sign convention: not documented in engine prose. From source, the value is QuantLib's `NPV()` for the instrument built with the request's `pay_receive` / `side` / option type (a swap response states it: positive in favour of the reported party), so the sign is QuantLib's for that side (a payer swap's NPV rises when rates rise). Test it with `reprice_with` flipping the side.
 - Premium vs forward premium: the engine returns one present value as of `as_of_date`; it does not document a forward (deferred) premium field.

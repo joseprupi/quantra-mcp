@@ -1,6 +1,6 @@
 # Connector analytics: swap_dv01, key_rate_ladder, scenario, fair_rate, reprice_with
 
-_Generated from THIS server's source (quantra-mcp) at commit `04b747d` by `scripts/methodology_gen.py --connector-only`. Unlike the other pages this one is not about the engine: it documents the request edits and the arithmetic the connector performs on engine outputs. Every statement is an excerpt of this repository with its location `path@sha:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantra-mcp/blob/04b747d/<path>#L..`._
+_Generated from THIS server's source (quantra-mcp) at commit `083561a` by `scripts/methodology_gen.py --connector-only`. Unlike the other pages this one is not about the engine: it documents the request edits and the arithmetic the connector performs on engine outputs. Every statement is an excerpt of this repository with its location `path@sha:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantra-mcp/blob/083561a/<path>#L..`._
 
 These five tools never price anything themselves. Every NPV they report is an engine output of a complete pricing request (echoed in `calls[*].result.request` / `base.request` / `changed.request`). What this server adds is (1) the edit of the request (a quote bumped by `bump_bp / 10 000`, a quote replaced, a field set) and (2) a subtraction, a halving or a sum of those engine NPVs. Every such derived number sits next to the raw per-call NPVs so it can be redone by hand.
 
@@ -35,9 +35,9 @@ prices, FX points) and pillars that carry a ``quote_id`` instead of a value
 are rejected with a message that names them.
 ````
 
-Source: `src/quantra_mcp/builders/bumps.py@04b747d:L1-L9`
+Source: `src/quantra_mcp/builders/bumps.py@083561a:L1-L9`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/builders/bumps.py#L1-L9>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/builders/bumps.py#L1-L9>
 
 ### 2. Which field is bumped per point type, and which point types cannot be bumped in bp (discount factors, FX points; bond clean prices and `quote_id` pillars are refused in `_quote`).
 
@@ -57,9 +57,9 @@ _RATE_FIELDS: dict[str, tuple[str, float]] = {
 }
 ````
 
-Source: `src/quantra_mcp/builders/bumps.py@04b747d:L25-L37`
+Source: `src/quantra_mcp/builders/bumps.py@083561a:L25-L37`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/builders/bumps.py#L25-L37>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/builders/bumps.py#L25-L37>
 
 ### 3. Unbumpable point types and the reason reported.
 
@@ -71,9 +71,9 @@ _UNBUMPABLE: dict[str, str] = {
 }
 ````
 
-Source: `src/quantra_mcp/builders/bumps.py@04b747d:L39-L43`
+Source: `src/quantra_mcp/builders/bumps.py@083561a:L39-L43`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/builders/bumps.py#L39-L43>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/builders/bumps.py#L39-L43>
 
 ### 4. The bump arithmetic itself (`after = before + bump_bp * scale`), recorded as `{curve, pillar, point_type, field, from, to, bump_bp}`.
 
@@ -94,9 +94,9 @@ GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/b
                 "bump_bp": bump_bp,
 ````
 
-Source: `src/quantra_mcp/builders/bumps.py@04b747d:L184-L197`
+Source: `src/quantra_mcp/builders/bumps.py@083561a:L184-L197`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/builders/bumps.py#L184-L197>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/builders/bumps.py#L184-L197>
 
 ### 5. A `replace_quotes` entry sets one pillar's quote to the given value (no arithmetic).
 
@@ -119,9 +119,9 @@ def replace_quote(
     point[p.field] = float(value)
 ````
 
-Source: `src/quantra_mcp/builders/bumps.py@04b747d:L203-L218`
+Source: `src/quantra_mcp/builders/bumps.py@083561a:L203-L218`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/builders/bumps.py#L203-L218>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/builders/bumps.py#L203-L218>
 
 ### 6. Every reprice goes through the SAME pricing tool the trade would normally use (`price_vanilla_swap` / `price_ois_swap` internals), so each `calls[*].result` is a complete, replayable pricing result.
 
@@ -136,9 +136,9 @@ async def _price_spec(
     """Reprice ``spec`` on a (possibly bumped) pricing block through the product's tool."""
 ````
 
-Source: `src/quantra_mcp/tools/analytics.py@04b747d:L176-L183`
+Source: `src/quantra_mcp/tools/analytics.py@083561a:L176-L183`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L176-L183>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L176-L183>
 
 ### 7. The NPV read from each engine response is `swaps[0].npv`, unchanged.
 
@@ -150,9 +150,9 @@ def _npv(result: ToolResult) -> float | None:
     return None
 ````
 
-Source: `src/quantra_mcp/tools/analytics.py@04b747d:L246-L250`
+Source: `src/quantra_mcp/tools/analytics.py@083561a:L246-L250`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L246-L250>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L246-L250>
 
 ### 8. `spot` / tenor dates are resolved by the engine once (base call) and pinned for every reprice, so bumped requests differ from the base only in the quotes moved.
 
@@ -175,9 +175,9 @@ def _pin_dates(spec: SwapSpec, base: ToolResult, notes: list[str]) -> SwapSpec:
     return spec
 ````
 
-Source: `src/quantra_mcp/tools/analytics.py@04b747d:L253-L268`
+Source: `src/quantra_mcp/tools/analytics.py@083561a:L253-L268`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L253-L268>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L253-L268>
 
 ### 9. DV01 methods: which bumped reprices each needs (`centered` = up and down; `up`; `down`).
 
@@ -191,9 +191,9 @@ def _sides(method: DvMethod, bump_bp: float) -> list[tuple[str, float]]:
     return [("down", -bump_bp)]
 ````
 
-Source: `src/quantra_mcp/tools/analytics.py@04b747d:L275-L281`
+Source: `src/quantra_mcp/tools/analytics.py@083561a:L275-L281`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L275-L281>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L275-L281>
 
 ### 10. The DV01 arithmetic: centered = (npv_up - npv_down) / 2; up = npv_up - base_npv; down = base_npv - npv_down. Nothing else.
 
@@ -211,9 +211,9 @@ def dv01_of(method: DvMethod, base_npv: float, npvs: dict[str, float]) -> float:
     return base_npv - npvs["down"]
 ````
 
-Source: `src/quantra_mcp/tools/analytics.py@04b747d:L284-L294`
+Source: `src/quantra_mcp/tools/analytics.py@083561a:L284-L294`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L284-L294>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L284-L294>
 
 ### 11. `swap_dv01`: every pillar of the selected curve(s) is bumped on each side the method needs; the per-call NPVs are reported as `npvs`, the derived number as `dv01` with its `dv01_definition`.
 
@@ -248,9 +248,9 @@ GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/t
             bumped_quotes=quotes,
 ````
 
-Source: `src/quantra_mcp/tools/analytics.py@04b747d:L519-L546`
+Source: `src/quantra_mcp/tools/analytics.py@083561a:L519-L546`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L519-L546>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L519-L546>
 
 ### 12. `key_rate_ladder`: the buckets are the curve's ACTUAL pillars in wire order; one reprice per pillar and side plus a parallel reprice per side.
 
@@ -266,9 +266,9 @@ GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/t
                 jobs.append((f"pillar:{p.label}:{side}", r.with_curves({curve_id: bumped}), edits))
 ````
 
-Source: `src/quantra_mcp/tools/analytics.py@04b747d:L581-L589`
+Source: `src/quantra_mcp/tools/analytics.py@083561a:L581-L589`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L581-L589>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L581-L589>
 
 ### 13. `key_rate_ladder` rows: `dv01` per pillar from that pillar's own up / down NPVs; `sum_of_buckets` is their sum; `parallel.dv01` is the same difference with every pillar bumped together.
 
@@ -293,9 +293,9 @@ GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/t
         parallel["dv01"] = dv01_of(method, r.base_npv, par_npvs)
 ````
 
-Source: `src/quantra_mcp/tools/analytics.py@04b747d:L601-L618`
+Source: `src/quantra_mcp/tools/analytics.py@083561a:L601-L618`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L601-L618>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L601-L618>
 
 ### 14. `scenario`: `change = npv - base_npv` per named market variant; `edits` counts the quotes moved (listed in `calls[*].edits`).
 
@@ -319,9 +319,9 @@ GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/t
             definitions={"change": "npv - base_npv; calls[*].edits lists every quote moved"},
 ````
 
-Source: `src/quantra_mcp/tools/analytics.py@04b747d:L692-L708`
+Source: `src/quantra_mcp/tools/analytics.py@083561a:L692-L708`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L692-L708>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L692-L708>
 
 ### 15. `fair_rate`: `fair_rate` / `fair_spread` are read from the engine response; when absent the tool says so and solves nothing.
 
@@ -341,9 +341,9 @@ GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/t
             message=None if fields else f"fair rate not provided by the engine for {trade.product}",
 ````
 
-Source: `src/quantra_mcp/tools/analytics.py@04b747d:L731-L743`
+Source: `src/quantra_mcp/tools/analytics.py@083561a:L731-L743`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L731-L743>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L731-L743>
 
 ### 16. Reprices fan out concurrently, bounded by `QUANTRA_MAX_CONCURRENCY`; a failed reprice fails the whole result with its engine error.
 
@@ -361,9 +361,9 @@ GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/t
         return None
 ````
 
-Source: `src/quantra_mcp/tools/analytics.py@04b747d:L405-L415`
+Source: `src/quantra_mcp/tools/analytics.py@083561a:L405-L415`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/analytics.py#L405-L415>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/analytics.py#L405-L415>
 
 ### 17. `reprice_with`: a change is either `value` (set, any JSON) or `bump_bp` (add `bump_bp / 10_000` to an existing numeric field); what was done is recorded as `{path, kind, before, after}`.
 
@@ -399,9 +399,9 @@ def apply_change(body: dict[str, Any], change: FieldChange) -> dict[str, Any]:
         "after": after,
 ````
 
-Source: `src/quantra_mcp/tools/reconcile.py@04b747d:L408-L436`
+Source: `src/quantra_mcp/tools/reconcile.py@083561a:L408-L436`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/reconcile.py#L408-L436>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/reconcile.py#L408-L436>
 
 ### 18. `reprice_with.request_diff`: every leaf that differs between the two requests.
 
@@ -410,9 +410,9 @@ def request_diff(a: Any, b: Any, prefix: str = "") -> list[dict[str, Any]]:
     """Every leaf that differs between two JSON values, as ``{path, before, after}``."""
 ````
 
-Source: `src/quantra_mcp/tools/reconcile.py@04b747d:L440-L441`
+Source: `src/quantra_mcp/tools/reconcile.py@083561a:L440-L441`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/reconcile.py#L440-L441>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/reconcile.py#L440-L441>
 
 ### 19. `reprice_with.differences`: the numeric top-level fields of the first priced item, `difference = changed - base` (subtraction only).
 
@@ -453,9 +453,9 @@ def numeric_differences(base: Any, changed: Any) -> dict[str, Any]:
         "arithmetic": "difference = changed - base (subtraction only)",
 ````
 
-Source: `src/quantra_mcp/tools/reconcile.py@04b747d:L464-L497`
+Source: `src/quantra_mcp/tools/reconcile.py@083561a:L464-L497`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/reconcile.py#L464-L497>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/reconcile.py#L464-L497>
 
 ### 20. `compare_results`: `abs_diff = quantra - external`, `rel_diff = abs_diff / |external|` (null when external is 0).
 
@@ -464,9 +464,9 @@ GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/t
             row["rel_diff"] = (value - ext) / abs(ext) if ext != 0 else None
 ````
 
-Source: `src/quantra_mcp/tools/reconcile.py@04b747d:L277-L278`
+Source: `src/quantra_mcp/tools/reconcile.py@083561a:L277-L278`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/reconcile.py#L277-L278>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/reconcile.py#L277-L278>
 
 ### 21. `compare_results` label synonyms: PV01 / BPV / annuity map to a swaption's `annuity`; DV01 / shifting / delta shift map to the connector's bump-and-reprice `dv01`; leg labels map to `legs[i].npv` (the full table).
 
@@ -529,13 +529,13 @@ LABEL_SYNONYMS: dict[str, list[str]] = {
 }
 ````
 
-Source: `src/quantra_mcp/tools/reconcile.py@04b747d:L53-L108`
+Source: `src/quantra_mcp/tools/reconcile.py@083561a:L53-L108`
 
-GitHub: <https://github.com/joseprupi/quantra-mcp/blob/04b747d/src/quantra_mcp/tools/reconcile.py#L53-L108>
+GitHub: <https://github.com/joseprupi/quantra-mcp/blob/083561a/src/quantra_mcp/tools/reconcile.py#L53-L108>
 
 ## PV01 vs DV01
 
-PV01 (also BPS, BPV, annuity) is the fixed leg's basis-point sensitivity: the annuity of the fixed leg for a 1bp coupon change on fixed discount factors. The engine reported it as `fixed_leg_bps` up to 0.9.0; engine 0.10.0 removed every `*_bps` field (`docs/versioning.md@v0.12.0:L245-L245`, <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L245>). The engine still computes the fixed leg's signed annuity, but only as the denominator of `fair_rate` (`src/evaluators/vanilla_swap_evaluator.cpp@v0.12.0:L31-L31`, <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/vanilla_swap_evaluator.cpp#L31>; OIS `src/evaluators/ois_swap_evaluator.cpp@v0.12.0:L31-L31`, <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/ois_swap_evaluator.cpp#L31>), never as a response field. DV01 is this connector's bump-and-reprice number (`swap_dv01`, centered by default: two engine NPVs 1bp apart on the curve quotes, halved): it moves the curve, so it is a different quantity from a PV01. `compare_results` maps DV01 / shifting / delta shift to `dv01`; PV01 / BPV / annuity map to a swaption's `annuity` where present and are otherwise listed unmapped with this explanation: there is no engine PV01 to compare a vendor's PV01 with; `swap_dv01` is the closest curve sensitivity, and it must be compared as a DV01, not as a PV01.
+PV01 (also BPS, BPV, annuity) is the fixed leg's basis-point sensitivity: the annuity of the fixed leg for a 1bp coupon change on fixed discount factors. The engine reported it as `fixed_leg_bps` up to 0.9.0; engine 0.10.0 removed every `*_bps` field (`docs/versioning.md@v0.14.0:L416-L416`, <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L416>). The engine still computes the fixed leg's signed annuity, but only as the denominator of `fair_rate` (`src/evaluators/vanilla_swap_evaluator.cpp@v0.14.0:L30-L30`, <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/vanilla_swap_evaluator.cpp#L30>; OIS `src/evaluators/ois_swap_evaluator.cpp@v0.14.0:L30-L30`, <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/ois_swap_evaluator.cpp#L30>), never as a response field. DV01 is this connector's bump-and-reprice number (`swap_dv01`, centered by default: two engine NPVs 1bp apart on the curve quotes, halved): it moves the curve, so it is a different quantity from a PV01. `compare_results` maps DV01 / shifting / delta shift to `dv01`; PV01 / BPV / annuity map to a swaption's `annuity` where present and are otherwise listed unmapped with this explanation: there is no engine PV01 to compare a vendor's PV01 with; `swap_dv01` is the closest curve sensitivity, and it must be compared as a DV01, not as a PV01.
 
 ## Caveats
 

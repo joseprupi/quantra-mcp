@@ -21,8 +21,8 @@ def test_index_covers_every_vendored_file_once() -> None:
     index = cat.load_index()
     rows = index["examples"]
     assert (
-        index["count"] == len(rows) == 241
-    )  # 239 engine fixtures + 2 blog (1 vendor-named + 6 issuer-named excluded)
+        index["count"] == len(rows) == 245
+    )  # 243 engine fixtures + 2 blog (1 vendor-named + 7 issuer-named excluded)
     assert index["engine_tag"] == pin().tag and index["engine_sha"] == pin().sha
     names = [r["name"] for r in rows]
     assert len(set(names)) == len(names)
@@ -42,8 +42,8 @@ def test_index_covers_every_vendored_file_once() -> None:
     assert beyond["expected_status"] == 422 and "beyond_pillar_error" in beyond["why"]
     assert cat.find("sofr-ois-swap-request")["list_key"] == "swaps"
     cataloged = [r for r in rows if r.get("catalog_id")]
-    assert len(cataloged) == 209
-    assert sum(1 for r in rows if r["oracle"]) == 211
+    assert len(cataloged) == 213
+    assert sum(1 for r in rows if r["oracle"]) == 215
     assert sum(1 for r in rows if r["category"] == "blog") == 2
 
 
@@ -96,11 +96,11 @@ async def test_list_and_get_example_tools(app: Any) -> None:
         bad = _s(await c.call_tool("list_examples", {"category": "nope"}))
         one = _s(await c.call_tool("get_example", {"name": "frb_eur_5y_at_par_annual_30360"}))
         missing = _s(await c.call_tool("get_example", {"name": "nope"}))
-    assert all_["ok"] and all_["count"] == 241 and "ir_swaps" in all_["categories"]
+    assert all_["ok"] and all_["count"] == 245 and "ir_swaps" in all_["categories"]
     # unfiltered = compact: counts per group, the first 20 names, a hint; filtered = rows
     assert all_["shown"] == 20 == len(all_["examples"]) == len(all_["names"])
-    assert sum(all_["by_category"].values()) == 241 and all_["by_category"]["bonds"] == 24
-    assert sum(all_["by_product"].values()) == 241 and "category=" in all_["hint"]
+    assert sum(all_["by_category"].values()) == 245 and all_["by_category"]["bonds"] == 24
+    assert sum(all_["by_product"].values()) == 245 and "category=" in all_["hint"]
     assert len(json.dumps(all_)) < 12_000
     assert "by_category" not in bonds and bonds["shown"] == 24 == len(bonds["examples"])
     assert bonds["count"] == 24 and all(r["category"] == "bonds" for r in bonds["examples"])
@@ -110,7 +110,7 @@ async def test_list_and_get_example_tools(app: Any) -> None:
     assert one["ok"] and one["endpoint"] == "/price-fixed-rate-bond"
     assert one["body"]["bonds"][0]["fixed_rate_bond"]["rate"] == 0.031
     assert one["reference_value"] == 999841.67 and one["oracle"]["kind"] == "npv"
-    assert one["source"].startswith("quantraserver v0.12.0")
+    assert one["source"].startswith("quantraserver v0.14.0")
     assert missing["ok"] is False and "unknown example" in missing["error"]
 
 
@@ -134,7 +134,7 @@ async def test_example_resources(app: Any) -> None:
         catalog = (await c.read_resource("quantra://docs/engine-catalog")).contents[0].text  # type: ignore[union-attr]
         with pytest.raises(Exception, match="not 'bonds'"):
             await c.read_resource("quantra://examples/bonds/cds_eur_5y_buyer_100bp_spread_curve")
-    assert idx["count"] == 241 and idx["examples"][0]["uri"].startswith("quantra://examples/blog/")
+    assert idx["count"] == 245 and idx["examples"][0]["uri"].startswith("quantra://examples/blog/")
     assert by_cat["endpoint"] == "/price-cds" and by_cat["body"] == by_name
     assert by_name["cds_list"][0]["cds"]["side"] == "Buyer"
     assert blog["swaps"][0]["ois_swap"]["overnight_leg"]["payment_lag"] == 2

@@ -62,6 +62,9 @@ SN_CPP = "src/evaluators/structured_note_evaluator.cpp"
 PATH_ENGINE_CPP = "src/mc/path_engine.cpp"
 QUANTO_CPP = "src/market/quanto_builder.cpp"
 SN_FBS = "flatbuffers/fbs/structured_note.fbs"
+IMPFWD_H = "src/evaluators/implied_forwards_evaluator.h"
+VOLCAL_CPP = "src/evaluators/vol_surface_calibration_evaluator.cpp"
+OPTQ_FBS = "flatbuffers/fbs/option_quotes.fbs"
 
 ENGINE_REPO_URL = "https://github.com/joseprupi/quantraserver"
 CONNECTOR_REPO_URL = "https://github.com/joseprupi/quantra-mcp"
@@ -70,7 +73,7 @@ CONNECTOR_REPO_URL = "https://github.com/joseprupi/quantra-mcp"
 #: from THIS tree without the engine checkout). Line numbers verified at the pin by
 #: ``git show``; ``tests/unit/test_methodology.py`` re-checks them when the engine
 #: repository is available, so a pin bump that moves them fails the gate.
-ENGINE_PIN_TAG = "v0.12.0"
+ENGINE_PIN_TAG = "v0.14.0"
 
 
 def _engine_ref(path: str, line: int) -> dict[str, str]:
@@ -84,9 +87,9 @@ def _engine_ref(path: str, line: int) -> dict[str, str]:
 
 #: 0.10.0 removed every swap `*_bps` response field (docs/versioning.md); the fixed
 #: leg's signed annuity survives only inside the engine, as the denominator of fair_rate.
-ENGINE_BPS_REMOVED = _engine_ref(VERSIONING, 245)  # ... the `*_bps` fields and the
-ENGINE_BPS_VANILLA = _engine_ref(VS_CPP, 31)  # const double fixedBps = SignedBps(...);
-ENGINE_BPS_OIS = _engine_ref(OIS_CPP, 31)  # const double fixedBps = SignedBps(...);
+ENGINE_BPS_REMOVED = _engine_ref(VERSIONING, 416)  # ... the `*_bps` fields and the
+ENGINE_BPS_VANILLA = _engine_ref(VS_CPP, 30)  # const double fixedBps = SignedBps(...);
+ENGINE_BPS_OIS = _engine_ref(OIS_CPP, 30)  # const double fixedBps = SignedBps(...);
 
 # this server's own source (the connector-analytics page cites the working tree)
 BUMPS_PY = "src/quantra_mcp/builders/bumps.py"
@@ -144,6 +147,14 @@ METRIC_TOPICS: dict[str, str] = {
     "event_probabilities": "structured-notes",
     "correlation_sensitivity": "structured-notes",
     "funding_dv01": "structured-notes",
+    "implied_dividend_yield": "option-quotes-to-surface",
+    "implied_funding_bp": "option-quotes-to-surface",
+    "implied_discount_factor": "option-quotes-to-surface",
+    "fit_residual_rmse": "option-quotes-to-surface",
+    "rmse_vol": "option-quotes-to-surface",
+    "max_abs_error_vol": "option-quotes-to-surface",
+    "butterfly_min_g": "option-quotes-to-surface",
+    "vanilla_repricing": "option-quotes-to-surface",
 }
 
 
@@ -1328,6 +1339,140 @@ TOPICS: list[Topic] = [
                 "steps per year.",
                 c(SN_FBS, r"^table MonteCarloSpec", r"^}"),
             ),
+        ],
+        "gaps": [],
+    },
+    {
+        "slug": "option-quotes-to-surface",
+        "title": "Option quotes to implied forwards, dividends and a Black vol surface",
+        "summary": (
+            "`POST /calibrate-implied-forwards` fits put-call parity per expiry of a listed "
+            "European option quote sheet (implied forward, implied discount factor, funding "
+            "spread, dividend yield, a ready dividend curve); `POST /calibrate-vol-surface` "
+            "inverts the out-of-the-money mids to Black vols and fits AndreasenHuge or one SVI "
+            "slice per expiry, checks butterfly and calendar arbitrage and reprices every used "
+            "quote on the returned surface. The excerpts below are the engine's own "
+            "documentation and source at the pin."
+        ),
+        "statements": [
+            s(
+                "What the implied-forwards endpoint returns and where it sits in the chain "
+                "quotes -> forwards -> surface -> models.",
+                c(HTTP_API, r"^## Implied forwards and dividends from option quotes", 11),
+            ),
+            s(
+                "The quote filters, in the order applied, each one a dropped line with that "
+                "reason; the limits on the filter values.",
+                c(
+                    HTTP_API,
+                    r"^Filter rules, applied per line in this order",
+                    r"naming the field\)\.$",
+                ),
+            ),
+            s(
+                "The put-call-parity fit: weighted least squares of C - P on the strike, two "
+                "passes (the second inside the moneyness window), the weights, the residuals and "
+                "the curve-relative quantities r(T), q(T) and the funding spread.",
+                c(
+                    IMPFWD_H,
+                    r"^ \* Put-call parity for European options",
+                    r"which is what pricing should use\.",
+                ),
+            ),
+            s(
+                "Using the returned dividend curve (repo + dividend, flat short end, exact "
+                "forwards at the fitted expiries).",
+                c(HTTP_API, r"^### Using the dividend curve", r"beyond the last one it is flat\."),
+            ),
+            s(
+                "Implied vols: the out-of-the-money side of every line, Black-76 inversion on "
+                "the forward, the drop reasons and the minimum quote counts per method.",
+                c(
+                    HTTP_API,
+                    r"^\*\*Implied vols\.\*\* Per expiry",
+                    r"with fewer it is reported unusable",
+                ),
+            ),
+            s(
+                "The Black-76 inversion as the engine calls it (QuantLib "
+                "`blackFormulaImpliedStdDev`).",
+                c(VOLCAL_CPP, r"^std::optional<double> impliedVol\(", r"^}"),
+            ),
+            s(
+                "AndreasenHuge: calibration set, curves from the implied discount factors and "
+                "forwards, QuantLib settings, the price floor for grid inversion and the "
+                "reported calibration error.",
+                c(
+                    HTTP_API,
+                    r"^\*\*AndreasenHuge\.\*\* Every used quote",
+                    r"in vol units over the calibration set\)\.",
+                ),
+            ),
+            s(
+                "The QuantLib construction: `AndreasenHugeVolatilityInterpl` (CubicSpline, "
+                "CallPut, 500 points) and `AndreasenHugeVolatilityAdapter`.",
+                c(
+                    VOLCAL_CPP,
+                    r"^    if \(in.method == VolSurfaceFitMethod::AndreasenHuge\) \{",
+                    r"out.andreasenHugeError = ed;",
+                ),
+            ),
+            s(
+                "SviPerExpiry: QuantLib `SviInterpolation` per expiry, the raw SVI total "
+                "variance, Durrleman's butterfly condition and the penalized refit.",
+                c(
+                    HTTP_API,
+                    r"^\*\*SviPerExpiry\.\*\* Per usable expiry",
+                    r"^are `sqrt\(w\(k\) / T\)`\.",
+                ),
+            ),
+            s(
+                "SVI total variance and Durrleman's g(k) as coded.",
+                c(VOLCAL_CPP, r"^double sviTotalVariance\(", r"return t1 \* t1"),
+            ),
+            s(
+                "The SVI fit call (QuantLib `SviInterpolation`, Levenberg-Marquardt, end "
+                "criteria).",
+                c(
+                    VOLCAL_CPP,
+                    r"^    if \(in.method == VolSurfaceFitMethod::SviPerExpiry\) \{",
+                    r"interp.update\(\);",
+                ),
+            ),
+            s(
+                "Calendar check (both methods; clipped only for SVI with enforce_calendar).",
+                c(
+                    HTTP_API,
+                    r"^\*\*Calendar check \(both methods\)\.\*\*",
+                    r"the implied-vol inversion tolerance\)\.",
+                ),
+            ),
+            s(
+                "Fit error and the vanilla repricing report: the returned surface rebuilt as "
+                "the pricers read it, every used quote repriced, inside the bid/ask or not.",
+                c(
+                    HTTP_API,
+                    r"^\*\*Fit error and repricing\.\*\*",
+                    r"which is why the default is 2\.5 %\.",
+                ),
+            ),
+            s(
+                "The repricing surface as coded (`BlackVarianceSurface`, NullCalendar, bilinear, "
+                "extrapolation).",
+                c(
+                    VOLCAL_CPP,
+                    r"^    // 5\. Vanilla repricing on the returned surface\.",
+                    r"surface->enableExtrapolation\(\);",
+                ),
+            ),
+            s(
+                "Using the surface: where to paste it and how to keep the forwards consistent.",
+                c(HTTP_API, r"^### Using the surface", r"\(`allow_extrapolation: true`\)\."),
+            ),
+        ],
+        "fields": [
+            s("`OptionQuote`: one line of the sheet.", c(OPTQ_FBS, r"^table OptionQuote ", r"^}")),
+            s("`QuoteFilter`: the filter values.", c(OPTQ_FBS, r"^table QuoteFilter", r"^}")),
         ],
         "gaps": [],
     },

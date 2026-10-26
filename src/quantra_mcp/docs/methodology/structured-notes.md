@@ -1,6 +1,6 @@
 # Structured notes: Monte Carlo set-up, payoff rules, quanto, seasoning, greeks
 
-_Generated from the engine's documentation and source at `v0.12.0` (`5b1c016739b1`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.12.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.14.0` (`9df97fb2c17a`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.14.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 `POST /price-structured-note` prices notes on equity-index baskets by Monte Carlo with one declarative payoff (observation events with optional autocall and coupon triggers, a coupon carry rule, a capital-protection block); every product shape is a configuration of those fields. The excerpts below are the engine's own documentation and source at the pin.
 
@@ -25,9 +25,9 @@ strike x expiry surface), yield curves, `FxSpotSpec` and the correlation
 matrices of "Correlation matrices". Nothing product-specific is in
 ````
 
-Source: `docs/http-api.md@v0.12.0:L1025-L1038`
+Source: `docs/http-api.md@v0.14.0:L1095-L1108`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1025-L1038>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1095-L1108>
 
 ### 2. The `StructuredNote` fields and their rules, as the engine documents them.
 
@@ -40,9 +40,9 @@ shared between notes):
 | `trade_id` | Echoed in the response. Required. |
 | `currency` | ISO code of the note: coupons, redemption and NPV. Required. |
 | `notional` | Coupons and the redemption are fractions of it. Presence-required, `> 0`. |
-| `underlyings[]` | The basket, at least one entry, ids distinct. Each: `underlying_id` (an `EquityUnderlyingSpec`, whose `currency` is required here), `volatility_id` (a `VolSurfaceSpec` with a `BlackVolSpec` payload: constant or term vols step exactly between observation dates; a strike x expiry surface makes the simulation Dupire local-vol and requires `monte_carlo.steps_per_year`), `initial_level` (the strike fixing every performance `S(t) / initial_level` is measured against; presence-required, `> 0`), `quanto` (present iff the underlying's currency differs from the note's: `discounting_curve` = the rate curve of the underlying's currency, `fx_spot_id` = an `FxSpotSpec` quoting the two currencies in either direction, `fx_volatility_id` = a constant or term `BlackVolSpec`, `fx_underlying_correlation` in `[-1, 1]`, presence-required), `historical_levels[]` (`{date, value}` closes on past dated observation dates; a past observation without one is a `400` naming the date). |
+| `underlyings[]` | The basket, at least one entry, ids distinct. Each: `underlying_id` (an `EquityUnderlyingSpec`, whose `currency` is required here), `volatility_id` (a `VolSurfaceSpec` with a `BlackVolSpec` payload: constant or term vols step exactly between observation dates; a strike x expiry surface makes the simulation Dupire local-vol and requires `monte_carlo.steps_per_year`; `POST /calibrate-vol-surface` returns such a surface from listed option quotes, ready to paste — see "Volatility surface from option quotes"), `initial_level` (the strike fixing every performance `S(t) / initial_level` is measured against; presence-required, `> 0`), `quanto` (present iff the underlying's currency differs from the note's: `discounting_curve` = the rate curve of the underlying's currency, `fx_spot_id` = an `FxSpotSpec` quoting the two currencies in either direction, `fx_volatility_id` = a constant or term `BlackVolSpec`, `fx_underlying_correlation` in `[-1, 1]`, presence-required), `historical_levels[]` (`{date, value}` closes on past dated observation dates; a past observation without one is a `400` naming the date). |
 | `performance_rule` | `WorstOf`, `BestOf` or `Average` of the underlyings' performances. Presence-required. |
-| `events[]` | Strictly increasing `observation_date`s; the last is the final observation. `autocall_trigger` present: `perf >= trigger` ends the note (notional plus this coupon plus the memory on `payment_date`). `coupon_trigger` present: `perf >= trigger` earns `coupon` plus the memory, paid on `payment_date` or held (`pay_only_on_call`). Both present (Phoenix with a call): the coupon test runs first. Neither: an accrual-only event, `coupon` joins the memory, nothing is observed or paid (`coupon_rule.memory` must be true, `payment_date` absent). `payment_date` is required iff a trigger is present and must be on or after the observation date; `coupon` is required with `coupon_trigger` and on accrual-only events. The final event must carry a trigger. |
+| `events[]` | Strictly increasing `observation_date`s; the last is the final observation. `autocall_trigger` present: `perf >= trigger` ends the note (notional plus this coupon plus the memory on `payment_date`). `coupon_trigger` present: `perf >= trigger` earns `coupon` plus the memory, paid on `payment_date` or held (`pay_only_on_call`). Both present (Phoenix with a call): the coupon test runs first. Neither: an accrual-only event, `coupon` joins the memory, nothing is observed or paid (`coupon_rule.memory` must be true, `payment_date` absent). `payment_date` is required iff a trigger is present and must be on or after the observation date; `coupon` is required with `coupon_trigger` and on accrual-only events. The final event must carry a trigger, unless it is marked `is_final: true`: a maturity-only observation where only the capital protection block (and `upside`) is tested, with no coupon test and no call test (the memory is not paid there); `coupon`, `coupon_trigger` and `autocall_trigger` must then be absent, `payment_date` is required and must equal `maturity_payment_date`, and the event must be the last one. A final observation that also tests a coupon or a call (an 80 % hurdle, a 100 % call) keeps its trigger; `is_final` is for a final date that only decides the redemption (a trigger note with upside). |
 | `coupon_rule` | `memory` (a missed coupon is added to a memory paid with the next coupon; the memory is a sum of amounts) and `pay_only_on_call` (true = Athena / snowball: earned coupons are held until a call or the final event; false = Phoenix: paid on their `payment_date`). Both presence-required. |
 | `capital` | `barrier` in `(0, 1]`, `monitoring` (`European`: tested on the final observation; `DailyClose`: breached when the basket performance is below the barrier on any simulated close), `put_strike` (default 1), `participation` (default 1); when breached the redemption is `1 - participation x max(put_strike - perf_final, 0)`. `knocked_in` is presence-required with `DailyClose` when an event is on or before the valuation date, absent otherwise. |
 | `upside` | Optional: `participation x max(perf_final - strike, 0)`, capped at `cap` when present, added to the redemption when the note is not called. |
@@ -52,9 +52,9 @@ shared between notes):
 | `monte_carlo` | `paths` (presence-required, even with `antithetic`), `seed` (default 42; `> 0` with Sobol), `sequence` (`Sobol` default, or `PseudoRandom`), `antithetic` (default true), `brownian_bridge` (default true; must be false with `PseudoRandom`), `steps_per_year` (required with a surface vol or a `DailyClose` barrier, must be absent otherwise). |
 ````
 
-Source: `docs/http-api.md@v0.12.0:L1095-L1112`
+Source: `docs/http-api.md@v0.14.0:L1165-L1182`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1095-L1112>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1165-L1182>
 
 ### 3. Response fields: price, standard error, legs, event probabilities, terms, seasoning and model echoes.
 
@@ -68,16 +68,16 @@ One row per note, in request order.
 | `legs` | `bond_redemption`, `coupons`, `capital_loss` (`<= 0`), each `{pv, standard_error}`; the three sum to `npv`. `upside` is in `bond_redemption`. |
 | `event_probabilities[]` | Per simulated event: `p_call` (present iff `autocall_trigger`), `p_coupon` (present iff a coupon test), both "alive at this event and the test holds". |
 | `p_barrier_breach`, `expected_life_years` | Breach probability; `E[t]` of the call (or the final observation), Actual/365 (Fixed) from the valuation date. |
-| `terms` | Every booked field as understood, defaults filled, each event flagged `accrual_only` / `final` / `resolved_from_history`. Check it before trusting the price. |
+| `terms` | Every booked field as understood, defaults filled, each event flagged `accrual_only` / `final` (the last event) / `is_final` (the request's maturity-only marker) / `resolved_from_history`. Check it before trusting the price. |
 | `seasoning` | How the past was resolved: per past event the levels, performances, basket performance, call and coupon outcomes, coupon paid, memory after; `memory_carried` into the simulation; `next_event_index`; for a decided note `known_payment_date` and `known_payment`. |
 | `model` | Per underlying `vol_shape`, `local_vol`, `quanto_drift` (rate units, at the first observation); `observation_dates_only`, `time_steps`, `time_grid`, `sequence_dimension`. |
 | `greeks` | The bump-and-reprice sensitivities below, present iff `greeks` was in the request. |
 | `market`, `decomposition`, `checks`, `distribution`, `timing` | The diagnostic blocks below, each present iff its flag was set and something was simulated. |
 ````
 
-Source: `docs/http-api.md@v0.12.0:L1136-L1149`
+Source: `docs/http-api.md@v0.14.0:L1210-L1223`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1136-L1149>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1210-L1223>
 
 ### 4. Pricing conventions: process per underlying (quanto drift), time grid, random numbers, discounting with the funding spread, seasoning, standard errors.
 
@@ -123,9 +123,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.m
   estimator; with Sobol it is an indication, not a confidence bound.
 ````
 
-Source: `docs/http-api.md@v0.12.0:L1283-L1321`
+Source: `docs/http-api.md@v0.14.0:L1357-L1395`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1283-L1321>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1357-L1395>
 
 ### 5. The payoff walk, one event on one path: accrual-only events add to the memory; the call test, the coupon test (its own trigger or the call test), memory and pay-only-on-call handling; at the final event the barrier test, the geared put loss and the upside.
 
@@ -141,29 +141,34 @@ EventOutcome stepEvent(
         st.memory += ev.couponOrZero();
         return o;
     }
-    const bool callNow = ev.autocallTrigger.has_value() && perf >= *ev.autocallTrigger;
-    // Coupon test: its own trigger, or (autocall only) the call test itself.
-    const bool earned = ev.couponTrigger ? perf >= *ev.couponTrigger : callNow;
-    o.couponEarned = earned;
-    if (earned) {
-        const double amount = ev.couponOrZero() + st.memory;
-        st.memory = 0.0;
-        if (callNow || isFinal || !trade.couponRule.payOnlyOnCall) {
-            o.couponPaid += amount;
-        } else {
-            st.memory = amount; // held until the next call or the final event
-        }
-    } else if (trade.couponRule.memory) {
-        st.memory += ev.couponOrZero();
-    }
-    if (ev.autocallTrigger) {
-        o.called = callNow;
-        if (callNow) {
-            o.couponPaid += st.memory; // everything held
+    // An `is_final` event (maturity-only observation) has no coupon test and
+    // no call test: the memory stays unpaid and only the capital block below
+    // runs (the mapper guarantees it is the last event).
+    if (!ev.isFinal) {
+        const bool callNow = ev.autocallTrigger.has_value() && perf >= *ev.autocallTrigger;
+        // Coupon test: its own trigger, or (autocall only) the call test itself.
+        const bool earned = ev.couponTrigger ? perf >= *ev.couponTrigger : callNow;
+        o.couponEarned = earned;
+        if (earned) {
+            const double amount = ev.couponOrZero() + st.memory;
             st.memory = 0.0;
-            o.redemptionPaid = 1.0;
-            st.called = true;
-            return o;
+            if (callNow || isFinal || !trade.couponRule.payOnlyOnCall) {
+                o.couponPaid += amount;
+            } else {
+                st.memory = amount; // held until the next call or the final event
+            }
+        } else if (trade.couponRule.memory) {
+            st.memory += ev.couponOrZero();
+        }
+        if (ev.autocallTrigger) {
+            o.called = callNow;
+            if (callNow) {
+                o.couponPaid += st.memory; // everything held
+                st.memory = 0.0;
+                o.redemptionPaid = 1.0;
+                st.called = true;
+                return o;
+            }
         }
     }
     if (isFinal) {
@@ -188,9 +193,9 @@ EventOutcome stepEvent(
 double basketPerformance(BasketPerformanceRule rule, const std::vector<double>& perfs) {
 ````
 
-Source: `src/evaluators/structured_note_evaluator.cpp@v0.12.0:L63-L118`
+Source: `src/evaluators/structured_note_evaluator.cpp@v0.14.0:L63-L123`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/structured_note_evaluator.cpp#L63-L118>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/structured_note_evaluator.cpp#L63-L123>
 
 ### 6. Discounting: a `ZeroSpreadedTermStructure` of the funding spread on the note curve (Continuous, Annual, Actual/365 (Fixed)).
 
@@ -206,9 +211,9 @@ std::shared_ptr<QuantLib::YieldTermStructure> spreadedCurve(
     return ts;
 ````
 
-Source: `src/evaluators/structured_note_evaluator.cpp@v0.12.0:L166-L174`
+Source: `src/evaluators/structured_note_evaluator.cpp@v0.14.0:L171-L179`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/structured_note_evaluator.cpp#L166-L174>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/structured_note_evaluator.cpp#L171-L179>
 
 ### 7. Quanto: the underlying's dividend curve becomes QuantLib's `QuantoTermStructure` (note curve as risk-free, the underlying currency's curve as foreign, sigma_S at the initial level, sigma_FX at the FX spot, rho).
 
@@ -223,9 +228,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/
         dividend, noteRiskFree, localRiskFree, equityBlackVol, strike, fxBlackVol, fxSpot, rho);
 ````
 
-Source: `src/market/quanto_builder.cpp@v0.12.0:L36-L43`
+Source: `src/market/quanto_builder.cpp@v0.14.0:L36-L43`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/market/quanto_builder.cpp#L36-L43>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/market/quanto_builder.cpp#L36-L43>
 
 ### 8. Random sequence generators: Sobol with Brownian bridge (Diagonal, JoeKuoD7), Sobol through the inverse normal, or pseudo-random.
 
@@ -250,9 +255,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/market/quan
                 QuantLib::PseudoRandom::make_sequence_generator(dimension, config.seed), config,
 ````
 
-Source: `src/mc/path_engine.cpp@v0.12.0:L177-L194`
+Source: `src/mc/path_engine.cpp@v0.14.0:L259-L276`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/mc/path_engine.cpp#L177-L194>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/mc/path_engine.cpp#L259-L276>
 
 ### 9. Antithetic variates: `paths` must be even; a pair is one sample.
 
@@ -260,9 +265,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/mc/path_eng
     const QuantLib::Size samples = config.antithetic ? config.paths / 2 : config.paths;
 ````
 
-Source: `src/mc/path_engine.cpp@v0.12.0:L43-L43`
+Source: `src/mc/path_engine.cpp@v0.14.0:L108-L108`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/mc/path_engine.cpp#L43-L43>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/mc/path_engine.cpp#L108-L108>
 
 ### 10. Seasoning: events on or before the valuation date are resolved from `historical_levels` through the same walk.
 
@@ -272,9 +277,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/mc/path_eng
     state.knockedIn = trade.capital.knockedIn.value_or(false);
 ````
 
-Source: `src/evaluators/structured_note_evaluator.cpp@v0.12.0:L610-L612`
+Source: `src/evaluators/structured_note_evaluator.cpp@v0.14.0:L616-L618`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/structured_note_evaluator.cpp#L610-L612>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/structured_note_evaluator.cpp#L616-L618>
 
 ### 11. Greeks: bump-and-reprice on common random numbers (the same seed, paths, grid and sequence as the price), and the number of simulations they cost.
 
@@ -288,9 +293,9 @@ the bumped and the base run is what is averaged, and its standard error is
 small even where the price's is not. Cost: `1 + 2N + N + 3` simulations for
 ````
 
-Source: `docs/http-api.md@v0.12.0:L1238-L1244`
+Source: `docs/http-api.md@v0.14.0:L1312-L1318`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1238-L1244>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1312-L1318>
 
 ### 12. The deadline that bounds a Greeks request.
 
@@ -300,9 +305,9 @@ own (`QUANTRA_REQUEST_BUDGET_MS`, the proxy's route timeout; the engine
 checks the budget before every extra run and returns `504` when it has
 ````
 
-Source: `docs/http-api.md@v0.12.0:L1248-L1250`
+Source: `docs/http-api.md@v0.14.0:L1322-L1324`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1248-L1250>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1322-L1324>
 
 ### 13. Units, standard errors and the definition of every sensitivity.
 
@@ -326,9 +331,9 @@ echoed in the block.
 | `rho` | NPV change per +1 bp parallel move of `discounting_curve`: a continuously compounded zero spread of `+rate_bump_bp` (`ZeroSpreadedTermStructure`, Actual/365 (Fixed)) on the note curve, used both as the processes' risk-free curve and under the funding spread for discounting, `(V(r + bump) - V0) / rate_bump_bp`. A note-currency underlying's forward rises with it; a quanto underlying's drift `r_local - q - rho sigma_S sigma_FX` does not move (its quanto curve is rebuilt on the shifted note curve, which cancels), so for a quanto basket `rho` is mostly the discounting. |
 ````
 
-Source: `docs/http-api.md@v0.12.0:L1253-L1269`
+Source: `docs/http-api.md@v0.14.0:L1327-L1343`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1253-L1269>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1327-L1343>
 
 ### 14. What the engine rejects (400 naming the field, 404 for an unknown id).
 
@@ -338,7 +343,10 @@ Each is a `400` naming the field (`notes[<i>].<path>: ...`): an empty
 `notional` or `initial_level`; a duplicate `underlying_id`; a missing
 `performance_rule`, `coupon_rule.memory` / `pay_only_on_call`,
 `capital.barrier` (or outside `(0, 1]`) / `monitoring`, `monte_carlo.paths`;
-events not strictly increasing; a final event without a trigger; an
+events not strictly increasing; a final event without a trigger and
+without `is_final`; an `is_final` event with a `coupon`, `coupon_trigger`
+or `autocall_trigger`, without a `payment_date`, with a `payment_date`
+other than `maturity_payment_date`, or that is not the last event; an
 accrual-only event with a `payment_date`, without a `coupon` or without
 `coupon_rule.memory`; a `coupon_trigger` without a `coupon`; a trigger
 without a `payment_date`, or one before the observation date; a negative
@@ -366,9 +374,9 @@ for a note that is not alive`), is a `400`. An unknown underlying, vol,
 curve, FX spot or correlation id is a `404`.
 ````
 
-Source: `docs/http-api.md@v0.12.0:L1325-L1355`
+Source: `docs/http-api.md@v0.14.0:L1399-L1432`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1325-L1355>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1399-L1432>
 
 ### 15. Known limits of this version.
 
@@ -387,9 +395,9 @@ price is validated (symmetric, unit diagonal, positive semi-definite) and
 never repaired; only the bumped matrix of the Greeks is repaired, and the
 ````
 
-Source: `docs/http-api.md@v0.12.0:L1357-L1368`
+Source: `docs/http-api.md@v0.14.0:L1434-L1445`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L1357-L1368>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L1434-L1445>
 
 ## Request fields that control it
 
@@ -421,12 +429,22 @@ table ObservationEvent {
     /// event then carries no coupon of its own and a call pays the notional
     /// plus the memory only.
     coupon:double = null;
+    /// True: this event is the final observation and only the capital
+    /// protection block (and `upside`, if present) is tested there: no
+    /// coupon test, no call test, unpaid coupons in the memory are not paid.
+    /// `coupon`, `coupon_trigger` and `autocall_trigger` must be absent (400
+    /// naming the field); `payment_date` is required and must equal
+    /// `StructuredNote.maturity_payment_date` (400 otherwise); the event
+    /// must be the last one (400), so there is at most one. Absent (or
+    /// false): the rules above stand, the last event must carry a trigger
+    /// and a final event with a trigger behaves as today.
+    is_final:bool = null;
 }
 ````
 
-Source: `flatbuffers/fbs/structured_note.fbs@v0.12.0:L99-L124`
+Source: `flatbuffers/fbs/structured_note.fbs@v0.14.0:L111-L146`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/structured_note.fbs#L99-L124>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/structured_note.fbs#L111-L146>
 
 - `coupon_rule`: memory and pay-only-on-call.
 
@@ -446,9 +464,9 @@ table CouponRule {
 }
 ````
 
-Source: `flatbuffers/fbs/structured_note.fbs@v0.12.0:L127-L139`
+Source: `flatbuffers/fbs/structured_note.fbs@v0.14.0:L149-L161`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/structured_note.fbs#L127-L139>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/structured_note.fbs#L149-L161>
 
 - `capital`: barrier, monitoring, put strike, participation, knocked_in.
 
@@ -473,9 +491,9 @@ table CapitalProtection {
 }
 ````
 
-Source: `flatbuffers/fbs/structured_note.fbs@v0.12.0:L147-L164`
+Source: `flatbuffers/fbs/structured_note.fbs@v0.14.0:L169-L186`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/structured_note.fbs#L147-L164>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/structured_note.fbs#L169-L186>
 
 - `underlyings[].quanto`: the quanto block.
 
@@ -504,9 +522,9 @@ table QuantoSpec {
 }
 ````
 
-Source: `flatbuffers/fbs/structured_note.fbs@v0.12.0:L13-L34`
+Source: `flatbuffers/fbs/structured_note.fbs@v0.14.0:L13-L34`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/structured_note.fbs#L13-L34>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/structured_note.fbs#L13-L34>
 
 - `monte_carlo`: paths, seed, sequence, antithetic, Brownian bridge, steps per year.
 
@@ -538,11 +556,11 @@ table MonteCarloSpec {
 }
 ````
 
-Source: `flatbuffers/fbs/structured_note.fbs@v0.12.0:L183-L207`
+Source: `flatbuffers/fbs/structured_note.fbs@v0.14.0:L205-L229`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/structured_note.fbs#L183-L207>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/structured_note.fbs#L205-L229>
 
-## Not documented in engine v0.12.0
+## Not documented in engine v0.14.0
 
 - Nothing further: the excerpts above cover the behaviour the server relies on.
 - The engine source at this tag and the QuantLib source it is built on are readable with search_source / read_source (cite `<repo>:<path>@<tag>:L<a>-L<b>`); a point this page does not document is to be read there, never answered from memory.

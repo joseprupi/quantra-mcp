@@ -37,6 +37,7 @@ ENGINE_TOPICS = {
     "schedules-and-stubs",
     "error-codes",
     "structured-notes",
+    "option-quotes-to-surface",
 }
 CONNECTOR_TOPICS = {"connector-analytics"}
 BRIEF_TOPICS = ENGINE_TOPICS | CONNECTOR_TOPICS
@@ -155,7 +156,14 @@ def test_connector_citations_match_the_working_tree() -> None:
 )
 def test_every_citation_exists_at_the_pin_in_the_engine_repo() -> None:
     """With the engine repo: each cited path exists at the tag, its line count is the
-    recorded one, and the excerpt on the page is byte-identical to the file's lines."""
+    recorded one, and the excerpt on the page is byte-identical to the file's lines
+    (after the line-for-line issuer scrub the generator applies, which never changes a
+    line number)."""
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+    import issuer_scrub
+
     index = _index()
     tag = index["engine_tag"]
     cache: dict[str, list[str]] = {}
@@ -165,6 +173,8 @@ def test_every_citation_exists_at_the_pin_in_the_engine_repo() -> None:
             check=True,
             capture_output=True,
         ).stdout.decode()
+        assert len(issuer_scrub.scrub_text(path, out).split("\n")) == len(out.split("\n"))
+        out = issuer_scrub.scrub_text(path, out)
         lines = out.split("\n")
         if lines and lines[-1] == "":
             lines.pop()
@@ -197,17 +207,17 @@ def test_every_citation_exists_at_the_pin_in_the_engine_repo() -> None:
     for path, line, text in [
         (
             "src/evaluators/vanilla_swap_evaluator.cpp",
-            31,
+            30,
             "const double fixedBps = SignedBps(trade.fixedLeg, fixed);",
         ),
         (
             "src/evaluators/ois_swap_evaluator.cpp",
-            31,
+            30,
             "const double fixedBps = SignedBps(trade.fixedLeg, fixed);",
         ),
         (
             "docs/versioning.md",
-            245,
+            416,
             "`overnight_leg_npv`, `leg1_npv`, `leg2_npv`, the `*_bps` fields and the",
         ),
     ]:

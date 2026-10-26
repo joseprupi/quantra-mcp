@@ -39,7 +39,7 @@ DEFAULT_DEST = ROOT / "vendor" / "sources"
 DEFAULT_CACHE = ROOT / "vendor" / "cache"
 STAMP = ".fetched.json"
 #: bump when issuer_scrub's rewrites change, so an extracted tree is re-extracted.
-SCRUB_VERSION = 1
+SCRUB_VERSION = 2
 
 TEXT_SUFFIXES = {
     ".h",

@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.1.15 (2026-10-26)
+
+Engine pin v0.12.0 -> v0.14.0 (`9df97fb`; QuantLib stays 1.44). Additive on the JSON API
+(0.13.0 structured-note `is_final`, cap/floor `Collar`; 0.13.1 non-finite 500s, holiday
+deposit-helper 400, bounded joint Hull-White calibration; 0.14.0 option quotes).
+
+- **New tools (42 -> 44):** `calibrate_implied_forwards` (`POST /calibrate-implied-forwards`:
+  per-expiry put-call-parity forward, implied DF, funding spread in bp, dividend yield,
+  residuals, dropped quotes with the engine's reasons, a ready dividend curve) and
+  `calibrate_vol_surface` (`POST /calibrate-vol-surface`: AndreasenHuge or SviPerExpiry,
+  `method` explicit, per-expiry fit errors, SVI parameters, butterfly / calendar findings,
+  vanilla repricing inside bid/ask). The sheet is sent as given; option quotes are market
+  data, so `market_data_source` (+ `sources` when sourced) is required. `summary.reuse`
+  points at the returned dividend curve / `VolSurfaceSpec`, directly usable as the market
+  of `price_structured_note` (local vol, `monte_carlo.steps_per_year`) and
+  `price_equity_option`.
+- **Structured notes:** events may carry `is_final: true` (vendored spec; nothing else
+  changes, the notes are still sent as given).
+- **Methodology:** regenerated at v0.14.0 (15 topics, 176 citations); new
+  `option-quotes-to-surface` page (filters, put-call-parity fit, Black-76 inversion,
+  Andreasen-Huge, SVI + Durrleman + calendar checks, repricing report). The citation test
+  now compares against the scrubbed engine text (line-for-line, line numbers unchanged).
+- **Examples 241 -> 245:** + `cap_floor/collar_eur_5y_cap_4pct_floor_2pct_euribor3m`,
+  `implied_forwards/synthetic_ndx_like_2026-09-30`, `vol_surface/synthetic_svi_sheet_2026-09-30_{andreasen_huge,svi}`;
+  the new issuer-named structured note on synthetic surfaces is NOT vendored (7 issuer
+  exclusions). New oracle kind `field_lists` for the per-expiry catalog cells.
+- **Issuer scrub:** `SUB_REWRITES` (in-line substring rewrites, line count unchanged) for
+  the 0.13.0 / 0.14.0 issuer mentions in `http-api.md`, `versioning.md`,
+  `structured_note.fbs` and the OpenAPI description; `SCRUB_VERSION` 2.
+- **Instructions:** product sentence names option quotes to forwards and vol surfaces;
+  still under the 2000-character budget (1998).
+- `scripts/live_check.py` gains an option-quote section.
+
 ## 0.1.14 (2026-10-22)
 
 Nothing issuer- or real-security-specific is reachable (operator rule). Trigger: in a

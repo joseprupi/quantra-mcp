@@ -61,6 +61,8 @@ GUARDED_TOOLS = {
     "price_yoy_inflation_swap",
     "price_yoy_inflation_cap_floor",
     "price_structured_note",
+    "calibrate_implied_forwards",
+    "calibrate_vol_surface",
     "swap_dv01",
     "key_rate_ladder",
     "scenario",

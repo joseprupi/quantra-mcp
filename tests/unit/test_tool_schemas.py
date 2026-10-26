@@ -12,7 +12,7 @@ from mcp import Client
 from quantra_mcp.tools._meta import MAX_DESCRIPTION_CHARS
 
 WRITERS = {"session_put", "session"}
-ENGINE_CALLERS_PREFIX = ("price_", "calendar_")
+ENGINE_CALLERS_PREFIX = ("price_", "calendar_", "calibrate_")
 ENGINE_CALLERS = {
     "quantra_meta",
     "engine_request",
@@ -35,7 +35,7 @@ def _props(schema: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
 async def test_every_tool_is_titled_annotated_and_described(app: Any) -> None:
     async with Client(app) as c:
         tools = (await c.list_tools()).tools
-    assert len(tools) == 42
+    assert len(tools) == 44
     for t in tools:
         assert t.title, t.name
         a = t.annotations

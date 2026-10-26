@@ -1,6 +1,6 @@
 # Fair rate, fair spread, ATM forward
 
-_Generated from the engine's documentation and source at `v0.12.0` (`5b1c016739b1`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.12.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.14.0` (`9df97fb2c17a`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.14.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 The engine reports QuantLib's `fairRate()` / `fairSpread()` for swaps, the curve-implied forward for FRAs, the par spread for CDS, and the ATM forward swap rate and annuity for swaptions (only when `swaption_pricing_details` is on).
 
@@ -17,9 +17,9 @@ The engine reports QuantLib's `fairRate()` / `fairSpread()` for swaps, the curve
         if (std::isfinite(fairRate)) out.fairRate = fairRate;
 ````
 
-Source: `src/evaluators/vanilla_swap_evaluator.cpp@v0.12.0:L29-L34`
+Source: `src/evaluators/vanilla_swap_evaluator.cpp@v0.14.0:L28-L33`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/vanilla_swap_evaluator.cpp#L29-L34>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/vanilla_swap_evaluator.cpp#L28-L33>
 
 ### 2. Vanilla swap: `fair_spread` is the same linear solve on the floating leg's signed annuity (the IBOR forwards or CMS coupons held).
 
@@ -34,9 +34,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/
         if (std::isfinite(fairSpread)) out.fairSpread = fairSpread;
 ````
 
-Source: `src/evaluators/vanilla_swap_evaluator.cpp@v0.12.0:L36-L43`
+Source: `src/evaluators/vanilla_swap_evaluator.cpp@v0.14.0:L35-L42`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/vanilla_swap_evaluator.cpp#L36-L43>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/vanilla_swap_evaluator.cpp#L35-L42>
 
 ### 3. When `fair_rate` and `fair_spread` are present (engine 0.10.0+): `fair_rate` iff exactly one leg carries `FixedCoupons`, `fair_spread` iff a leg carries IBOR, overnight or CMS coupons; both are optional fields.
 
@@ -58,9 +58,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/
     fair_spread:double = null;
 ````
 
-Source: `flatbuffers/fbs/vanilla_swap_response.fbs@v0.12.0:L31-L45`
+Source: `flatbuffers/fbs/vanilla_swap_response.fbs@v0.14.0:L31-L45`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/vanilla_swap_response.fbs#L31-L45>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/vanilla_swap_response.fbs#L31-L45>
 
 ### 4. OIS swap: `fair_rate` / `fair_spread` by `OvernightIndexedSwap`'s formulas on the fixed / overnight leg's signed annuity.
 
@@ -81,9 +81,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs
         if (std::isfinite(fairSpread)) out.fairSpread = fairSpread;
 ````
 
-Source: `src/evaluators/ois_swap_evaluator.cpp@v0.12.0:L29-L42`
+Source: `src/evaluators/ois_swap_evaluator.cpp@v0.14.0:L28-L41`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/ois_swap_evaluator.cpp#L29-L42>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/ois_swap_evaluator.cpp#L28-L41>
 
 ### 5. Swap leg BPS (`fixed_leg_bps`, ...) are no longer response fields from engine 0.10.0; the annuity exists only inside the fair-rate formula above.
 
@@ -93,9 +93,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/
 per-leg `*_flows` lists are removed. One rule on every swap endpoint:
 ````
 
-Source: `docs/versioning.md@v0.12.0:L244-L246`
+Source: `docs/versioning.md@v0.14.0:L415-L417`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L244-L246>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L415-L417>
 
 ### 6. CDS: `fair_spread` is the par spread in decimal, absent when QuantLib cannot express it (e.g. zero running coupon); `fair_upfront` is the upfront for the par spread.
 
@@ -107,9 +107,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning
     fair_upfront:double;
 ````
 
-Source: `flatbuffers/fbs/cds_response.fbs@v0.12.0:L8-L12`
+Source: `flatbuffers/fbs/cds_response.fbs@v0.14.0:L8-L12`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/cds_response.fbs#L8-L12>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/cds_response.fbs#L8-L12>
 
 ### 7. FRA: `forward_rate` is the implied forward from the forwarding curve.
 
@@ -118,9 +118,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs
     forward_rate:double;
 ````
 
-Source: `flatbuffers/fbs/fra_response.fbs@v0.12.0:L6-L7`
+Source: `flatbuffers/fbs/fra_response.fbs@v0.14.0:L6-L7`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/fra_response.fbs#L6-L7>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/fra_response.fbs#L6-L7>
 
 ### 8. Swaption: `atm_forward` is the ATM forward swap rate and `annuity` the underlying swap's annuity (PV01-style), both diagnostics.
 
@@ -131,9 +131,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs
     /// Underlying swap annuity (PV01-style quantity). Present only with
 ````
 
-Source: `flatbuffers/fbs/swaption_response.fbs@v0.12.0:L13-L16`
+Source: `flatbuffers/fbs/swaption_response.fbs@v0.14.0:L13-L16`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/swaption_response.fbs#L13-L16>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/swaption_response.fbs#L13-L16>
 
 ### 9. Those swaption diagnostics are read from QuantLib's additional results only when `swaption_pricing_details` is set.
 
@@ -144,9 +144,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs
                     swaption, "impliedVolatility",
 ````
 
-Source: `src/evaluators/swaption_evaluator.cpp@v0.12.0:L636-L639`
+Source: `src/evaluators/swaption_evaluator.cpp@v0.14.0:L636-L639`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/swaption_evaluator.cpp#L636-L639>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/evaluators/swaption_evaluator.cpp#L636-L639>
 
 ## Request fields that control it
 
@@ -160,11 +160,11 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/evaluators/
     swaption_pricing_details:bool = false;
 ````
 
-Source: `flatbuffers/fbs/pricing.fbs@v0.12.0:L62-L66`
+Source: `flatbuffers/fbs/pricing.fbs@v0.14.0:L62-L66`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/pricing.fbs#L62-L66>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/pricing.fbs#L62-L66>
 
-## Not documented in engine v0.12.0
+## Not documented in engine v0.14.0
 
 - A fair rate for bonds is not a concept the engine exposes; bonds report `yield` (see day-counters-and-compounding).
 - Which curve projects the fair rate is not stated in prose: from source the swap is built on the index whose curve is `forwarding_curve` and discounted on `discounting_curve`, so the fair rate is the par rate under exactly those two curves.

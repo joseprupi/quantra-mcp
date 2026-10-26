@@ -1,6 +1,6 @@
 # Curve construction: traits, interpolators, helpers
 
-_Generated from the engine's documentation and source at `v0.12.0` (`5b1c016739b1`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.12.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
+_Generated from the engine's documentation and source at `v0.14.0` (`9df97fb2c17a`) by `scripts/pin_engine.py`. Every statement is an excerpt of that tree with its location `path@tag:Lstart-Lend` and the GitHub permalink `https://github.com/joseprupi/quantraserver/blob/v0.14.0/<path>#L..`; the one-line headings are paraphrases of the excerpt under them. Where the engine documents nothing, the last section says so._
 
 A curve is a `TermStructure` whose required `bootstrap_trait` selects the family: `Discount` / `ZeroRate` / `FwdRate` bootstrap a QuantLib `PiecewiseYieldCurve` from rate helpers; `InterpolatedZero` / `InterpolatedDiscount` / `InterpolatedFwd` interpolate explicit values (see value-curves). Nothing is inferred from the point types.
 
@@ -24,9 +24,9 @@ table TermStructure {
 }
 ````
 
-Source: `flatbuffers/fbs/term_structure.fbs@v0.12.0:L422-L434`
+Source: `flatbuffers/fbs/term_structure.fbs@v0.14.0:L422-L434`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/term_structure.fbs#L422-L434>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/term_structure.fbs#L422-L434>
 
 ### 2. The six families and what each builds.
 
@@ -54,9 +54,9 @@ one curve must share one `compounding`/`frequency` (a mixed set was silently
 mis-built before).
 ````
 
-Source: `docs/versioning.md@v0.12.0:L614-L634`
+Source: `docs/versioning.md@v0.14.0:L785-L805`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L614-L634>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L785-L805>
 
 ### 3. Interpolators available: BackwardFlat, ForwardFlat, Linear, LogCubic, LogLinear.
 
@@ -71,9 +71,9 @@ enum Interpolator : byte {
 }
 ````
 
-Source: `flatbuffers/fbs/enums.fbs@v0.12.0:L22-L29`
+Source: `flatbuffers/fbs/enums.fbs@v0.14.0:L22-L29`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/enums.fbs#L22-L29>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/enums.fbs#L22-L29>
 
 ### 4. Helper (point) types a curve may carry.
 
@@ -96,9 +96,9 @@ union Point {
 }
 ````
 
-Source: `flatbuffers/fbs/term_structure.fbs@v0.12.0:L400-L415`
+Source: `flatbuffers/fbs/term_structure.fbs@v0.14.0:L400-L415`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/term_structure.fbs#L400-L415>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/term_structure.fbs#L400-L415>
 
 ### 5. A helper's quote is selected by presence (`rate` / `price` / `spread` / `quote_id`): supply exactly one; none is an error; a genuine 0 is representable.
 
@@ -108,9 +108,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs
   you mean; supplying none is an error, and a genuine `0` is representable.
 ````
 
-Source: `docs/http-api.md@v0.12.0:L22-L24`
+Source: `docs/http-api.md@v0.14.0:L22-L24`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/http-api.md#L22-L24>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/http-api.md#L22-L24>
 
 ### 6. OIS helpers carry explicit overnight conventions (payment lag, averaging, lookback, lockout, observation shift); a zero payment lag was the silent pre-0.6.0 behaviour and shifts the long end measurably.
 
@@ -137,9 +137,9 @@ Internally a wire `0` maps to QuantLib's null lookback (measurably different
 from a literal zero-day lookback on indices with fixing days).
 ````
 
-Source: `docs/versioning.md@v0.12.0:L550-L569`
+Source: `docs/versioning.md@v0.14.0:L721-L740`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning.md#L550-L569>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/docs/versioning.md#L721-L740>
 
 ### 7. On OIS helpers the fixed-leg calendar / frequency / convention feed QuantLib's payment slots; the fixed-leg day counter is deprecated and ignored.
 
@@ -162,9 +162,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/docs/versioning
     fixed_leg_day_counter:enums.DayCounter = null;
 ````
 
-Source: `flatbuffers/fbs/term_structure.fbs@v0.12.0:L119-L134`
+Source: `flatbuffers/fbs/term_structure.fbs@v0.14.0:L119-L134`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/term_structure.fbs#L119-L134>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/term_structure.fbs#L119-L134>
 
 ### 8. The code: `day_counter`, `interpolator` and `bootstrap_trait` are each required on the `TermStructure`; the trait is the explicit family selector (no auto-dispatch from the point types).
 
@@ -182,9 +182,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs
     auto trait = ts->bootstrap_trait().value();
 ````
 
-Source: `src/parsers/term_structure_parser.cpp@v0.12.0:L79-L89`
+Source: `src/parsers/term_structure_parser.cpp@v0.14.0:L79-L89`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_parser.cpp#L79-L89>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_parser.cpp#L79-L89>
 
 ### 9. The code: for `Discount` / `ZeroRate` / `FwdRate` every point is parsed into a QuantLib `RateHelper` (a value point among them is a request error) and the helpers are handed to `buildCurve`.
 
@@ -208,8 +208,11 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/ter
                 }
                 auto point = pw->point();
                 auto type = pw->point_type();
-                auto helper =
-                    pointParser.parse(type, point, quotes, curves, indices, bump, fxSpots);
+                const std::string location = "rates.curves['" +
+                                             (ts->id() ? ts->id()->str() : std::string()) +
+                                             "'].points[" + std::to_string(i) + "]";
+                auto helper = pointParser.parse(
+                    type, point, quotes, curves, indices, bump, fxSpots, location);
                 if (!helper)
                     QUANTRA_INVALID_ARGUMENT(
                         "Failed to parse term structure point at index " + std::to_string(i));
@@ -219,9 +222,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/ter
             return buildCurve(ts, instruments);
 ````
 
-Source: `src/parsers/term_structure_parser.cpp@v0.12.0:L317-L344`
+Source: `src/parsers/term_structure_parser.cpp@v0.14.0:L317-L347`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_parser.cpp#L317-L344>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_parser.cpp#L317-L347>
 
 ### 10. The code: `buildCurve` uses a bootstrap tolerance of 1e-15, the curve's `reference_date` (else the evaluation date) and its `day_counter`, then switches on `interpolator` x `bootstrap_trait`.
 
@@ -242,9 +245,9 @@ std::shared_ptr<YieldTermStructure> TermStructureParser::buildCurve(
     switch (ts->interpolator().value()) {
 ````
 
-Source: `src/parsers/term_structure_parser.cpp@v0.12.0:L356-L369`
+Source: `src/parsers/term_structure_parser.cpp@v0.14.0:L359-L372`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_parser.cpp#L356-L369>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_parser.cpp#L359-L372>
 
 ### 11. The code: the `LogLinear` branch instantiates `QuantLib::PiecewiseYieldCurve<Discount | ZeroYield | ForwardRate, LogLinear>` (reference date, helpers, day counter, tolerance) for `bootstrap_trait` `Discount` / `ZeroRate` / `FwdRate`; `BackwardFlat`, `ForwardFlat` and `Linear` follow the same pattern with their own QuantLib interpolator class.
 
@@ -266,9 +269,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/ter
                 default: QUANTRA_INVALID_ARGUMENT("Unsupported BootstrapTrait for LogLinear");
 ````
 
-Source: `src/parsers/term_structure_parser.cpp@v0.12.0:L424-L438`
+Source: `src/parsers/term_structure_parser.cpp@v0.14.0:L427-L441`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_parser.cpp#L424-L438>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_parser.cpp#L427-L441>
 
 ### 12. The code: `LogCubic` maps to QuantLib's `MonotonicLogCubic`; an unknown `interpolator` or trait combination is a request error, never a default.
 
@@ -291,9 +294,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/ter
         default: QUANTRA_INVALID_ARGUMENT("Unsupported Interpolator");
 ````
 
-Source: `src/parsers/term_structure_parser.cpp@v0.12.0:L442-L457`
+Source: `src/parsers/term_structure_parser.cpp@v0.14.0:L445-L460`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_parser.cpp#L442-L457>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_parser.cpp#L445-L460>
 
 ### 13. The code: an `OISHelper` becomes `QuantLib::OISRateHelper(settlement_days, tenor, quote, overnight index, deps.discount_curve, telescopic=false, payment_lag, fixed_leg_convention, fixed_leg_frequency, calendar, forward start 0, overnight spread 0, LastRelevantDate pillar, averaging_method, QuantLib defaults for end-of-month / fixed frequency / fixed calendar, lookback_days (wire 0 = QuantLib Null = off), lockout_days, apply_observation_shift)`.
 
@@ -336,9 +339,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/ter
             requireBool(point->apply_observation_shift(), "OISHelper.apply_observation_shift"));
 ````
 
-Source: `src/parsers/term_structure_point_parser.cpp@v0.12.0:L376-L411`
+Source: `src/parsers/term_structure_point_parser.cpp@v0.14.0:L403-L438`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_point_parser.cpp#L376-L411>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_point_parser.cpp#L403-L438>
 
 ### 14. The code: a `SwapHelper` becomes `QuantLib::SwapRateHelper(quote, tenor, calendar, sw_fixed_leg_frequency, sw_fixed_leg_convention, sw_fixed_leg_day_counter, ibor index, spread, fwd_start_days, deps.discount_curve)`; the index forwarding is always the curve being built.
 
@@ -352,9 +355,9 @@ GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/ter
             point->fwd_start_days() * Days, discount);
 ````
 
-Source: `src/parsers/term_structure_point_parser.cpp@v0.12.0:L267-L273`
+Source: `src/parsers/term_structure_point_parser.cpp@v0.14.0:L294-L300`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/src/parsers/term_structure_point_parser.cpp#L267-L273>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/src/parsers/term_structure_point_parser.cpp#L294-L300>
 
 ## Request fields that control it
 
@@ -375,11 +378,11 @@ table TermStructure {
 }
 ````
 
-Source: `flatbuffers/fbs/term_structure.fbs@v0.12.0:L423-L434`
+Source: `flatbuffers/fbs/term_structure.fbs@v0.14.0:L423-L434`
 
-GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.12.0/flatbuffers/fbs/term_structure.fbs#L423-L434>
+GitHub: <https://github.com/joseprupi/quantraserver/blob/v0.14.0/flatbuffers/fbs/term_structure.fbs#L423-L434>
 
-## Not documented in engine v0.12.0
+## Not documented in engine v0.14.0
 
 - Bootstrap accuracy, iteration limits and extrapolation policy are not documented in engine prose at this tag; from source (`buildCurve` above) the bootstrap tolerance is 1e-15 and everything else is QuantLib's `PiecewiseYieldCurve` default (a bond beyond the last pillar is rejected, see error-codes / the example `fixed_rate_bond_beyond_pillar_request`).
 - The pillar dates the engine reports for a bootstrapped curve are the helpers' tenor dates, not necessarily the helper maturity nodes (this server's live finding, CHANGELOG 0.1.1); rebuilding a curve from sampled discount factors at those dates does not reproduce it between nodes.

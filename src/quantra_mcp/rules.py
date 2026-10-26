@@ -21,7 +21,7 @@ market_data_source has no value for estimated or recalled data; sourced needs `s
 """
 
 EXAMPLE_SHAPE_RULE = """\
-The 241 vendored engine examples are request-SHAPE references only: never reuse their
+The 245 vendored engine examples are request-SHAPE references only: never reuse their
 market data for a user's trade or say "the engine already ships this trade"; an
 example's data runs only when the user asks for that example.
 """

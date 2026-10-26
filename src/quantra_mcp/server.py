@@ -29,6 +29,7 @@ from quantra_mcp.tools import (
     discovery,
     examples,
     explain,
+    option_quotes,
     pricing,
     raw,
     reconcile,
@@ -43,10 +44,10 @@ log = logging.getLogger("quantra_mcp")
 SERVER_NAME = "quantra"
 
 GUIDANCE = """\
-Quantra engine (structured notes included); every number is the engine's. To a
-business user, in trade terms: can it be priced, what data is missing, conventions
-assumed with source, the result vs theirs, causes tested with reprice_with. Never
-alter an input to match. Developers: quantra://guide/developers.
+Quantra engine (structured notes, option quotes to forwards and vol surfaces); every
+number is the engine's. To a business user: can it be priced, missing data,
+conventions assumed with source, result vs theirs, causes tested (reprice_with).
+Never alter an input to match. Developers: quantra://guide/developers.
 """
 
 #: order matters: the rule first, the example-shape rule second, the source rule third,
@@ -173,6 +174,7 @@ def build_server(
     curves.register(app, the_backend, the_store)
     pricing.register(app, the_backend, the_store)
     structured_note.register(app, the_backend, the_store)
+    option_quotes.register(app, the_backend, the_store)
     analytics.register(app, the_backend, the_store, settings.max_concurrency)
     examples.register(app)
     explain.register(app)

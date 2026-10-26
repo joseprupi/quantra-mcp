@@ -145,6 +145,51 @@ LINE_REWRITES: dict[str, dict[str, str]] = {
     "tests/functional/CATALOG.md": {},
 }
 
+#: path (engine repo) -> [(substring, replacement)], applied inside a line after
+#: ``LINE_REWRITES`` (engine 0.13.0+: one-line JSON descriptions and long table rows carry
+#: the issuer text mid-line). Never contains a newline, so the line count is unchanged.
+SUB_REWRITES: dict[str, list[tuple[str, str]]] = {
+    "docs/http-api.md": [
+        ("(Santander's 80 % hurdle, BNP's 100 % call)", "(an 80 % hurdle, a 100 % call)"),
+        (
+            "a final date that only decides the redemption (the Scotia note).",
+            "a final date that only decides the redemption (a trigger note with upside).",
+        ),
+        (
+            "The Scotia note (`scotia_autocallable_trigger_ndx_rty_us06419jme72.json`)",
+            "A worst-of trigger note with upside",
+        ),
+        ("(README there). The Scotia note", "(README there). A structured-note"),
+        (
+            "example `examples/data/structured_note/scotia_\u2026_with_synthetic_surface.json`",
+            "example on synthetic surfaces (issuer-named: not served by this connector)",
+        ),
+    ],
+    "docs/versioning.md": [
+        (
+            "`examples/data/structured_note/scotia_\u2026_with_synthetic_surface.json` (the",
+            "a structured-note example on synthetic surfaces (an issuer-named",
+        ),
+        (
+            "Scotia note on synthetic surfaces under Dupire local vol). Functional",
+            "note, not served by this connector, under Dupire local vol). Functional",
+        ),
+        ("`structured_note_scotia_\u2026_synthetic_surface`.", "and one structured-note row."),
+        ("Scotia example's last event", "trigger-note example's last event"),
+        ("the BNP example round trip", "a four-underlying example round trip"),
+    ],
+    "flatbuffers/fbs/structured_note.fbs": [
+        ("(Santander's 80 % hurdle:", "(an 80 % hurdle:"),
+        ("BNP's 100 % call:", "a 100 % call:"),
+        ("(the Scotia note: 75 %", "(for example: 75 %"),
+    ],
+    "jsonserver/openapi/openapi3.json": [
+        ("(Santander's 80 % hurdle:", "(an 80 % hurdle:"),
+        ("BNP's 100 % call:", "a 100 % call:"),
+        ("(the Scotia note: 75 %", "(for example: 75 %"),
+    ],
+}
+
 #: CATALOG.md: a table row naming an issuer / security is replaced by a neutral row.
 _CATALOG = "tests/functional/CATALOG.md"
 _CASES_RE = re.compile(r"^_(\d+) cases across (\d+) family\(ies\)\._$")
@@ -161,6 +206,8 @@ def scrub_text(path: str, text: str) -> str:
         if line in rewrites:
             out.append(rewrites[line])
             continue
+        for old, new in SUB_REWRITES.get(path, ()):
+            line = line.replace(old, new)
         if path == _CATALOG and line.startswith("| ") and ISSUER_TEXT_RE.search(line):
             out.append(_CAT_ROW)
             dropped += 1
@@ -188,6 +235,6 @@ def scrub(path: str, data: bytes) -> bytes:
         text = data.decode("utf-8")
     except UnicodeDecodeError:
         return data
-    if path not in LINE_REWRITES and not ISSUER_TEXT_RE.search(text):
+    if path not in LINE_REWRITES and path not in SUB_REWRITES and not ISSUER_TEXT_RE.search(text):
         return data
     return scrub_text(path, text).encode("utf-8")
